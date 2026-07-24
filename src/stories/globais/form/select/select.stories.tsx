@@ -31,6 +31,20 @@ const departmentOptions = [
   { label: 'Tecnologia', value: 'tecnologia' },
 ];
 
+const stateOptions = [
+  { label: 'Acre', value: 'AC' },
+  { label: 'Bahia', value: 'BA' },
+  { label: 'Ceará', value: 'CE' },
+  { label: 'Distrito Federal', value: 'DF' },
+  { label: 'Espírito Santo', value: 'ES' },
+  { label: 'Minas Gerais', value: 'MG' },
+  { label: 'Paraná', value: 'PR' },
+  { label: 'Rio de Janeiro', value: 'RJ' },
+  { label: 'Rio Grande do Sul', value: 'RS' },
+  { label: 'Santa Catarina', value: 'SC' },
+  { label: 'São Paulo', value: 'SP' },
+];
+
 const schema = z.object({
   department: z.string().min(1, 'Selecione um departamento.'),
 });
@@ -119,6 +133,32 @@ export const Vitrine: Story = {
         description="Submeta sem selecionar para ver o erro."
       >
         <ControlledDemo />
+      </Card>
+
+      <Card
+        title="Busca automática (lista longa)"
+        description="Acima de 8 opções o campo de busca aparece sozinho — sem precisar passar prop."
+      >
+        <Select
+          id="sel-search-auto"
+          label="Estado"
+          placeholder="Selecione um estado"
+          searchPlaceholder="Buscar estado..."
+          options={stateOptions}
+        />
+      </Card>
+
+      <Card
+        title="Busca forçada desligada"
+        description="Mesmo com lista longa, searchable={false} mantém o dropdown puro do Radix."
+      >
+        <Select
+          id="sel-search-off"
+          label="Estado"
+          searchable={false}
+          placeholder="Selecione um estado"
+          options={stateOptions}
+        />
       </Card>
     </div>
   ),

@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Select as SelectPrimitive } from 'radix-ui';
 import {
   useController,
@@ -7,6 +8,8 @@ import {
   type FieldValues,
   type RegisterOptions,
 } from 'react-hook-form';
+
+import { ComboboxInput } from './combobox';
 
 import {
   type FormFieldErrors,
@@ -28,6 +31,13 @@ import {
   Select as BaseSelect,
 } from '@/components/ui/select';
 
+/**
+ * Acima deste número de opções o `Select` liga a busca automaticamente (a menos
+ * que `searchable` seja passado explicitamente). Listas curtas continuam como o
+ * dropdown puro do Radix — sem uma caixa de busca inútil.
+ */
+const SEARCHABLE_OPTION_THRESHOLD = 8;
+
 type SelectBaseProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
   id?: string;
   label: string;
@@ -38,7 +48,28 @@ type SelectBaseProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
   placeholder?: string;
   errors?: FormFieldErrors;
   'aria-invalid'?: boolean;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
+  /**
+   * Exibe um campo de busca no topo da lista (como o `MultiSelect`). Quando
+   * omitido, liga automaticamente para listas longas (mais de
+   * `SEARCHABLE_OPTION_THRESHOLD` opções); passe `true`/`false` para forçar. Como o
+   * Radix Select não tem busca embutida, o modo pesquisável troca a renderização
+   * para o núcleo do `Combobox` — mantendo a mesma API do `Select`.
+   */
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  /** Texto exibido quando a busca não retorna opções. */
+  emptyText?: string;
+  /**
+   * Só no modo `searchable`: portala o popover para o `body`. **Padrão `true`** —
+   * espelha o Radix Select (que sempre portala), garantindo o posicionamento
+   * correto sob o campo em qualquer página, mesmo com ancestrais que criam
+   * containing block para `position: fixed` (transform/overflow/contain). Passe
+   * `portal={false}` só DENTRO de um Dialog/Drawer, onde a roda do mouse precisa
+   * rolar a lista (o `react-remove-scroll` do modal só libera o wheel em conteúdo
+   * não portalado).
+   */
+  portal?: boolean;
 };
 
 type ControlledSelectProps<
@@ -75,12 +106,34 @@ function SelectBase({
   placeholder,
   errors,
   options,
+  searchable,
+  searchPlaceholder,
+  emptyText,
+  portal,
+  value,
+  defaultValue,
+  onValueChange,
+  disabled,
   'aria-invalid': ariaInvalid,
   ...props
 }: SelectBaseProps) {
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+
+  // Fallback interno para o modo `searchable` uncontrolled (com `defaultValue`).
+  // No modo Radix (não-pesquisável) quem cuida disso é o próprio Radix Select.
+  const [internalValue, setInternalValue] = React.useState(
+    typeof defaultValue === 'string' ? defaultValue : ''
+  );
+  const searchableValue = value === undefined ? internalValue : value;
+  const handleSearchableChange = (next: string) => {
+    if (value === undefined) setInternalValue(next);
+    onValueChange?.(next);
+  };
+
+  // Auto: liga a busca em listas longas; `searchable` explícito (true/false) força.
+  const isSearchable = searchable ?? options.length > SEARCHABLE_OPTION_THRESHOLD;
 
   return (
     <BaseField data-invalid={invalid}>
@@ -90,20 +143,41 @@ function SelectBase({
         </FieldLabel>
       )}
 
-      <BaseSelect {...props}>
-        <SelectTrigger id={id} aria-invalid={resolvedAriaInvalid}>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {options.map(({ label, value }) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </BaseSelect>
+      {isSearchable ? (
+        <ComboboxInput
+          id={id}
+          value={searchableValue}
+          onValueChange={handleSearchableChange}
+          options={options}
+          placeholder={placeholder}
+          searchPlaceholder={searchPlaceholder}
+          emptyText={emptyText}
+          disabled={disabled}
+          portal={portal ?? true}
+          aria-invalid={resolvedAriaInvalid}
+        />
+      ) : (
+        <BaseSelect
+          {...props}
+          value={value}
+          defaultValue={defaultValue}
+          onValueChange={onValueChange}
+          disabled={disabled}
+        >
+          <SelectTrigger id={id} aria-invalid={resolvedAriaInvalid}>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {options.map(({ label, value, disabled }) => (
+                <SelectItem key={value} value={value} disabled={disabled}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </BaseSelect>
+      )}
 
       {description && <FieldDescription>{description}</FieldDescription>}
       <FieldError errors={allErrors} />

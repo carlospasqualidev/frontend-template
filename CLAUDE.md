@@ -1076,6 +1076,7 @@ A cor primária do sistema vive em **uma única variável** no topo de [`src/ind
 - `as` aceita o elemento HTML semântico independente do styling (ex.: `<Typography as="h1" variant="h3">` para uma h1 com peso visual de h3).
 - Não use a classes `text-{size} font-{weight} text-muted-foreground` manualmente quando uma variante já bate — isso garante consistência visual entre telas.
 - Texto dentro de primitivos shadcn (`CardTitle`, `EmptyTitle`, `FieldLabel`, `Badge`) já tem tipografia interna — não envolver com `Typography`.
+- **Hierarquia: subtítulo NUNCA maior que o título do container (regra dura).** Dentro de um `Modal`, `Card`, `Dialog` ou seção, o **título do container é o maior heading**; todo **heading de subseção** no corpo deve ser **visualmente menor** que esse título — nunca maior. Um subtítulo maior que o título inverte a hierarquia e confunde o que é o quê (ex.: um bloco "Variáveis" renderizado como `h1`/`h2` dentro de um modal cujo título "Lançar resultado" é `h3` — o subtítulo "grita" mais que o título). Na prática: o título de `Modal`/`Card` já tem sua tipografia; subseções internas usam no máximo `Typography variant="small"`/`muted` (rótulo de grupo) ou um heading **abaixo** do tamanho do título — **nunca** `hero`/`h1`/`h2`. Se a subseção parece maior que o título, **reduza a variante da subseção** (não aumente o título). Vale para qualquer nível: sub-subtítulo < subtítulo < título.
 
 ### Datas
 

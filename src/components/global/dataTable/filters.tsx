@@ -61,12 +61,20 @@ export interface DateRangeFilter extends BaseFilter {
   type: 'dateRange';
 }
 
+/** Faixa numérica (mín./máx.) — reutiliza o valor `{ from, to }` do intervalo. */
+export interface NumberRangeFilter extends BaseFilter {
+  type: 'numberRange';
+  /** Observação curta exibida abaixo dos campos (ex.: como o filtro casa). */
+  hint?: string;
+}
+
 export type DataTableFilter =
   | TextFilter
   | SelectFilter
   | MultiSelectFilter
   | DateFilter
-  | DateRangeFilter;
+  | DateRangeFilter
+  | NumberRangeFilter;
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function textFilter(config: Omit<TextFilter, 'type'>): TextFilter {
@@ -97,6 +105,13 @@ export function dateRangeFilter(
   return { type: 'dateRange', ...config };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function numberRangeFilter(
+  config: Omit<NumberRangeFilter, 'type'>
+): NumberRangeFilter {
+  return { type: 'numberRange', ...config };
+}
+
 /** Estado interno: usa Map para acesso por chave dinâmica sem `obj[key]`. */
 type FilterState = Map<string, DataTableFilterValue>;
 
@@ -118,7 +133,7 @@ function getRange(values: FilterState, key: string): DateRangeValue {
 }
 
 function emptyValueFor(filter: DataTableFilter): DataTableFilterValue {
-  if (filter.type === 'dateRange') return { from: '', to: '' };
+  if (filter.type === 'dateRange' || filter.type === 'numberRange') return { from: '', to: '' };
   if (filter.type === 'multiSelect') return [];
   return '';
 }
@@ -242,6 +257,34 @@ function renderFilter(
         </div>
       );
     }
+    case 'numberRange': {
+      const range = getRange(values, filter.key);
+      return (
+        <div className="space-y-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <InputField
+              id={`${fieldId}-from`}
+              label={`${filter.label} (de)`}
+              type="number"
+              inputMode="decimal"
+              placeholder="mín."
+              value={range.from}
+              onChange={(event) => setValue(filter.key, { ...range, from: event.target.value })}
+            />
+            <InputField
+              id={`${fieldId}-to`}
+              label={`${filter.label} (até)`}
+              type="number"
+              inputMode="decimal"
+              placeholder="máx."
+              value={range.to}
+              onChange={(event) => setValue(filter.key, { ...range, to: event.target.value })}
+            />
+          </div>
+          {filter.hint ? <p className="text-xs text-muted-foreground">{filter.hint}</p> : null}
+        </div>
+      );
+    }
   }
 }
 
@@ -303,7 +346,7 @@ export function DataTableFilters({
           <div
             key={filter.key}
             className={
-              filter.type === 'dateRange' ? 'w-full sm:w-lg' : 'w-full sm:w-60'
+              filter.type === 'dateRange' || filter.type === 'numberRange' ? 'w-full sm:w-lg' : 'w-full sm:w-60'
             }
           >
             {renderFilter(filter, values, setValue)}

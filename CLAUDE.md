@@ -886,6 +886,22 @@ Veja o padrão demonstrado na story `Padrões/OptimisticUpdate` no Storybook (`n
 - Todos seguem o mesmo padrão: aceitam **uncontrolled** (`{...register('campo')}` + `errors`) **ou controlled** (`control` + `name` + opcional `rules`/`defaultValue`). Discriminated union impede misturar os dois modos.
 - Veja [`src/screens/session/login.tsx`](src/screens/session/login.tsx) e a story `Formulário/Formulário completo` no Storybook como referência.
 
+#### Nenhum input sem placeholder (regra dura)
+
+**Todo campo de entrada tem um `placeholder` que orienta o que digitar/selecionar — sem exceção.** Vale para `InputField`, `NumberField`, `MaskedInputField`, `TextArea`, `Select`/`MultiSelect`, `DateField`/`DateTimeField`, qualquer `Combobox`/campo pesquisável, e os filtros da `DataTable`/barra de filtros. Um campo sem placeholder (só o rótulo e a caixa vazia) deixa o usuário sem pista do formato/ação esperados.
+
+- O placeholder **complementa** o rótulo, **nunca o substitui** (o `label` continua obrigatório — ver a11y "Toda input precisa de label").
+- **Texto/número/máscara:** exemplo do formato/conteúdo esperado ("Digite o código", "seu@email.com"). `DateField` já usa "dd/mm/aaaa"; `NumberField` já mostra o zero mascarado.
+- **Select/Combobox/MultiSelect:** ação de escolha ("Selecione", "Selecione o cliente", "Todos" nos filtros multi).
+- **Únicas exceções** (não têm placeholder por natureza): `Switch`, `Checkbox`, `RadioGroup` e campos read-only de exibição.
+
+#### `readOnly` copiável × campo-espelho inerte
+
+Há **duas** situações de `readOnly` num `InputField`/`TextArea` — não as confunda:
+
+- **Travado por permissão** (o form inteiro em modo leitura por falta de `update`): o campo continua **focável e selecionável** de propósito — o usuário precisa **copiar** o valor (CNPJ, código do lote, etc.). É o `readOnly` documentado em "Detalhe = Edição". **Não** o torne inerte.
+- **Campo-espelho de exibição** (mostra um valor **derivado** que o usuário nunca digita — ex.: "Cliente" espelhando o pedido de origem, "Peso líquido" calculado): renderizar como `<input readOnly>` deixa ele **focável e com realce de seleção**, o que parece um bug ("o campo disabled ainda seleciona texto"). Torne-o **inerte**: `readOnly` + `tabIndex={-1}` + `className="pointer-events-none select-none"`. Fica com o visual de campo (alinha no grid), mas sem foco nem seleção. Julgue pelo campo: se o valor vale a pena copiar (código de lote/corrida), mantenha selecionável; se é só um espelho de contexto, deixe inerte.
+
 #### Cobertura obrigatória com Zod
 
 **Todo formulário precisa ter cada campo coberto por um schema Zod — sem exceção.** A validação acontece **antes** do submit e antes de qualquer chamada à API. O schema é a fonte de verdade do shape e das regras do formulário; nada de validação ad-hoc dentro do `onSubmit` ou em `useState`.
@@ -977,6 +993,10 @@ Use estes antes de cair direto no `components/ui/`:
 2. **Conteúdo do popover NÃO portalado** (`PopoverContent portal={false}`). O `react-remove-scroll` bloqueia o wheel em tudo que está **fora** da subárvore do Dialog; como o `PopoverContent` portala para o `body` por padrão, a lista fica fora dessa subárvore e o wheel é bloqueado mesmo com overflow nativo. Com `portal={false}` o conteúdo renderiza dentro do Dialog (dentro do allowlist do RemoveScroll) e a roda funciona. O Popover é `position: fixed` (Floating UI), então não portalar **não** causa recorte por `overflow` nem erra o posicionamento.
 
 Sintoma de esquecer o item 2: a lista rola pela barra mas **não pela roda do mouse** dentro do modal. O `PopoverContent` de [`ui/popover.tsx`](src/components/ui/popover.tsx) já expõe o prop `portal` (padrão `true`) exatamente para esse opt-out — passe `portal={false}` quando o popover vive dentro de um `Modal`.
+
+**Regra dura — qualquer campo com popover próprio (Combobox/Select pesquisável) nasce com `portal={true}` (padrão de PÁGINA).** Se você criar uma abstração de campo que abre um `Popover` (ex.: um `Combobox` pesquisável, um `Select` com busca), o default do `portal` **tem que ser `true`** (portala — igual ao `PopoverContent` e ao `Select`), **nunca `false`**. Em página o popover é `position: fixed`; sem portal, um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora e ele abre no **canto da tela**. O único lugar que passa `portal={false}` é **DENTRO de um `Modal`/Dialog/Drawer** (pelo motivo da roda do mouse acima). Nunca inverta esse default "para consertar o scroll do modal" — isso quebra TODAS as telas de página. Resumo: **default portala (página ancora); `portal={false}` só dentro de modal.** Mantenha o mesmo default entre todos os componentes que envolvem `Popover` — defaults divergentes entre `Select` e um `Combobox` são a origem clássica desse bug reaparecer.
+
+**Empilhamento (z-index) do popover portalado — não regredir.** Como o popover portala no `body`, ele disputa empilhamento no root e cobriria o header/breadcrumb se tivesse z-index maior. A convenção é: **`PopoverContent` = `z-30`** (`ui/popover.tsx`) + `collisionPadding={{ top: 68 }}` (fica abaixo do header quando possível); **header/breadcrumb do layout = `z-40` com `bg-background`** (`layout.tsx` — ACIMA do popover para ele nunca cobrir o breadcrumb/ações, sem vazar pelo bg opaco); **sidebar mobile (Sheet) e modais = `z-50`** (cobrem o header quando abertos). Não suba o header acima de 50 (quebra mobile/modais) nem o popover acima de 30 (voltaria a cobrir o breadcrumb).
 
 **Padrão para criar uma nova abstração global:**
 

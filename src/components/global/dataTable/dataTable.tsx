@@ -116,6 +116,12 @@ interface DataTableProps<TData, TValue> {
    */
   getRowHref?: (row: TData) => string;
   /**
+   * Classe(s) extra por linha, derivada(s) da linha original — para realce
+   * semântico (ex.: linha em estado de alerta/atenção). Retorne `undefined` para
+   * as linhas sem realce. Compõe com o estilo de linha clicável.
+   */
+  rowClassName?: (row: TData) => string | undefined;
+  /**
    * Exibe um número fixo de linhas (`SKELETON_ROW_COUNT`) com skeletons no lugar
    * do conteúdo das células. Filtros e cabeçalho permanecem visíveis e
    * interativos; a paginação é desabilitada durante o load para evitar disparos
@@ -157,6 +163,7 @@ export function DataTable<TData, TValue>({
   defaultFilterValues,
   onRowClick,
   getRowHref,
+  rowClassName,
   isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -311,11 +318,10 @@ export function DataTable<TData, TValue>({
                     }
                     role={href ? 'link' : onRowClick ? 'button' : undefined}
                     tabIndex={interactive ? 0 : undefined}
-                    className={
-                      interactive
-                        ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                        : undefined
-                    }
+                    className={cn(
+                      interactive && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                      rowClassName?.(row.original),
+                    )}
                   >
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta as

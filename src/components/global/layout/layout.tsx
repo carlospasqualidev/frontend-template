@@ -27,7 +27,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+        {/* z-40 + bg opaco: o header/breadcrumb fica ACIMA dos popovers de
+            Select/Combobox (z-30, portalados no body) para eles nunca o cobrirem;
+            fica ABAIXO do sidebar mobile (Sheet) e dos modais (z-50). O bg-background
+            impede o popover de "vazar" através do header. */}
+        <header className="relative z-40 flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1 cursor-pointer" />
             <Separator orientation="vertical" className="mr-2 h-5" />

@@ -93,6 +93,15 @@ type DateTimeFieldProps<
   | ControlledDateTimeFieldProps<TFieldValues, TName>
   | UncontrolledDateTimeFieldProps;
 
+/**
+ * Mantém o foco (e o caret) no input ao clicar num adorno do campo. Os botões de
+ * limpar e de horário atual agem SOBRE o input — tirar o foco dele é efeito
+ * colateral indesejado do clique, não intenção do usuário.
+ */
+function preventFocusSteal(event: React.MouseEvent<HTMLButtonElement>) {
+  event.preventDefault();
+}
+
 function DateTimeFieldBase({
   id,
   name,
@@ -111,6 +120,7 @@ function DateTimeFieldBase({
   ...props
 }: DateTimeFieldBaseProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const fieldRef = React.useRef<HTMLDivElement>(null);
   const popoverContentRef = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
@@ -135,13 +145,22 @@ function DateTimeFieldBase({
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
 
+  // Último valor que ESTE campo comitou. O efeito de sincronia abaixo ignora o
+  // eco do próprio commit para não apagar o texto que está sendo digitado.
+  const lastCommittedValue = React.useRef(resolvedValue);
+
   React.useEffect(() => {
+    if (resolvedValue === lastCommittedValue.current) return;
+
+    lastCommittedValue.current = resolvedValue;
     setDisplayValue(formatDisplayValue(resolvedValue));
     setTimeDraft(extractTimeParts(parsedDateTime));
   }, [parsedDateTime, resolvedValue]);
 
   const commitValue = React.useCallback(
     (nextValue: string) => {
+      lastCommittedValue.current = nextValue;
+
       if (!isControlled) {
         setInternalValue(nextValue);
       }
@@ -231,7 +250,11 @@ function DateTimeFieldBase({
         return;
       }
 
-      commitValue(nextFormValue ?? nextDisplayValue);
+      // O valor do campo é SEMPRE ISO (`aaaa-mm-ddThh:mm`) ou vazio. Enquanto a
+      // data/hora digitada está incompleta (`28/07/026`, `28/07/2026 1`), o campo
+      // vale vazio — o texto parcial fica só na exibição. Comitá-lo levava a data
+      // pt-BR crua para quem consome o campo (filtro → query string → backend).
+      commitValue(nextFormValue ?? '');
     },
     [commitValue]
   );
@@ -289,26 +312,42 @@ function DateTimeFieldBase({
 
       const nextFocusedElement = event.relatedTarget;
 
+      // O foco indo para um adorno do PRÓPRIO campo (limpar / horário atual /
+      // abrir calendário) ou para o conteúdo do popover não é "sair do campo" —
+      // não propague o blur. Sem esta guarda, clicar num desses botões com o
+      // campo ainda vazio disparava a validação (`mode: 'onBlur'`) do valor
+      // vazio e piscava o erro de obrigatório ANTES de o clique preencher a
+      // data — o usuário via o erro e só o segundo clique "funcionava".
+      // O valor digitado já é comitado a cada tecla em `handleInputChange`,
+      // então adiar a normalização do blur aqui não perde nada.
       if (
         nextFocusedElement instanceof HTMLElement &&
-        popoverContentRef.current?.contains(nextFocusedElement)
+        (fieldRef.current?.contains(nextFocusedElement) ||
+          popoverContentRef.current?.contains(nextFocusedElement))
       ) {
         return;
       }
 
       const nextFormValue = parseDisplayValueToFormValue(displayValue);
+      const parsedNextDate = nextFormValue
+        ? parseDateTimeValue(nextFormValue)
+        : undefined;
 
-      if (nextFormValue) {
-        const parsedNextDate = parseDateTimeValue(nextFormValue);
-
-        if (parsedNextDate) {
-          commitDateAndTime(parsedNextDate, extractTimeParts(parsedNextDate));
-        }
+      if (parsedNextDate) {
+        commitDateAndTime(parsedNextDate, extractTimeParts(parsedNextDate));
+      } else if (displayValue) {
+        // Ao sair do campo, data e hora incompleta é descartada: o campo fica
+        // vazio em vez de exibir um texto que não corresponde a nenhum instante.
+        // Campo já vazio não passa por aqui — comitar apagaria "não preenchido"
+        // por "vazio" e sujaria o formulário só por passar o foco pelo campo.
+        setDisplayValue('');
+        setTimeDraft(DEFAULT_TIME_PARTS);
+        commitValue('');
       }
 
       onBlur?.();
     },
-    [commitDateAndTime, displayValue, onBlur, open]
+    [commitDateAndTime, commitValue, displayValue, onBlur, open]
   );
 
   const handleTimeInputChange = React.useCallback(
@@ -373,7 +412,7 @@ function DateTimeFieldBase({
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverAnchor asChild>
-          <div className="relative">
+          <div ref={fieldRef} className="relative">
             <Input
               {...props}
               ref={inputRef}
@@ -386,49 +425,56 @@ function DateTimeFieldBase({
               value={displayValue}
               disabled={disabled}
               aria-invalid={resolvedAriaInvalid}
-              className={cn('pr-28', className)}
+              // pr-22 = os 3 adornos agrupados (3 × size-7 = 84px) + folga. Antes era
+              // pr-28 com os botões espalhados em right-1/9/16, o que exigia um campo
+              // mais largo que o padrão da barra de filtros (`sm:w-60`).
+              className={cn('pr-22', className)}
               onChange={handleInputChange}
               onBlur={handleInputBlur}
             />
 
-            {hasValue && (
+            {/* Adornos AGRUPADOS num flex: o cluster ocupa só o que precisa e não
+                depende de `right-N` calculado à mão por botão (que obrigava a reservar
+                padding a mais e estourava a largura padrão do campo). */}
+            <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center">
+              {hasValue && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={disabled}
+                  aria-label="Limpar data e horário"
+                  onMouseDown={preventFocusSteal}
+                  onClick={handleClearValue}
+                >
+                  <XIcon className="size-4 text-muted-foreground" />
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 disabled={disabled}
-                aria-label="Limpar data e horário"
-                className="absolute top-1/2 right-16 -translate-y-1/2! active:-translate-y-1/2!"
-                onClick={handleClearValue}
+                aria-label="Definir horário atual"
+                onMouseDown={preventFocusSteal}
+                onClick={handleSetNow}
               >
-                <XIcon className="size-4 text-muted-foreground" />
+                <Clock2Icon className="size-4 text-muted-foreground" />
               </Button>
-            )}
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              disabled={disabled}
-              aria-label="Definir horário atual"
-              className="absolute top-1/2 right-9 -translate-y-1/2! active:-translate-y-1/2!"
-              onClick={handleSetNow}
-            >
-              <Clock2Icon className="size-4 text-muted-foreground" />
-            </Button>
-
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={disabled}
-                aria-label="Abrir calendário e horário"
-                className="absolute top-1/2 right-1 -translate-y-1/2! active:-translate-y-1/2!"
-              >
-                <CalendarIcon className="size-4 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={disabled}
+                  aria-label="Abrir calendário e horário"
+                >
+                  <CalendarIcon className="size-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+            </div>
           </div>
         </PopoverAnchor>
 

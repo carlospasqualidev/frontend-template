@@ -255,10 +255,7 @@ function TimelineDemo() {
                   <Icon className="size-4" />
                 </span>
                 {isLast ? null : (
-                  <span
-                    className="my-1 w-px flex-1 bg-border"
-                    aria-hidden
-                  />
+                  <span className="my-1 w-px flex-1 bg-border" aria-hidden />
                 )}
               </div>
               <div className="space-y-1 pb-2">
@@ -359,7 +356,9 @@ function ItemListWithActionsDemo() {
                   variant="outline"
                   size="sm"
                   disabled={session.current}
-                  onClick={() => toast(`Sessão em ${session.device} encerrada.`)}
+                  onClick={() =>
+                    toast(`Sessão em ${session.device} encerrada.`)
+                  }
                 >
                   Encerrar
                 </Button>
@@ -515,9 +514,9 @@ function TabsWithUrlStateDemo() {
   //   const navigate = useNavigate();
   //   const activeTab = isTabValue(search.tab) ? search.tab : 'profile';
   //   const setTab = (next) => navigate({ to: '.', search: (p) => ({...p, tab: next === 'profile' ? undefined : next}), replace: true });
-  const [tab, setTab] = useState<'profile' | 'security' | 'notifications' | 'billing'>(
-    'profile'
-  );
+  const [tab, setTab] = useState<
+    'profile' | 'security' | 'notifications' | 'billing'
+  >('profile');
 
   return (
     <Card
@@ -880,8 +879,8 @@ function OptimisticUpdateDemo() {
 
         <Typography variant="muted">
           Clique algumas vezes. O botão troca instantaneamente — sem spinner,
-          porque a UI já reflete o estado pretendido. Quando o request falha,
-          um toast avisa e a UI volta sozinha pelo snapshot capturado em
+          porque a UI já reflete o estado pretendido. Quando o request falha, um
+          toast avisa e a UI volta sozinha pelo snapshot capturado em
           `onMutate`.
         </Typography>
       </div>

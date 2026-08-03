@@ -7,7 +7,9 @@ import { NumberField } from '@/components/global/form/numberField';
 import { useZodForm } from '@/lib/forms/useZodForm';
 
 const schema = z.object({
-  quantity: z.number({ error: 'Informe uma quantidade.' }).positive('Informe uma quantidade maior que zero.'),
+  quantity: z
+    .number({ error: 'Informe uma quantidade.' })
+    .positive('Informe uma quantidade maior que zero.'),
 });
 
 function Harness({
@@ -15,20 +17,30 @@ function Harness({
   prefix,
   maxDecimals,
   srOnlyLabel,
+  defaultValue,
 }: {
   onValid?: (values: { quantity: number }) => void;
   prefix?: string;
   maxDecimals?: number;
   srOnlyLabel?: boolean;
+  defaultValue?: number;
 }) {
   const { control, handleSubmit } = useZodForm({
     schema,
-    defaultValues: { quantity: undefined },
+    defaultValues: { quantity: defaultValue },
   });
 
   return (
     <form onSubmit={handleSubmit((values) => onValid?.(values))}>
-      <NumberField id="quantity" name="quantity" control={control} label="Quantidade" prefix={prefix} maxDecimals={maxDecimals} srOnlyLabel={srOnlyLabel} />
+      <NumberField
+        id="quantity"
+        name="quantity"
+        control={control}
+        label="Quantidade"
+        prefix={prefix}
+        maxDecimals={maxDecimals}
+        srOnlyLabel={srOnlyLabel}
+      />
       <button type="submit">Enviar</button>
     </form>
   );
@@ -51,7 +63,9 @@ describe('NumberField (global) — máscara pt-BR na digitação', () => {
     await userEvent.type(screen.getByLabelText('Quantidade'), '150000');
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
 
-    expect(onValid).toHaveBeenCalledWith(expect.objectContaining({ quantity: 1500 }));
+    expect(onValid).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 1500 })
+    );
   });
 
   it('respeita maxDecimals (5 casas) para taxas/índices', async () => {
@@ -63,7 +77,9 @@ describe('NumberField (global) — máscara pt-BR na digitação', () => {
     expect(input).toHaveValue('5,12345');
 
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
-    expect(onValid).toHaveBeenCalledWith(expect.objectContaining({ quantity: 5.12345 }));
+    expect(onValid).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 5.12345 })
+    );
   });
 
   it('aplica prefixo monetário', async () => {
@@ -75,14 +91,32 @@ describe('NumberField (global) — máscara pt-BR na digitação', () => {
     expect(input).toHaveValue('R$ 123,45');
   });
 
+  // Regressão: apagar até o campo ficar vazio, num formulário com valor carregado
+  // (edição), fazia o valor INICIAL reaparecer — o `useController` devolve o
+  // default do formulário quando o valor é `undefined`.
+  it('apagar tudo esvazia o campo (não ressuscita o valor inicial)', async () => {
+    render(<Harness defaultValue={800} maxDecimals={0} />);
+    const input = screen.getByLabelText('Quantidade');
+
+    await userEvent.clear(input);
+
+    expect(input).toHaveValue('');
+  });
+
   it('usa o zero mascarado como placeholder padrão', () => {
     render(<Harness />);
-    expect(screen.getByLabelText('Quantidade')).toHaveAttribute('placeholder', '0,00');
+    expect(screen.getByLabelText('Quantidade')).toHaveAttribute(
+      'placeholder',
+      '0,00'
+    );
   });
 
   it('placeholder padrão respeita prefixo e casas decimais', () => {
     render(<Harness prefix="R$ " maxDecimals={5} />);
-    expect(screen.getByLabelText('Quantidade')).toHaveAttribute('placeholder', 'R$ 0,00000');
+    expect(screen.getByLabelText('Quantidade')).toHaveAttribute(
+      'placeholder',
+      'R$ 0,00000'
+    );
   });
 
   it('com srOnlyLabel, mantém o rótulo acessível mas oculto visualmente', () => {
@@ -98,6 +132,8 @@ describe('NumberField (global) — máscara pt-BR na digitação', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
 
-    expect(await screen.findByText('Informe uma quantidade.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Informe uma quantidade.')
+    ).toBeInTheDocument();
   });
 });

@@ -77,8 +77,8 @@ export const Vitrine: Story = {
             <div className="space-y-2">
               <p className="text-sm font-semibold">shadcn/ui</p>
               <p className="text-sm text-muted-foreground">
-                Beautifully designed components built with Radix UI and
-                Tailwind CSS.
+                Beautifully designed components built with Radix UI and Tailwind
+                CSS.
               </p>
               <p className="text-xs text-muted-foreground">ui.shadcn.com</p>
             </div>
@@ -129,8 +129,8 @@ export const Vitrine: Story = {
           trigger={<Button variant="outline">Rápido (50ms)</Button>}
         >
           <p className="text-sm">
-            Este preview abre quase instantaneamente. Padrão do Radix é
-            700ms; ajuste conforme o caso.
+            Este preview abre quase instantaneamente. Padrão do Radix é 700ms;
+            ajuste conforme o caso.
           </p>
         </HoverCard>
       </Card>

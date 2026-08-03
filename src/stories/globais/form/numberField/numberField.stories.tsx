@@ -25,8 +25,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const schema = z.object({
-  quantity: z.number({ error: 'Informe a quantidade.' }).positive('Informe uma quantidade maior que zero.'),
-  price: z.number({ error: 'Informe o valor.' }).positive('Informe um valor maior que zero.'),
+  quantity: z
+    .number({ error: 'Informe a quantidade.' })
+    .positive('Informe uma quantidade maior que zero.'),
+  price: z
+    .number({ error: 'Informe o valor.' })
+    .positive('Informe um valor maior que zero.'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -38,10 +42,30 @@ function NumberFieldDemo() {
   });
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit(() => undefined)} noValidate>
-      <NumberField id="quantity" name="quantity" control={control} label="Quantidade" placeholder="0,00" />
-      <NumberField id="price" name="price" control={control} label="Valor" prefix="R$ " placeholder="R$ 0,00" />
-      <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+    <form
+      className="space-y-3"
+      onSubmit={handleSubmit(() => undefined)}
+      noValidate
+    >
+      <NumberField
+        id="quantity"
+        name="quantity"
+        control={control}
+        label="Quantidade"
+        placeholder="0,00"
+      />
+      <NumberField
+        id="price"
+        name="price"
+        control={control}
+        label="Valor"
+        prefix="R$ "
+        placeholder="R$ 0,00"
+      />
+      <button
+        type="submit"
+        className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+      >
         Validar
       </button>
     </form>
@@ -62,7 +86,10 @@ export const Vitrine: Story = {
 };
 
 function TableCellDemo() {
-  const { control } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { quantity: undefined, price: undefined } });
+  const { control } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { quantity: undefined, price: undefined },
+  });
   return (
     <table className="w-full text-sm">
       <thead>
@@ -74,10 +101,24 @@ function TableCellDemo() {
       <tbody>
         <tr>
           <td className="pr-2">
-            <NumberField id="cell-min" name="quantity" control={control} label="Valor mínimo" srOnlyLabel maxDecimals={5} />
+            <NumberField
+              id="cell-min"
+              name="quantity"
+              control={control}
+              label="Valor mínimo"
+              srOnlyLabel
+              maxDecimals={5}
+            />
           </td>
           <td>
-            <NumberField id="cell-max" name="price" control={control} label="Valor máximo" srOnlyLabel maxDecimals={5} />
+            <NumberField
+              id="cell-max"
+              name="price"
+              control={control}
+              label="Valor máximo"
+              srOnlyLabel
+              maxDecimals={5}
+            />
           </td>
         </tr>
       </tbody>

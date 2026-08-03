@@ -1,5 +1,6 @@
 import {
   useController,
+  useWatch,
   type Control,
   type FieldPathByValue,
   type FieldValues,
@@ -34,7 +35,11 @@ interface NumberFieldProps<
 }
 
 /** Número -> texto mascarado pt-BR (milhar "." e decimal ","), com prefixo opcional. */
-function toMasked(value: number | undefined, prefix: string, maxDecimals: number): string {
+function toMasked(
+  value: number | undefined,
+  prefix: string,
+  maxDecimals: number
+): string {
   if (value == null || Number.isNaN(value)) return '';
   const formatted = value.toLocaleString('pt-BR', {
     minimumFractionDigits: maxDecimals,
@@ -80,7 +85,12 @@ export function NumberField<
     fieldState: { error },
   } = useController({ control, name });
 
-  const value = typeof field.value === 'number' ? field.value : undefined;
+  // O valor vem do `useWatch`, não do `field.value`: quando o campo é esvaziado
+  // (`undefined`), o `useController` devolve o DEFAULT do formulário — e um campo
+  // com valor carregado (edição) ressuscitava o valor inicial ao ser apagado. O
+  // `useWatch` sem `defaultValue` entrega o valor real do formulário.
+  const watched = useWatch({ control, name });
+  const value = typeof watched === 'number' ? watched : undefined;
 
   // Placeholder padrão: o zero já mascarado (ex.: "0,00", "0,00000", "R$ 0,00")
   // — assim todo campo numérico mostra o formato esperado, sem ficar vazio.
@@ -99,7 +109,9 @@ export function NumberField<
         readOnly={readOnly}
         aria-invalid={!!error || undefined}
         value={toMasked(value, prefix, maxDecimals)}
-        onChange={(event) => field.onChange(fromInput(event.target.value, maxDecimals))}
+        onChange={(event) =>
+          field.onChange(fromInput(event.target.value, maxDecimals))
+        }
         onBlur={field.onBlur}
       />
       <FieldError errors={resolveFieldErrors(error)} />

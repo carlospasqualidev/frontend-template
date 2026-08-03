@@ -77,7 +77,10 @@ export const Vitrine: Story = {
         />
       </Card>
 
-      <Card title="Marcado por padrão" description="Uncontrolled com defaultChecked.">
+      <Card
+        title="Marcado por padrão"
+        description="Uncontrolled com defaultChecked."
+      >
         <Checkbox
           id="cb-default"
           label="Receber relatórios semanais"

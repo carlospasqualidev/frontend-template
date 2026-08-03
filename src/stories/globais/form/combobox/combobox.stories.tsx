@@ -42,7 +42,10 @@ const cityOptions = [
   'São Paulo',
   'Sorocaba',
   'Vitória',
-].map((name) => ({ value: name.toLowerCase().replace(/\s+/g, '-'), label: name }));
+].map((name) => ({
+  value: name.toLowerCase().replace(/\s+/g, '-'),
+  label: name,
+}));
 
 const schema = z.object({ city: z.string().min(1, 'Selecione a cidade.') });
 
@@ -53,9 +56,22 @@ function ControlledDemo() {
   });
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit(() => undefined)} noValidate>
-      <Combobox label="Cidade" name="city" control={control} options={cityOptions} placeholder="Selecione a cidade" />
-      <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+    <form
+      className="space-y-3"
+      onSubmit={handleSubmit(() => undefined)}
+      noValidate
+    >
+      <Combobox
+        label="Cidade"
+        name="city"
+        control={control}
+        options={cityOptions}
+        placeholder="Selecione a cidade"
+      />
+      <button
+        type="submit"
+        className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+      >
         Validar
       </button>
     </form>
@@ -65,7 +81,10 @@ function ControlledDemo() {
 export const Vitrine: Story = {
   render: () => (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card title="Pesquisável" description="Abra e digite para filtrar uma lista grande. Validação Zod ao submeter vazio.">
+      <Card
+        title="Pesquisável"
+        description="Abra e digite para filtrar uma lista grande. Validação Zod ao submeter vazio."
+      >
         <ControlledDemo />
       </Card>
     </div>

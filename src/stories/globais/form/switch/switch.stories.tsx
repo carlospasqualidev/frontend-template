@@ -53,12 +53,11 @@ export const Vitrine: Story = {
         />
       </Card>
 
-      <Card title="Ligado por padrão" description="Uncontrolled com defaultChecked.">
-        <Switch
-          id="sw-default"
-          label="Backup automático"
-          defaultChecked
-        />
+      <Card
+        title="Ligado por padrão"
+        description="Uncontrolled com defaultChecked."
+      >
+        <Switch id="sw-default" label="Backup automático" defaultChecked />
       </Card>
 
       <Card

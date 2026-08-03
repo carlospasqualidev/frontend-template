@@ -31,7 +31,10 @@ type Story = StoryObj<typeof meta>;
 export const Vitrine: Story = {
   render: () => (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card title="Imagem + fallback" description="Imagem com fallback caso falhe.">
+      <Card
+        title="Imagem + fallback"
+        description="Imagem com fallback caso falhe."
+      >
         <div className="flex items-center gap-3">
           <Avatar>
             <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />

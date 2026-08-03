@@ -40,7 +40,9 @@ describe('transformIntoInputDate', () => {
 
 describe('transformIntoDatabaseDate', () => {
   it('retorna null para data vazia', () => {
-    expect(transformIntoDatabaseDate({ date: null, hasTimeStamp: false })).toBeNull();
+    expect(
+      transformIntoDatabaseDate({ date: null, hasTimeStamp: false })
+    ).toBeNull();
   });
 
   it('preserva instante exato quando hasTimeStamp=true', () => {

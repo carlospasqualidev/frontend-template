@@ -46,15 +46,17 @@ export const Vitrine: Story = {
               Posso ter mais de uma conta no mesmo e-mail?
             </AccordionTrigger>
             <AccordionContent>
-              Não. Cada e-mail pode estar associado a apenas uma conta ativa
-              no sistema.
+              Não. Cada e-mail pode estar associado a apenas uma conta ativa no
+              sistema.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-3">
-            <AccordionTrigger>Onde vejo o histórico de acesso?</AccordionTrigger>
+            <AccordionTrigger>
+              Onde vejo o histórico de acesso?
+            </AccordionTrigger>
             <AccordionContent>
-              Em "Minha conta" → "Segurança" → "Sessões ativas". Lá você
-              também pode encerrar dispositivos remotos.
+              Em "Minha conta" → "Segurança" → "Sessões ativas". Lá você também
+              pode encerrar dispositivos remotos.
             </AccordionContent>
           </AccordionItem>
         </Accordion>

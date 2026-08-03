@@ -1,11 +1,5 @@
-import {
-  BadgeCheckIcon,
-  ChevronsUpDownIcon,
-  LogOutIcon,
-  SparklesIcon,
-} from 'lucide-react';
+import { BadgeCheckIcon, ChevronsUpDownIcon, LogOutIcon } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { toast } from 'sonner';
 
 import { UserAvatar } from '@/components/global/avatar/userAvatar';
 import {
@@ -34,6 +28,11 @@ export function NavUser() {
   async function handleSignOut() {
     try {
       await signOut();
+    } catch {
+      // Falha ao encerrar a sessão no servidor não pode prender o usuário na
+      // tela protegida — o interceptor do `api` já avisou, e o `signOut` da
+      // store já limpou o estado local. Sem este `catch`, a rejeição sobe por
+      // um `void handleSignOut()` e vira unhandled rejection no console.
     } finally {
       await navigate({ to: '/login', replace: true });
     }
@@ -85,13 +84,7 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => toast('Plano Pro em breve.')}>
-                <SparklesIcon />
-                Upgrade para Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={() => {

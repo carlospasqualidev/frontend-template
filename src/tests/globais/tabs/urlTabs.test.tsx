@@ -21,7 +21,11 @@ function setupRouter(initialPath: string) {
       <UrlTabs
         defaultValue="profile"
         items={[
-          { value: 'profile', label: 'Perfil', content: <span>conteudo-profile</span> },
+          {
+            value: 'profile',
+            label: 'Perfil',
+            content: <span>conteudo-profile</span>,
+          },
           {
             value: 'security',
             label: 'Segurança',

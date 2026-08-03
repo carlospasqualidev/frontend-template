@@ -10,8 +10,20 @@ import { z } from 'zod';
  * Ao adicionar uma nova env, declare-a aqui e em `.env.example`.
  */
 const envSchema = z.object({
-  /** URL base da API. Ex.: http://localhost:8080/api */
-  VITE_API_URL: z.url(),
+  /**
+   * URL base da API. Aceita:
+   * - URL absoluta (dev local): `http://localhost:8080/api`
+   * - caminho same-origin (deploy): `/api` — o nginx do container faz proxy
+   *   de /api para o backend na rede interna, então o navegador chama a própria
+   *   origem (sem CORS; cookie de sessão HTTP-only continua same-site).
+   */
+  VITE_API_URL: z
+    .string()
+    .min(1)
+    .refine((value) => value.startsWith('/') || URL.canParse(value), {
+      message:
+        'Informe uma URL absoluta (http://...) ou um caminho same-origin iniciado por "/".',
+    }),
   /** Nome do projeto, usado em logs de erro. */
   VITE_PROJECT_NAME: z.string().min(1).default('Frontend'),
   /** Ambiente lógico do projeto (ex.: Sandbox, Production). */

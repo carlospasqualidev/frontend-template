@@ -89,7 +89,11 @@ export function clampDateSegment(value: string, max: number) {
   return `${Math.min(Number(value), max)}`.padStart(2, '0');
 }
 
-export function maskDisplayValue(value: string) {
+export function maskDisplayValue(
+  value: string,
+  options?: { shouldAutoStartYear?: boolean }
+) {
+  const shouldAutoStartYear = options?.shouldAutoStartYear ?? true;
   const isoDateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (isoDateMatch) {
@@ -106,17 +110,26 @@ export function maskDisplayValue(value: string) {
 
     const day = clampDateSegment(rawDay.slice(0, 2), 31);
     const month = clampDateSegment(rawMonth.slice(0, 2), 12);
-    const year = rawYear.slice(0, 4);
+    // Dígito que passa do tamanho do mês SEGUE para o ano em vez de ser
+    // descartado. É o que acontece quando o caret está no fim e o ano ainda não
+    // começou: o dígito cai no fim do segmento do mês.
+    const year = `${rawMonth.slice(2)}${rawYear}`.slice(0, 4);
 
     let nextValue = day;
     const hasMonthPart =
       segments.length > 1 || sanitizedWithSeparators.endsWith('/');
     const shouldStartYearPart =
+      shouldAutoStartYear &&
       day.length === 2 &&
       month.length === 2 &&
-      rawYear.length === 0 &&
-      !sanitizedWithSeparators.endsWith('/');
-    const hasYearPart = rawYear.length > 0 || shouldStartYearPart;
+      year.length === 0;
+    // Barra digitada em cima da que a máscara já inseriu (`28/07/` + `/`): o ano
+    // continua começado. Sem isso a barra era removida, o dígito seguinte caía no
+    // fim do mês e — antes do carry acima — era engolido.
+    const hasYearSeparator =
+      sanitizedWithSeparators.endsWith('/') && segments.length > 2;
+    const hasYearPart =
+      year.length > 0 || shouldStartYearPart || hasYearSeparator;
 
     if (hasMonthPart) {
       nextValue = `${nextValue}/${month}`;

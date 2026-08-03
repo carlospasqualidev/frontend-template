@@ -81,10 +81,13 @@ describe('FileDropzone (global)', () => {
   it('mostra a prévia e remove o arquivo', async () => {
     const handleChange = vi.fn();
     render(
-      <FileDropzone file={makeFile('planilha.csv')} onFileChange={handleChange} />
+      <FileDropzone
+        file={makeFile('planilha-eo.csv')}
+        onFileChange={handleChange}
+      />
     );
 
-    expect(screen.getByText('planilha.csv')).toBeInTheDocument();
+    expect(screen.getByText('planilha-eo.csv')).toBeInTheDocument();
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Remover arquivo' })
@@ -92,10 +95,79 @@ describe('FileDropzone (global)', () => {
     expect(handleChange).toHaveBeenCalledWith(null);
   });
 
+  it('modo múltiplo: entrega todos os arquivos escolhidos pelo input', async () => {
+    const handleFilesChange = vi.fn();
+    const { container } = render(
+      <FileDropzone
+        multiple
+        onFilesChange={handleFilesChange}
+        accept=".csv"
+        id="files-input"
+      />
+    );
+
+    const input = container.querySelector<HTMLInputElement>('#files-input')!;
+    expect(input.multiple).toBe(true);
+
+    await userEvent.upload(input, [
+      makeFile('planilha-1.csv'),
+      makeFile('planilha-2.csv'),
+    ]);
+
+    expect(handleFilesChange).toHaveBeenCalledTimes(1);
+    expect(handleFilesChange.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it('modo múltiplo: entrega todos os arquivos compatíveis soltos e ignora os demais', () => {
+    const handleFilesChange = vi.fn();
+    render(
+      <FileDropzone multiple onFilesChange={handleFilesChange} accept=".csv" />
+    );
+
+    const dropzone = screen.getByRole('button', {
+      name: 'Selecionar arquivos',
+    });
+    fireEvent.drop(dropzone, {
+      dataTransfer: {
+        files: [
+          makeFile('planilha-1.csv'),
+          makeFile('imagem.png', 'image/png'),
+          makeFile('planilha-2.csv'),
+        ],
+      },
+    });
+
+    expect(handleFilesChange).toHaveBeenCalledTimes(1);
+    expect(
+      (handleFilesChange.mock.calls[0][0] as File[]).map((file) => file.name)
+    ).toEqual(['planilha-1.csv', 'planilha-2.csv']);
+  });
+
+  it('modo múltiplo: segue mostrando a área de soltar (sem prévia própria)', async () => {
+    const { container } = render(
+      <FileDropzone multiple onFilesChange={() => undefined} id="files-input" />
+    );
+
+    await userEvent.upload(
+      container.querySelector<HTMLInputElement>('#files-input')!,
+      makeFile('planilha.csv')
+    );
+
+    expect(
+      screen.getByText('Arraste os arquivos aqui ou clique para selecionar')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('planilha.csv')).not.toBeInTheDocument();
+  });
+
   it('não interage quando desabilitado', () => {
     const handleChange = vi.fn();
     render(
-      <FileDropzone file={null} onFileChange={handleChange} disabled accept=".csv" />
+      <FileDropzone
+        file={null}
+        onFileChange={handleChange}
+        disabled
+        accept=".csv"
+      />
     );
 
     const dropzone = screen.getByRole('button', { name: 'Selecionar arquivo' });

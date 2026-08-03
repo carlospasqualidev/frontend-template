@@ -66,12 +66,7 @@ function VitrineDemo() {
         title="Padrão"
         description="Vazio; aceita digitação ou seleção no calendário."
       >
-        <DateField
-          id="df-basic"
-          name="basic"
-          control={control}
-          label="Data"
-        />
+        <DateField id="df-basic" name="basic" control={control} label="Data" />
       </Card>
 
       <Card title="Com descrição" description="Texto auxiliar abaixo.">

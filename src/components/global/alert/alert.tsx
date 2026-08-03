@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-  CircleAlert,
-  CircleCheck,
-  Info,
-  TriangleAlert,
-} from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
 
 import {
   Alert as AlertPrimitive,
@@ -24,32 +19,33 @@ interface IAlert {
   className?: string;
 }
 
+// Mesma paleta semântica do Badge (tokens em index.css) — um único verde/azul/
+// âmbar/vermelho em todo o sistema. Banner soft-tint: fundo com 10% (claro) /
+// 20% (dark) do tom, texto e ícone na cor cheia do token.
+// Map (não Record indexado por variável) para não disparar object-injection.
 const variantClasses = new Map<AlertVariant, string>([
   ['default', ''],
-  [
-    'info',
-    'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100',
-  ],
+  ['info', 'border-info/25 bg-info/10 text-info dark:bg-info/20'],
   [
     'success',
-    'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100',
+    'border-success/25 bg-success/10 text-success dark:bg-success/20',
   ],
   [
     'warning',
-    'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100',
+    'border-warning/25 bg-warning/10 text-warning dark:bg-warning/20',
   ],
   [
     'error',
-    'border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100',
+    'border-destructive/25 bg-destructive/10 text-destructive dark:bg-destructive/20',
   ],
 ]);
 
 const variantDescriptionClasses = new Map<AlertVariant, string>([
   ['default', ''],
-  ['info', 'text-sky-800 dark:text-sky-200/85'],
-  ['success', 'text-emerald-800 dark:text-emerald-200/85'],
-  ['warning', 'text-amber-800 dark:text-amber-200/85'],
-  ['error', 'text-red-800 dark:text-red-200/85'],
+  ['info', 'text-info/90'],
+  ['success', 'text-success/90'],
+  ['warning', 'text-warning/90'],
+  ['error', 'text-destructive/90'],
 ]);
 
 const defaultIcons = new Map<AlertVariant, React.ReactNode>([

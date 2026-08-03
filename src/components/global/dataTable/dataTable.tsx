@@ -1,14 +1,17 @@
 import * as React from 'react';
 import {
   type ColumnDef,
+  type ExpandedState,
   type RowData,
   type SortingState,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { Search } from 'lucide-react';
+import { Eraser, Search } from 'lucide-react';
 
+import { expandColumn } from './columnHelpers';
 import {
   DataTableFilters,
   type DataTableFilter,
@@ -66,6 +69,22 @@ declare module '@tanstack/react-table' {
  */
 const CELL_MAX_WIDTH = 'max-w-[400px]';
 
+/**
+ * Há uma seleção de texto ativa no momento? Numa linha clicável, arrastar para
+ * selecionar texto dispara o `click` logo depois — sem este guard a tabela
+ * navegaria e o usuário nunca conseguiria copiar o conteúdo da célula. Um clique
+ * simples primeiro colapsa qualquer seleção anterior (no `mousedown`), então no
+ * `click` a seleção só é não-vazia quando o gesto foi de fato selecionar texto.
+ */
+function hasActiveTextSelection(): boolean {
+  const selection = window.getSelection();
+  return (
+    !!selection &&
+    !selection.isCollapsed &&
+    selection.toString().trim().length > 0
+  );
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   /** Linhas da página atual, já paginadas/filtradas/ordenadas pelo backend. */
@@ -81,6 +100,17 @@ interface DataTableProps<TData, TValue> {
   onPageChange: (pageIndex: number) => void;
   /** Quantidade de linhas por página (usada para detectar a última página). Padrão: `50`. */
   pageSize?: number;
+  /**
+   * Total de itens no conjunto completo (todas as páginas), quando o backend o
+   * fornece. Opt-in: quando definido, "Próxima" é habilitada por
+   * `(pageIndex + 1) * pageSize < rowCount` — paginação exata mesmo quando o
+   * número de **linhas exibidas** não corresponde ao tamanho da página (ex.: uma
+   * linha por item×localização, onde um "item" da página vira várias linhas).
+   * Quando omitido, mantém-se a heurística padrão (`data.length < pageSize`), que
+   * dispensa `COUNT` no servidor. Aqui, `pageSize` é o número de **itens** por
+   * página (não de linhas).
+   */
+  rowCount?: number;
   /** Mensagem exibida quando não há resultados. */
   emptyMessage?: string;
   /**
@@ -101,6 +131,11 @@ interface DataTableProps<TData, TValue> {
   /** Valores iniciais dos filtros. */
   defaultFilterValues?: DataTableFilterValues;
   /**
+   * Conteúdo opcional à esquerda da linha dos botões "Limpar"/"Buscar" do
+   * cabeçalho de filtros (ex.: um aviso/resumo). Só aparece quando há `filters`.
+   */
+  filtersLeadingActions?: React.ReactNode;
+  /**
    * Quando definido, cada linha vira clicável e dispara este callback com a
    * linha original (`row.original`) — útil para navegar para uma tela de
    * detalhes. Botões/menus dentro de células (`actionsColumn`, `selectColumn`)
@@ -116,9 +151,17 @@ interface DataTableProps<TData, TValue> {
    */
   getRowHref?: (row: TData) => string;
   /**
+   * Quando definido, cada linha ganha um chevron (coluna injetada à esquerda)
+   * que expande uma sub-linha com este conteúdo — útil para detalhes que não
+   * cabem numa célula (ex.: os itens de um pedido). Expandir e
+   * clicar na linha (`onRowClick`) são gestos independentes: o chevron isola a
+   * propagação. O conteúdo ocupa toda a largura da tabela.
+   */
+  renderSubRow?: (row: TData) => React.ReactNode;
+  /**
    * Classe(s) extra por linha, derivada(s) da linha original — para realce
-   * semântico (ex.: linha em estado de alerta/atenção). Retorne `undefined` para
-   * as linhas sem realce. Compõe com o estilo de linha clicável.
+   * semântico (ex.: registro atrasado em vermelho, vencendo hoje em azul). Retorne
+   * `undefined` para as linhas sem realce. Compõe com o estilo de linha clicável.
    */
   rowClassName?: (row: TData) => string | undefined;
   /**
@@ -156,27 +199,40 @@ export function DataTable<TData, TValue>({
   pageIndex,
   onPageChange,
   pageSize = 25,
+  rowCount,
   emptyMessage = 'Nenhum resultado.',
   onSortingChange,
   filters,
   onSearch,
   defaultFilterValues,
+  filtersLeadingActions,
   onRowClick,
   getRowHref,
+  renderSubRow,
   rowClassName,
   isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   const hasActiveFilters =
     !!defaultFilterValues && Object.keys(defaultFilterValues).length > 0;
 
+  // Com `renderSubRow`, injeta a coluna do chevron no início — assim o
+  // consumidor declara só as colunas de dado e a expansão fica padronizada.
+  const tableColumns = React.useMemo(
+    () => (renderSubRow ? [expandColumn<TData>(), ...columns] : columns),
+    [columns, renderSubRow]
+  );
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
-    columns,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: renderSubRow ? () => true : undefined,
     // Ordenação no servidor: a tabela só guarda o estado (para o indicador no
     // cabeçalho) e avisa o consumidor; não reordena as linhas localmente.
     manualSorting: true,
@@ -186,11 +242,15 @@ export function DataTable<TData, TValue>({
       onSortingChange?.(next);
     },
     onRowSelectionChange: setRowSelection,
+    onExpandedChange: setExpanded,
     state: {
       sorting,
       rowSelection,
+      expanded,
     },
   });
+
+  const columnCount = tableColumns.length;
 
   return (
     <div>
@@ -203,6 +263,7 @@ export function DataTable<TData, TValue>({
           defaultValues={defaultFilterValues}
           onSearch={(values) => onSearch?.(values)}
           isLoading={isLoading}
+          leadingActions={filtersLeadingActions}
         />
       ) : null}
 
@@ -264,91 +325,108 @@ export function DataTable<TData, TValue>({
                 };
 
                 return (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    onClick={
-                      interactive
-                        ? (event) => {
-                            // Ctrl/Cmd/Shift+clique abre em nova aba, como num
-                            // link nativo; o clique normal segue a navegação SPA.
-                            if (
-                              href &&
-                              (event.metaKey || event.ctrlKey || event.shiftKey)
-                            ) {
-                              openInNewTab();
-                              return;
-                            }
-                            onRowClick?.(row.original);
-                          }
-                        : undefined
-                    }
-                    onAuxClick={
-                      href
-                        ? (event) => {
-                            // Botão do meio (scroll) abre o destino em nova aba.
-                            if (event.button === 1) {
-                              event.preventDefault();
-                              openInNewTab();
-                            }
-                          }
-                        : undefined
-                    }
-                    onMouseDown={
-                      href
-                        ? (event) => {
-                            // Evita o cursor de autoscroll do clique do meio.
-                            if (event.button === 1) event.preventDefault();
-                          }
-                        : undefined
-                    }
-                    onKeyDown={
-                      interactive
-                        ? (event) => {
-                            // Só dispara quando o foco está na própria linha —
-                            // Enter/Espaço em botões/checkboxes dentro de células
-                            // têm `event.target` diferente e são ignorados aqui.
-                            if (event.target !== event.currentTarget) return;
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
+                  <React.Fragment key={row.id}>
+                    <TableRow
+                      data-state={row.getIsSelected() && 'selected'}
+                      onClick={
+                        interactive
+                          ? (event) => {
+                              // Selecionar texto para copiar não deve navegar: se há
+                              // seleção ativa, o gesto foi copiar, não abrir a linha.
+                              if (hasActiveTextSelection()) return;
+                              // Ctrl/Cmd/Shift+clique abre em nova aba, como num
+                              // link nativo; o clique normal segue a navegação SPA.
+                              if (
+                                href &&
+                                (event.metaKey ||
+                                  event.ctrlKey ||
+                                  event.shiftKey)
+                              ) {
+                                openInNewTab();
+                                return;
+                              }
                               onRowClick?.(row.original);
                             }
-                          }
-                        : undefined
-                    }
-                    role={href ? 'link' : onRowClick ? 'button' : undefined}
-                    tabIndex={interactive ? 0 : undefined}
-                    className={cn(
-                      interactive && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                      rowClassName?.(row.original),
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta as
-                        | { className?: string }
-                        | undefined;
-                      return (
+                          : undefined
+                      }
+                      onAuxClick={
+                        href
+                          ? (event) => {
+                              // Botão do meio (scroll) abre o destino em nova aba.
+                              if (event.button === 1) {
+                                event.preventDefault();
+                                openInNewTab();
+                              }
+                            }
+                          : undefined
+                      }
+                      onMouseDown={
+                        href
+                          ? (event) => {
+                              // Evita o cursor de autoscroll do clique do meio.
+                              if (event.button === 1) event.preventDefault();
+                            }
+                          : undefined
+                      }
+                      onKeyDown={
+                        interactive
+                          ? (event) => {
+                              // Só dispara quando o foco está na própria linha —
+                              // Enter/Espaço em botões/checkboxes dentro de células
+                              // têm `event.target` diferente e são ignorados aqui.
+                              if (event.target !== event.currentTarget) return;
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onRowClick?.(row.original);
+                              }
+                            }
+                          : undefined
+                      }
+                      role={href ? 'link' : onRowClick ? 'button' : undefined}
+                      tabIndex={interactive ? 0 : undefined}
+                      className={cn(
+                        interactive &&
+                          'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                        rowClassName?.(row.original)
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta as
+                          | { className?: string }
+                          | undefined;
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={cn(
+                              CELL_MAX_WIDTH,
+                              'truncate',
+                              meta?.className
+                            )}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    {renderSubRow && row.getIsExpanded() ? (
+                      <TableRow className="hover:bg-transparent">
                         <TableCell
-                          key={cell.id}
-                          className={cn(
-                            CELL_MAX_WIDTH,
-                            'truncate',
-                            meta?.className
-                          )}
+                          colSpan={columnCount}
+                          className="bg-muted/30 p-0"
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
+                          {renderSubRow(row.original)}
                         </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                      </TableRow>
+                    ) : null}
+                  </React.Fragment>
                 );
               })
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={columns.length} className="py-6">
+                <TableCell colSpan={columnCount} className="py-6">
                   <Empty
                     title={emptyMessage}
                     description={
@@ -360,6 +438,7 @@ export function DataTable<TData, TValue>({
                   >
                     {hasActiveFilters && onSearch ? (
                       <Button variant="outline" onClick={() => onSearch({})}>
+                        <Eraser />
                         Limpar filtros
                       </Button>
                     ) : null}
@@ -384,7 +463,12 @@ export function DataTable<TData, TValue>({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(pageIndex + 1)}
-          disabled={isLoading || data.length < pageSize}
+          disabled={
+            isLoading ||
+            (rowCount != null
+              ? (pageIndex + 1) * pageSize >= rowCount
+              : data.length < pageSize)
+          }
         >
           Próxima
         </Button>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Eraser, Loader2, Search } from 'lucide-react';
 
 import { DateField } from '@/components/global/form/dateField';
 import { InputField } from '@/components/global/form/inputField';
@@ -133,7 +133,8 @@ function getRange(values: FilterState, key: string): DateRangeValue {
 }
 
 function emptyValueFor(filter: DataTableFilter): DataTableFilterValue {
-  if (filter.type === 'dateRange' || filter.type === 'numberRange') return { from: '', to: '' };
+  if (filter.type === 'dateRange' || filter.type === 'numberRange')
+    return { from: '', to: '' };
   if (filter.type === 'multiSelect') return [];
   return '';
 }
@@ -238,22 +239,31 @@ function renderFilter(
       );
     case 'dateRange': {
       const range = getRange(values, filter.key);
+      // Cada data ocupa a MESMA largura de um filtro simples (`sm:w-60`) em vez de
+      // dividir uma largura fixa: a barra de filtros fica com todos os campos do
+      // mesmo tamanho, independente do tipo.
       return (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <DateField
-            id={`${fieldId}-from`}
-            label={`${filter.label} (de)`}
-            value={range.from}
-            onChange={(value) =>
-              setValue(filter.key, { ...range, from: value })
-            }
-          />
-          <DateField
-            id={`${fieldId}-to`}
-            label={`${filter.label} (até)`}
-            value={range.to}
-            onChange={(value) => setValue(filter.key, { ...range, to: value })}
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+          <div className="w-full sm:w-60">
+            <DateField
+              id={`${fieldId}-from`}
+              label={`${filter.label} (de)`}
+              value={range.from}
+              onChange={(value) =>
+                setValue(filter.key, { ...range, from: value })
+              }
+            />
+          </div>
+          <div className="w-full sm:w-60">
+            <DateField
+              id={`${fieldId}-to`}
+              label={`${filter.label} (até)`}
+              value={range.to}
+              onChange={(value) =>
+                setValue(filter.key, { ...range, to: value })
+              }
+            />
+          </div>
         </div>
       );
     }
@@ -261,27 +271,37 @@ function renderFilter(
       const range = getRange(values, filter.key);
       return (
         <div className="space-y-1">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <InputField
-              id={`${fieldId}-from`}
-              label={`${filter.label} (de)`}
-              type="number"
-              inputMode="decimal"
-              placeholder="mín."
-              value={range.from}
-              onChange={(event) => setValue(filter.key, { ...range, from: event.target.value })}
-            />
-            <InputField
-              id={`${fieldId}-to`}
-              label={`${filter.label} (até)`}
-              type="number"
-              inputMode="decimal"
-              placeholder="máx."
-              value={range.to}
-              onChange={(event) => setValue(filter.key, { ...range, to: event.target.value })}
-            />
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <div className="w-full sm:w-60">
+              <InputField
+                id={`${fieldId}-from`}
+                label={`${filter.label} (de)`}
+                type="number"
+                inputMode="decimal"
+                placeholder="mín."
+                value={range.from}
+                onChange={(event) =>
+                  setValue(filter.key, { ...range, from: event.target.value })
+                }
+              />
+            </div>
+            <div className="w-full sm:w-60">
+              <InputField
+                id={`${fieldId}-to`}
+                label={`${filter.label} (até)`}
+                type="number"
+                inputMode="decimal"
+                placeholder="máx."
+                value={range.to}
+                onChange={(event) =>
+                  setValue(filter.key, { ...range, to: event.target.value })
+                }
+              />
+            </div>
           </div>
-          {filter.hint ? <p className="text-xs text-muted-foreground">{filter.hint}</p> : null}
+          {filter.hint ? (
+            <p className="text-xs text-muted-foreground">{filter.hint}</p>
+          ) : null}
         </div>
       );
     }
@@ -296,6 +316,11 @@ interface DataTableFiltersProps {
   onSearch: (values: DataTableFilterValues) => void;
   /** Quando verdadeiro, desabilita os botões e exibe loading no botão de buscar. */
   isLoading?: boolean;
+  /**
+   * Conteúdo opcional à esquerda da linha dos botões "Limpar"/"Buscar" (ex.: um
+   * aviso/resumo). Fica alinhado à esquerda; os botões permanecem à direita.
+   */
+  leadingActions?: React.ReactNode;
 }
 
 /**
@@ -319,6 +344,7 @@ export function DataTableFilters({
   defaultValues,
   onSearch,
   isLoading,
+  leadingActions,
 }: DataTableFiltersProps) {
   const initialValues = React.useMemo(
     () => buildInitialValues(filters, defaultValues),
@@ -346,7 +372,9 @@ export function DataTableFilters({
           <div
             key={filter.key}
             className={
-              filter.type === 'dateRange' || filter.type === 'numberRange' ? 'w-full sm:w-lg' : 'w-full sm:w-60'
+              filter.type === 'dateRange' || filter.type === 'numberRange'
+                ? 'w-full sm:w-auto'
+                : 'w-full sm:w-60'
             }
           >
             {renderFilter(filter, values, setValue)}
@@ -354,13 +382,17 @@ export function DataTableFilters({
         ))}
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {leadingActions ? (
+          <div className="mr-auto">{leadingActions}</div>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
           onClick={handleClear}
           disabled={isLoading}
         >
+          <Eraser />
           Limpar
         </Button>
         {isLoading ? (
@@ -368,7 +400,10 @@ export function DataTableFilters({
             <Loader2 className="mr-2 animate-spin" /> Buscar
           </PrimitiveButton>
         ) : (
-          <Button type="submit">Buscar</Button>
+          <Button type="submit">
+            <Search />
+            Buscar
+          </Button>
         )}
       </div>
     </form>

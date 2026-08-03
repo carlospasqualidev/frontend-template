@@ -5,6 +5,7 @@ import { sessionUserRef } from './sessionUserRef';
 
 import { env } from '@/lib/env';
 import {
+  extractResponseMessage,
   hasResponseMessage,
   type ICatchHandler,
   type IThenHandler,
@@ -38,10 +39,10 @@ export const sendErrorMessage = async ({ error }: { error: unknown }) => {
 };
 
 export const catchHandler = (err: ICatchHandler) => {
-  const data = err.response?.data;
+  const message = extractResponseMessage(err.response?.data);
 
-  if (hasResponseMessage(data)) {
-    toast.error(data.message, { id: 'errorToastId' });
+  if (message) {
+    toast.error(message, { id: 'errorToastId' });
     return;
   }
 

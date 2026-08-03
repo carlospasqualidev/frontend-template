@@ -25,8 +25,12 @@ describe('buildAuditListParams', () => {
   });
 
   it('repassa a busca de texto e ignora string vazia', () => {
-    expect(buildAuditListParams(makeQuery({ filters: { search: 'maria' } })).search).toBe('maria');
-    expect(buildAuditListParams(makeQuery({ filters: { search: '' } })).search).toBeUndefined();
+    expect(
+      buildAuditListParams(makeQuery({ filters: { search: 'maria' } })).search
+    ).toBe('maria');
+    expect(
+      buildAuditListParams(makeQuery({ filters: { search: '' } })).search
+    ).toBeUndefined();
   });
 
   it('junta filtros de múltipla escolha em CSV e descarta arrays vazios', () => {
@@ -38,29 +42,39 @@ describe('buildAuditListParams', () => {
   });
 
   it('resolve a ordenação do primeiro sort para orderBy/order da allowlist', () => {
-    const asc = buildAuditListParams(makeQuery({ sort: [{ id: 'module', desc: false }] }));
+    const asc = buildAuditListParams(
+      makeQuery({ sort: [{ id: 'module', desc: false }] })
+    );
     expect(asc).toMatchObject({ orderBy: 'module', order: 'asc' });
 
-    const desc = buildAuditListParams(makeQuery({ sort: [{ id: 'createdAt', desc: true }] }));
+    const desc = buildAuditListParams(
+      makeQuery({ sort: [{ id: 'createdAt', desc: true }] })
+    );
     expect(desc).toMatchObject({ orderBy: 'createdAt', order: 'desc' });
   });
 
   it('ignora ordenação por coluna fora da allowlist (ex.: userName)', () => {
-    const params = buildAuditListParams(makeQuery({ sort: [{ id: 'userName', desc: true }] }));
+    const params = buildAuditListParams(
+      makeQuery({ sort: [{ id: 'userName', desc: true }] })
+    );
     expect(params.orderBy).toBeUndefined();
     expect(params.order).toBeUndefined();
   });
 
   it('traduz o intervalo de datas em bordas de início/fim', () => {
     const params = buildAuditListParams(
-      makeQuery({ filters: { createdAt: { from: '2026-07-01', to: '2026-07-10' } } })
+      makeQuery({
+        filters: { createdAt: { from: '2026-07-01', to: '2026-07-10' } },
+      })
     );
     expect(params.createdFrom).toBeDefined();
     expect(params.createdTo).toBeDefined();
   });
 
   it('não define bordas de data quando o intervalo está vazio', () => {
-    const params = buildAuditListParams(makeQuery({ filters: { createdAt: { from: '', to: '' } } }));
+    const params = buildAuditListParams(
+      makeQuery({ filters: { createdAt: { from: '', to: '' } } })
+    );
     expect(params.createdFrom).toBeUndefined();
     expect(params.createdTo).toBeUndefined();
   });
@@ -78,18 +92,30 @@ describe('fetchAuditLogs', () => {
   });
 
   it('filtra por conteúdo com match parcial (contains), não exato', async () => {
-    const { logs, count } = await fetchAuditLogs({ page: 1, pageSize: 10, search: 'Marina' });
+    const { logs, count } = await fetchAuditLogs({
+      page: 1,
+      pageSize: 10,
+      search: 'Marina',
+    });
     expect(count).toBe(1);
     expect(logs[0].description).toContain('Marina');
   });
 
   it('some com o registro que não casa a busca', async () => {
-    const { logs } = await fetchAuditLogs({ page: 1, pageSize: 50, search: 'inexistente-xyz' });
+    const { logs } = await fetchAuditLogs({
+      page: 1,
+      pageSize: 50,
+      search: 'inexistente-xyz',
+    });
     expect(logs).toHaveLength(0);
   });
 
   it('filtra por módulo via CSV', async () => {
-    const { logs, count } = await fetchAuditLogs({ page: 1, pageSize: 50, module: 'USERS' });
+    const { logs, count } = await fetchAuditLogs({
+      page: 1,
+      pageSize: 50,
+      module: 'USERS',
+    });
     expect(count).toBe(logs.length);
     expect(logs.every((log) => log.module === 'USERS')).toBe(true);
   });
@@ -102,7 +128,12 @@ describe('fetchAuditLogs', () => {
   });
 
   it('ordena por módulo em ordem crescente quando solicitado', async () => {
-    const { logs } = await fetchAuditLogs({ page: 1, pageSize: 50, orderBy: 'module', order: 'asc' });
+    const { logs } = await fetchAuditLogs({
+      page: 1,
+      pageSize: 50,
+      orderBy: 'module',
+      order: 'asc',
+    });
     const modules = logs.map((log) => log.module);
     const sorted = [...modules].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     expect(modules).toEqual(sorted);
@@ -111,7 +142,12 @@ describe('fetchAuditLogs', () => {
 
 describe('fetchAuditLogDetail', () => {
   it('retorna o antes/depois do registro existente', async () => {
-    const { logs } = await fetchAuditLogs({ page: 1, pageSize: 1, module: 'USERS', action: 'update' });
+    const { logs } = await fetchAuditLogs({
+      page: 1,
+      pageSize: 1,
+      module: 'USERS',
+      action: 'update',
+    });
     const detail = await fetchAuditLogDetail(logs[0].id);
     expect(detail.id).toBe(logs[0].id);
     expect(detail).toHaveProperty('before');

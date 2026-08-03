@@ -42,7 +42,10 @@ export const Vitrine: Story = {
           />
         </Card>
 
-        <Card title="Com arquivo" description="Prévia com nome, tamanho e remover.">
+        <Card
+          title="Com arquivo"
+          description="Prévia com nome, tamanho e remover."
+        >
           <FileDropzone
             file={makeFile('planilha.csv', 42)}
             onFileChange={() => undefined}

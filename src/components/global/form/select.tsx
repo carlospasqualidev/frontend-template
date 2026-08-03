@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { XIcon } from 'lucide-react';
 import { Select as SelectPrimitive } from 'radix-ui';
 import {
   useController,
@@ -61,15 +62,18 @@ type SelectBaseProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
   /** Texto exibido quando a busca não retorna opções. */
   emptyText?: string;
   /**
-   * Só no modo `searchable`: portala o popover para o `body`. **Padrão `true`** —
-   * espelha o Radix Select (que sempre portala), garantindo o posicionamento
-   * correto sob o campo em qualquer página, mesmo com ancestrais que criam
-   * containing block para `position: fixed` (transform/overflow/contain). Passe
-   * `portal={false}` só DENTRO de um Dialog/Drawer, onde a roda do mouse precisa
-   * rolar a lista (o `react-remove-scroll` do modal só libera o wheel em conteúdo
-   * não portalado).
+   * Só no modo `searchable`: portala o popover para o `body`. **Automático pelo
+   * contexto** — `false` dentro de um `Modal` (senão o popover abre atrás dele e a
+   * roda do mouse não rola a lista), `true` em página (ancora sob o campo mesmo com
+   * ancestrais que criam containing block). Não é preciso passar manualmente; a
+   * prop existe só como escape hatch para forçar.
    */
   portal?: boolean;
+  /**
+   * Exibe um botão "X" para limpar a seleção (volta a `''`). Só aparece quando há
+   * valor selecionado e o campo não está desabilitado. Use em campos opcionais.
+   */
+  clearable?: boolean;
 };
 
 type ControlledSelectProps<
@@ -110,6 +114,7 @@ function SelectBase({
   searchPlaceholder,
   emptyText,
   portal,
+  clearable,
   value,
   defaultValue,
   onValueChange,
@@ -133,12 +138,17 @@ function SelectBase({
   };
 
   // Auto: liga a busca em listas longas; `searchable` explícito (true/false) força.
-  const isSearchable = searchable ?? options.length > SEARCHABLE_OPTION_THRESHOLD;
+  const isSearchable =
+    searchable ?? options.length > SEARCHABLE_OPTION_THRESHOLD;
+  const showRadixClear = Boolean(clearable && value && !disabled);
 
   return (
     <BaseField data-invalid={invalid}>
       {label && (
-        <FieldLabel htmlFor={id} className={srOnlyLabel ? 'sr-only' : undefined}>
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
           {label}
         </FieldLabel>
       )}
@@ -153,7 +163,8 @@ function SelectBase({
           searchPlaceholder={searchPlaceholder}
           emptyText={emptyText}
           disabled={disabled}
-          portal={portal ?? true}
+          portal={portal}
+          clearable={clearable}
           aria-invalid={resolvedAriaInvalid}
         />
       ) : (
@@ -164,9 +175,32 @@ function SelectBase({
           onValueChange={onValueChange}
           disabled={disabled}
         >
-          <SelectTrigger id={id} aria-invalid={resolvedAriaInvalid}>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
+          {/* Wrapper `relative` para ancorar o X. O `Field` (vertical) aplica
+              `*:w-full` só aos filhos DIRETOS — como o gatilho agora está dentro do
+              wrapper, ele precisa de `w-full` explícito para ocupar 100% (o wrapper
+              já recebe o `*:w-full` do Field). */}
+          <div className="relative w-full">
+            {/* A seta do Radix é filha do flex (não dá para reposicionar sem mover
+                a seta), então o X fica absoluto à ESQUERDA dela (right-8 < seta em
+                right-2) — sem alterar o padding do gatilho, que empurraria a seta. */}
+            <SelectTrigger
+              id={id}
+              aria-invalid={resolvedAriaInvalid}
+              className="w-full"
+            >
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            {showRadixClear && (
+              <button
+                type="button"
+                aria-label="Limpar seleção"
+                onClick={() => onValueChange?.('')}
+                className="absolute top-1/2 right-8 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none dark:hover:bg-muted/50"
+              >
+                <XIcon className="size-4" />
+              </button>
+            )}
+          </div>
           <SelectContent>
             <SelectGroup>
               {options.map(({ label, value, disabled }) => (

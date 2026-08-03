@@ -26,6 +26,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -61,12 +63,30 @@
   --brand: oklch(0.488 0.243 264.376);
   --brand-foreground: oklch(0.97 0.014 254.604);
 
-  /* ── paleta de gráficos (5 tons harmonizados — separada da marca) ── */
+  /* ── paleta SEQUENCIAL de gráficos (5 tons do MESMO hue da marca) ──
+     Para UMA medida em intensidades: barra empilhada, área, mapa de calor.
+     NÃO serve para séries diferentes — tons do mesmo hue não se distinguem.
+     Ao trocar a marca do projeto, regere estes 5 no hue novo. */
   --chart-1: oklch(0.809 0.105 251.813);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
+
+  /* ── paleta CATEGÓRICA de gráficos (hues distintos) ──
+     Para séries DIFERENTES no mesmo gráfico, onde o leitor precisa separar uma
+     linha da outra. Independente da marca — NÃO regere ao trocar a identidade.
+     A ordem dos slots é o mecanismo de segurança para daltonismo (não é
+     cosmética): use sempre na sequência, nunca ciclando nem escolhendo "a que
+     combina". Validada nas duas superfícies (#ffffff e o card do dark): pior par
+     adjacente ΔE 9,2 em deficiência de cor e 27,6 em visão normal. Aqua e
+     magenta ficam abaixo de 3:1 no fundo claro — daí a legenda e o traçado de
+     cada série carregarem a identidade junto com a cor. */
+  --series-1: #2a78d6; /* azul */
+  --series-2: #eb6834; /* laranja */
+  --series-3: #1baf7a; /* aqua */
+  --series-4: #4a3aa7; /* violeta */
+  --series-5: #e87ba4; /* magenta */
 
   /* ──   Os aliases logo abaixo mantêm --primary e --sidebar-primary sincronizados. ── */
   --primary: var(--brand);
@@ -88,8 +108,27 @@
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
+  /* ────────────────────────────────────────────────────────────────
+     PALETA SEMÂNTICA DE STATUS — fonte única da cor das tags/badges e
+     dos toasts. Toda tag de status tira a cor DAQUI (via variante do
+     Badge); nunca hardcode Tailwind (bg-green-100, text-red-700…) numa
+     tela. O Badge pinta o texto na cor cheia do token sobre um fundo com
+     10% (claro) / 20% (escuro) do MESMO tom — por isso os tokens no
+     modo claro são escuros (texto legível sobre fundo quase branco) e no
+     dark são claros. Valores calibrados para contraste AA nesse fundo.
+       success     = positivo / ativo / concluído          (verde)
+       info        = informativo / em andamento            (azul)
+       warning     = atenção / pendência                   (âmbar)
+       destructive = erro / negativo / ação destrutiva     (vermelho)
+     Neutro (cinza) = variantes `secondary` / `outline` do Badge —
+     use-as para rótulos e totalizadores (contadores/somatórios), que
+     não têm status. Ao precisar de uma cor nova, adicione um token aqui
+     + uma variante no Badge, nunca cor solta na tela.
+     ──────────────────────────────────────────────────────────────── */
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.55 0.15 152);
+  --success: oklch(0.48 0.15 152);
+  --info: oklch(0.48 0.17 255);
+  --warning: oklch(0.5 0.12 75);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
@@ -116,6 +155,15 @@
 
   /* --primary / --sidebar-primary / --chart-1..5 herdam de :root via cascade — não duplicar */
 
+  /* A paleta categórica, ao contrário, É redeclarada: são os MESMOS hues em passos
+     escolhidos para o fundo escuro, não um flip automático dos de cima. Os passos
+     claros ficariam com contraste insuficiente aqui. Validados como conjunto. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #9085e9;
+  --series-5: #d55181;
+
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.24 0.006 285.885);
@@ -128,8 +176,12 @@
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
+  /* Paleta semântica no dark: mesmos papéis, passos claros (o Badge/Alert pinta o
+     texto na cor cheia sobre 20% do tom num fundo escuro). Ver :root. */
   --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.72 0.17 152);
+  --success: oklch(0.8 0.15 152);
+  --info: oklch(0.78 0.15 255);
+  --warning: oklch(0.85 0.14 85);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);

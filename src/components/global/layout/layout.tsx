@@ -2,6 +2,7 @@ import { Suspense, useEffect } from 'react';
 import { useLocation } from '@tanstack/react-router';
 
 import { Breadcrumb } from '@/components/global/layout/breadcrumb';
+import { IdleTimeout } from '@/components/global/layout/idleTimeout';
 import { rememberSearch } from '@/lib/navigation/searchMemory';
 import { PageActionsSlot } from '@/components/global/layout/pageActions';
 import { SuspenseFallback } from '@/components/global/layout/suspenseFallback';
@@ -20,11 +21,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Lembra os filtros/ordenação/página de cada rota para restaurá-los ao voltar
   // (breadcrumb, "Cancelar") mesmo após entrar num detalhe/criar.
   useEffect(() => {
-    rememberSearch(location.pathname, location.search as Record<string, unknown>);
+    rememberSearch(
+      location.pathname,
+      location.search as Record<string, unknown>
+    );
   }, [location.pathname, location.search]);
 
   return (
     <SidebarProvider>
+      <IdleTimeout />
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         {/* z-40 + bg opaco: o header/breadcrumb fica ACIMA dos popovers de

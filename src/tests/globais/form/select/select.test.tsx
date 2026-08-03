@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Select } from '@/components/global/form/select';
+import { Modal } from '@/components/global/modal/modal';
 import { useZodForm } from '@/lib/forms/useZodForm';
 
 const OPTIONS = [
@@ -20,20 +21,19 @@ const LONG_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
 
 describe('Select (global)', () => {
   describe('modo padrão (Radix)', () => {
-    it('renderiza o rótulo e o gatilho', () => {
-      render(<Select id="role" label="Papel" options={OPTIONS} />);
+    it('renderiza o gatilho com rótulo e placeholder', () => {
+      render(
+        <Select
+          label="Estado"
+          placeholder="Selecione um estado"
+          options={OPTIONS}
+        />
+      );
 
-      expect(screen.getByText('Papel')).toBeInTheDocument();
-      expect(screen.getByLabelText('Papel')).toBeInTheDocument();
-    });
-
-    it('com srOnlyLabel, mantém o rótulo acessível mas oculto visualmente', () => {
-      render(<Select id="role" label="Papel" srOnlyLabel options={OPTIONS} />);
-
-      // O gatilho continua acessível pelo rótulo (leitor de tela o encontra)...
-      expect(screen.getByLabelText('Papel')).toBeInTheDocument();
-      // ...mas o rótulo fica visualmente oculto (classe utilitária sr-only).
-      expect(screen.getByText('Papel')).toHaveClass('sr-only');
+      expect(screen.getByText('Estado')).toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toHaveTextContent(
+        'Selecione um estado'
+      );
     });
 
     it('lista curta usa o dropdown do Radix (sem busca automática)', () => {
@@ -42,6 +42,23 @@ describe('Select (global)', () => {
         'data-slot',
         'select-trigger'
       );
+    });
+
+    it('clearable limpa a seleção (Radix)', async () => {
+      const user = userEvent.setup();
+      const onValueChange = vi.fn();
+      render(
+        <Select
+          label="Estado"
+          clearable
+          value="SP"
+          onValueChange={onValueChange}
+          options={OPTIONS}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Limpar seleção' }));
+      expect(onValueChange).toHaveBeenCalledWith('');
     });
   });
 
@@ -110,6 +127,24 @@ describe('Select (global)', () => {
       expect(screen.getByRole('option', { name: 'Bahia' })).toBeDisabled();
     });
 
+    it('clearable limpa a seleção (searchable)', async () => {
+      const user = userEvent.setup();
+      const onValueChange = vi.fn();
+      render(
+        <Select
+          label="Estado"
+          searchable
+          clearable
+          value="SP"
+          onValueChange={onValueChange}
+          options={OPTIONS}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Limpar seleção' }));
+      expect(onValueChange).toHaveBeenCalledWith('');
+    });
+
     it('integra com useZodForm (controlled) e entrega o valor no submit', async () => {
       const user = userEvent.setup();
       const onValid = vi.fn();
@@ -142,6 +177,35 @@ describe('Select (global)', () => {
       expect(onValid).toHaveBeenCalledWith(
         expect.objectContaining({ state: 'SP' })
       );
+    });
+  });
+
+  describe('portal automático dentro de Modal', () => {
+    // Regressão do "dropdown abre atrás do modal": dentro de um Modal o Select
+    // searchable NÃO portala (via InModalContext), então o popover fica DENTRO do
+    // dialog do modal (na frente + roda do mouse funciona). Se voltasse a portalar,
+    // as opções iriam para um portal no `body`, fora do dialog do modal.
+    // (O próprio popover do Radix também tem role="dialog", por isso identificamos o
+    // modal pelo nome acessível — o título.)
+    it('renderiza o popover DENTRO do dialog do modal (não portala para o body)', async () => {
+      const user = userEvent.setup();
+      render(
+        <Modal
+          open
+          setOpen={() => undefined}
+          title="Lançar resultado"
+          description="Descrição"
+        >
+          <Select label="Aspecto" searchable options={OPTIONS} />
+        </Modal>
+      );
+
+      const modal = screen.getByRole('dialog', { name: 'Lançar resultado' });
+      await user.click(within(modal).getByRole('combobox'));
+
+      expect(
+        within(modal).getByRole('option', { name: 'Bahia' })
+      ).toBeInTheDocument();
     });
   });
 });

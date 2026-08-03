@@ -71,10 +71,7 @@ describe('MultiSelect (primitive)', () => {
     );
 
     await userEvent.click(screen.getByRole('combobox'));
-    await userEvent.type(
-      screen.getByPlaceholderText('Buscar fruta...'),
-      'maç'
-    );
+    await userEvent.type(screen.getByPlaceholderText('Buscar fruta...'), 'maç');
 
     expect(screen.getByText('Maçã')).toBeInTheDocument();
     expect(screen.queryByText('Banana')).not.toBeInTheDocument();
@@ -98,6 +95,38 @@ describe('MultiSelect (primitive)', () => {
     expect(hiddenInputs[1]).toHaveAttribute('value', 'banana');
   });
 
+  it('clearable exibe um "X" no gatilho que limpa toda a seleção sem abrir a lista', async () => {
+    const handleChange = vi.fn();
+    render(
+      <MultiSelect
+        options={FRUITS}
+        clearable
+        value={['apple', 'banana']}
+        onValueChange={handleChange}
+      />
+    );
+
+    // Sem abrir o popover, o "X" do gatilho já limpa.
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Limpar seleção' })
+    );
+    expect(handleChange).toHaveBeenCalledWith([]);
+  });
+
+  it('clearable não exibe o "X" quando nada está selecionado', () => {
+    render(
+      <MultiSelect
+        options={FRUITS}
+        clearable
+        value={[]}
+        onValueChange={() => undefined}
+      />
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Limpar seleção' })
+    ).not.toBeInTheDocument();
+  });
+
   it('permite limpar a seleção via botão "Limpar seleção"', async () => {
     const handleChange = vi.fn();
     render(
@@ -112,9 +141,7 @@ describe('MultiSelect (primitive)', () => {
 
     const dialog = screen.getByRole('group');
     void within(dialog);
-    await userEvent.click(
-      screen.getByRole('button', { name: /limpar sele/i })
-    );
+    await userEvent.click(screen.getByRole('button', { name: /limpar sele/i }));
 
     expect(handleChange).toHaveBeenCalledWith([]);
   });

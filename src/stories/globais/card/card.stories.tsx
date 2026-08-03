@@ -38,8 +38,8 @@ export const Vitrine: Story = {
         description="Container básico com título, descrição e conteúdo livre."
       >
         <Typography variant="muted">
-          Conteúdo do card. Use para qualquer agrupamento visual com cabeçalho
-          e corpo.
+          Conteúdo do card. Use para qualquer agrupamento visual com cabeçalho e
+          corpo.
         </Typography>
       </Card>
 
@@ -84,9 +84,9 @@ export const Vitrine: Story = {
         description="Leia atentamente antes de prosseguir."
       >
         <Typography variant="muted">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec
-          aliquam tortor at quam pretium, ac convallis turpis dignissim. Nulla
-          facilisi. Suspendisse potenti.
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec aliquam
+          tortor at quam pretium, ac convallis turpis dignissim. Nulla facilisi.
+          Suspendisse potenti.
         </Typography>
       </Card>
 

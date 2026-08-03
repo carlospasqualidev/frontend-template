@@ -376,9 +376,11 @@ Todo texto exposto ao usuário em **português brasileiro (pt-BR)**.
   - Evite: `Unexpected persistence layer failure.`
 - **Nunca exponha referência interna ao usuário**: número de card/demanda, hash/código de merge, nome de branch, jargão de implementação. Não entra em label, placeholder, mensagem, toast nem em texto vindo do backend renderizado na tela. Se aparecer numa descrição/label (inclusive dado de seed), é bug — corrija na origem.
 
-### Regra de negócio e dado derivado vêm do backend
+### Dado derivado, rótulos e mensagens vêm do backend
 
 **Regra de negócio não vive no frontend.** Cálculos, validações de estado, rótulos pt-BR e mensagens derivadas de regra vêm **prontos do backend**; a tela só renderiza. Se você se pegar reimplementando uma regra no client (recomputar totais, decidir um estado, traduzir um enum, montar uma mensagem derivada), pare: o backend deveria estar entregando pronto. Isso mantém uma única fonte de verdade e evita que duas telas divirjam ao reimplementar a mesma regra.
+
+**Corolário — nome de arquivo de download também.** Quando a API serve um arquivo (relatório, PDF, planilha), o nome vem no `Content-Disposition` da resposta, não chumbado na tela: use [`downloadFile`](src/services/api/download.ts), que lê o header (`filename*` RFC 5987 com acento + fallback ASCII) e cai num nome padrão só se ele não vier. Nome montado no client perde o contexto que o servidor colocou nele e passa a divergir do arquivo real.
 
 ### Acentuação e codificação (evitar mojibake)
 
@@ -405,7 +407,8 @@ Radix (via shadcn) dá a base de a11y — foco, ARIA, navegação por teclado. M
 
 - **Nunca remova o `focus-visible:ring`.** Se está atrapalhando o visual, ajuste a cor do ring (`--ring`), não remova. Sem indicador de foco, navegação por teclado fica cega.
 - **Toda input precisa de label associada.** Use os fields globais (`InputField`, `Select`, `DateField`...) — eles já geram `<FieldLabel htmlFor>` ↔ `<Input id>`. **Não use `placeholder` como label** — placeholder some quando o usuário começa a digitar e leitor de tela ignora.
-- **Botão-ícone exige `aria-label` em pt-BR**. `<Button variant="ghost" size="icon" aria-label="Fechar"><X /></Button>`. Sem isso, o leitor de tela anuncia "botão" sem dizer o quê.
+- **Botão-ícone exige rótulo E tooltip — use a prop `tooltip` do [`Button`](src/components/global/button/button.tsx) global (regra dura).** Ação renderizada **só como ícone** passa `tooltip="..."` em pt-BR: o componente usa o texto como `aria-label` (leitor de tela) **e** revela o tooltip no hover/foco (vidente descobre o que o ícone faz). `<Button variant="ghost" size="icon" tooltip="Fechar"><X /></Button>`. Só `aria-label` deixa o usuário vidente adivinhando; só tooltip deixa o leitor de tela anunciando "botão". O `Button` traz o próprio `TooltipProvider` — funciona em qualquer tela, sem provider ancestral.
+  - **Exceção `asChild`:** com `asChild` o `Button` é um `Slot` para outro gatilho (um `<a>`, um `DropdownMenuTrigger`) e a prop `tooltip` é ignorada — monte o `Tooltip` em volta do gatilho na própria tela e passe `aria-label` no botão. Ver `toggleTheme.tsx` e `rowActions.tsx`.
 - **Texto sempre dentro do elemento certo.** Não envolva texto em `<div onClick={...}>` — use `<button>` (ou `<Button variant="link">`). Div clicável não é focável por teclado, não tem role de botão, não dispara em `Enter`/`Space`.
 - **Imagens precisam de `alt`.** Decorativa: `alt=""` (explícito). Informativa: descrição curta em pt-BR. Avatar: `alt={nome}` com fallback nas iniciais.
 - **Contraste mínimo de 4.5:1** para texto sobre fundo (WCAG AA). Os tokens do projeto (`text-foreground` sobre `bg-background`, `text-muted-foreground` sobre `bg-card`) já passam — desvio só com motivo claro.
@@ -512,6 +515,40 @@ src/
   - para caminhos internos same-origin, usa o roteamento cliente do TanStack Router;
   - para links externos, `target="_blank"`, `mailto:`, `tel:` ou clique do scroll, preserva o comportamento nativo do navegador.
   - não confunda com `Link` do `@tanstack/react-router` importado diretamente; aliase quando precisar usar os dois no mesmo arquivo.
+
+#### Hyperlink é `<a href>`, NUNCA `<button onClick={navigate}>` (regra dura)
+
+**Todo hyperlink do sistema usa o `Link` global com `href` de verdade.** Navegar por
+`<button onClick={() => navigate(...)}>` é proibido: botão não tem `href`, então
+**Ctrl/Cmd+clique, clique do meio, "abrir em nova aba/janela", copiar endereço e
+arrastar para os favoritos não funcionam** — o usuário perde a navegação que espera de
+qualquer link da web, e nada na tela indica que aquilo não é um link de verdade.
+
+O `Link` global já entrega as duas metades da regra:
+
+1. **Modificadores caem no comportamento nativo.** O roteamento em SPA só acontece no
+   clique simples com o botão esquerdo; com Ctrl, Cmd, Shift, Alt ou botão do meio o
+   navegador abre em outra aba/janela sozinho.
+2. **Ícone "abrir em nova aba" ao lado do texto**, ligado por padrão — uma âncora de
+   verdade com `target="_blank"`, `aria-label` e tooltip, apontando para o mesmo `href`.
+
+Desligue o ícone com `newTabIcon={false}` **apenas** onde ele não faz sentido: navegação
+estrutural (sidebar, breadcrumb, abas), link dentro de frase corrida, e link que já abre
+fora (aí o ícone seria redundante — o componente já o omite sozinho para `target="_blank"`,
+`mailto:`, `tel:`, âncora `#` e `download`).
+
+Use `newTabLabel` para dar contexto ao leitor de tela quando houver vários links iguais na
+tela — ex.: ``newTabLabel={`Abrir o pedido ${code} em nova aba`}``.
+
+```tsx
+❌ <button type="button" onClick={() => goDetail(id)}>{code}</button>
+✓  <Link href={detailHref(id)} newTabLabel={`Abrir o pedido ${code} em nova aba`}>{code}</Link>
+```
+
+Corolário: quem precisa navegar expõe **`href`**, não só um callback. Se um hook só
+devolve `goX()`, adicione o `xHref()` correspondente. Navegação programática fica para o
+que não é link clicável — submit de formulário, redirect após salvar.
+
 - **Toda rota protegida declara `errorComponent`** — sem isso, um erro lançado no render derruba o app inteiro num fallback genérico. Use o [`ErrorFallback`](src/components/global/errorFallback) global, que mostra mensagem amigável em pt-BR + botão "Tentar novamente" disparando `router.invalidate()` (refaz loaders e remonta a rota).
 
 Esqueleto para nova tela + rota:
@@ -532,6 +569,15 @@ export const minhaTelaRoute = createRoute({
 ```
 
 Depois, registre em [`src/routes.tsx`](src/routes.tsx).
+
+#### Navegação (sidebar)
+
+A navegação vive em [`src/lib/constants/sidebar.tsx`](src/lib/constants/sidebar.tsx) (`sidebarData`) e é renderizada por [`navMain.tsx`](src/components/global/sidebar/navMain.tsx). Regras:
+
+- **Um item por tela, dentro do grupo do seu módulo.** Cada módulo é um grupo colapsável (`SidebarMenuSub`) e as telas são suas filhas, sob o prefixo de URL do módulo. **Não crie grupos ad-hoc** para subconjuntos de um módulo — o grupo é o módulo. Recursos transversais (Início, Documentação) ficam em `links`, fora de qualquer grupo.
+- **Ordem sempre alfabética (pt-BR).** O `NavMain` ordena os itens de cada grupo por `title` via `localeCompare` — **não** confie na ordem da lista em `sidebarData`; ela é irrelevante para a exibição.
+- **`permission` gata o item.** Item com `permission` só aparece para quem a possui ([`hasPermission`](src/lib/permissions.ts)); o grupo some se ficar sem itens visíveis. Use `anyPermission` quando a tela abre para quem tem **ao menos uma** de várias permissões. O backend continua sendo a autoridade — isto é só navegação. Ao criar uma tela com RBAC, use a permissão de leitura (`<módulo>.<entidade>.read`).
+- **Sidebar recolhida em ícones** já é tratada: o `NavMain` troca o `SidebarMenuSub` (invisível nesse modo) por um flyout `DropdownMenu` à direita, senão os filhos ficariam inalcançáveis.
 
 ### Organização de telas
 
@@ -630,6 +676,34 @@ export function DashboardPage() {
 
 Só introduza um wrapper na raiz quando precisar de um comportamento de layout real que o Layout não cobre — ex.: a tela quer ocupar 100% da altura disponível (`flex h-full min-h-0 flex-col`, como na lista de usuários). Nesse caso, o wrapper paga pelo seu lugar; spacing puro não.
 
+### Botões — tamanho/altura padrão do sistema (não misturar alturas)
+
+**Use SEMPRE o tamanho padrão do [`Button`](src/components/global/button/button.tsx) (sem prop `size`) para qualquer botão de ação real** — ações de tela (`PageActions`), ações de formulário (Salvar/Cancelar), botões de barra de filtro (Buscar/Limpar), ações de diálogo, "Tentar novamente", "Expandir/Recolher", etc. O tamanho padrão (`h-8`) é a altura do sistema; recorrer a `size="sm"` (`h-7`) por reflexo deixa o botão **mais baixo que o resto** e quebra o alinhamento visual.
+
+Tabela de tamanhos ([`components/ui/button.tsx`](src/components/ui/button.tsx)): `default` = `h-8` (**use este por padrão**), `sm` = `h-7`, `xs` = `h-6`, `lg` = `h-9`, `icon` = `size-8` (quadrado, só ícone).
+
+Regras:
+
+- **Ação real → tamanho `default`.** Não passe `size` a menos que haja motivo deliberado.
+- **`size="sm"`/`xs` só para controles auxiliares densos** e reconhecidamente menores — ex.: chips/atalhos (presets de período), toolbar compacta dentro de um card denso, fileira de `RowActions`. Nunca para o botão primário de uma barra/rodapé.
+- **Nunca misture alturas na MESMA linha/grupo de botões.** Se numa linha há um botão `default`, todos os botões daquela linha são `default`. (Um `sm` ao lado de um `default` é o erro clássico.)
+- **`size="icon"` para botão só-ícone** (sempre com `tooltip` em pt-BR — ver a11y).
+- Isso é ortogonal a `variant` (cor/ênfase) — variante escolhe a aparência; tamanho é sempre `default` salvo exceção justificada acima.
+
+### Controles de formulário têm UMA altura padrão (`h-8`)
+
+Todos os controles de campo do sistema têm a MESMA altura — **`h-8`** (32px): `ui/input` (usado por `InputField`/`DateField`/`DateTimeField`), `Select`, `MultiSelect` (`data-[size=default]:h-8`), `Combobox`. Um controle mais alto/baixo que os vizinhos numa linha de filtros/formulário é bug visual.
+
+- **Ao escrever um gatilho/controle custom** (um botão que imita input), use **`h-8`** — nunca `h-9`/`h-10`. Espelhe o `ui/input`: `h-8`, `rounded-lg`, `px-2.5`, `text-sm`.
+- Não misture alturas de controle na mesma linha; se um controle destoa, o errado é ele, não os outros.
+
+### Erro de campo não desloca componentes vizinhos
+
+Quando um campo (`InputField`/`NumberField`/`Combobox`/…) exibe mensagem de erro, ele cresce **para baixo** (a mensagem entra abaixo do input). Numa linha ou grid com outros elementos (botão ao lado, colunas irmãs), isso **não pode empurrar/deslocar os vizinhos**.
+
+- **Linhas/grids de campos usam `items-start`** — nunca `items-end` ou `items-center` numa linha/grid onde algum campo pode exibir erro. `items-end`/`items-center` ancoram pelo rodapé/meio, que "desce" quando o erro aparece, arrastando os irmãos junto. Com `items-start`, cada item fica preso no topo e o erro cresce para baixo sem mover nada.
+- **Botão/adorno ao lado de um campo**: alinhe-o ao **input**, não ao rodapé do campo (que cresce com o erro). Com o label acima, use `items-start` na linha e desça o botão pela altura do label (`mt-7` ≈ label `text-sm` + `gap-2` do campo) para casar com o input.
+
 ### Ações da tela ficam no topo (`PageActions`)
 
 **Toda ação primária/contextual de uma tela (Novo, Editar, Excluir, Salvar, Cancelar…) vai no topo, via [`PageActions`](src/components/global/layout/pageActions.tsx)** — o slot exportável que renderiza (por portal) no header global do [`Layout`](src/components/global/layout/layout.tsx), ao lado do breadcrumb. **Não** crie uma barra de ações própria no corpo da tela, nem espalhe botões de ação soltos no meio do conteúdo.
@@ -705,6 +779,17 @@ Há **dois** padrões de ação sobre itens, e eles **não se misturam**. Antes 
 - **Não** use ícones de ação soltos na célula nem um layout de ações diferente por tela — clique na linha (editar) + "⋯" (demais ações) é o padrão único.
 
 Resumo: **item de lista de topo → clique na linha edita; "⋯" só para Excluir/toggle de status/ações auxiliares (e some se não sobrar ação permitida). Filho de um detalhe → inline, sem save próprio, tudo pelo `Salvar alterações` do topo do pai.**
+
+#### Exceção: telas operacionais usam ações em BOTÕES visíveis (`RowActions`)
+
+Numa tela **operacional** — aquela em que a mesma pessoa repete as etapas do fluxo dezenas de vezes por dia — as ações da linha viram **botões-ícone visíveis** em vez do menu "⋯": esconder cada ação atrás de um menu custa um clique a mais em **cada** repetição. Isso é **decisão de produto por tela**, não um estilo alternativo: registre aqui a tela que adotou o padrão, e mantenha o menu "⋯" em todas as outras (inclusive nas demais telas do mesmo módulo).
+
+- Use **[`RowActions`](src/components/global/rowActions/rowActions.tsx)** (célula de tabela montada à mão) ou o helper **`rowActionsColumn`** ([`dataTable/columnHelpers.tsx`](src/components/global/dataTable/columnHelpers.tsx)) numa `DataTable`. **Não** monte fileira de botões à mão na célula.
+- Cada ação declara `key`, `label` (pt-BR — vira tooltip **e** `aria-label`), `icon` e um **`tone`**. A cor é o que o operador reconhece **antes** de ler o tooltip, então a mesma ação mantém o mesmo tom em todas as telas. Os tons vêm de tokens do `index.css` — **nunca** cor solta via `className`. Precisa de um tom novo? Token + entrada em `toneClasses`.
+- **Etapa indisponível fica visível e desabilitada** (`disabled` + `disabledReason`), nunca omitida: a posição de cada ícone não muda entre linhas (memória muscular) e o tooltip diz o que falta. Só omita a ação quando ela **não existe** para aquela linha (ex.: sem permissão).
+- **Não duplique um caminho que já existe na célula.** Se a ação já é oferecida na coluna do assunto dela, não entra também na coluna de ações.
+- **Ação que NAVEGA declara `href`** (além do `onSelect`): o botão vira um `<a>` de verdade, então **clique do meio** e Ctrl/Cmd/Shift+clique abrem em **nova aba** — o operador abre a etapa sem perder a listagem filtrada — e o clique normal segue a navegação SPA. Ação que abre modal/confirmação não tem `href`.
+- **Continua sem `Editar` na coluna de ações**: o clique na linha já abre a edição.
 
 ### HTTP
 
@@ -871,6 +956,8 @@ Veja o padrão demonstrado na story `Padrões/OptimisticUpdate` no Storybook (`n
 
 - Sessão por cookie HTTP-only. `SessionValidation` ([`src/components/global/layout/sessionValidation.tsx`](src/components/global/layout/sessionValidation.tsx)) valida antes de renderizar rotas protegidas.
 - Usuário fica em `useSessionStore` ([`src/hooks/useSessionStore.ts`](src/hooks/useSessionStore.ts)) — Zustand.
+- **Logout por inatividade é global**, montado uma vez no `Layout` via [`IdleTimeout`](src/components/global/layout/idleTimeout.tsx) (lógica em [`useIdleLogout`](src/hooks/useIdleLogout.ts)): passado o tempo de inatividade, abre um modal com contagem regressiva (~60s) e encerra a sessão se o usuário não continuar. O tempo efetivo vem do backend em `user.idleTimeoutMinutes` (usuário → config de sistema → default); o valor no client é só rede de segurança. Nenhuma tela implementa timeout próprio.
+- **Permissões** chegam achatadas em `user.permissions` e são consultadas com [`hasPermission`](src/lib/permissions.ts) **apenas para ajustar a UI** (esconder item de menu, botão ou coluna de ação). O backend continua sendo a autoridade — nunca trate o gate de UI como segurança.
 
 ### Estado global
 
@@ -881,7 +968,9 @@ Veja o padrão demonstrado na story `Padrões/OptimisticUpdate` no Storybook (`n
 ### Formulários
 
 - Use `useZodForm` ([`src/lib/forms/useZodForm.ts`](src/lib/forms/useZodForm.ts)) — integra React Hook Form com schema Zod.
-- Componentes de campo prontos em [`src/components/global/form/`](src/components/global/form) (`inputField`, `numberField`, `select`, `dateField`, `dateTimeField`, `checkbox`, `switch`, `textArea`, `multiSelect`).
+- Componentes de campo prontos em [`src/components/global/form/`](src/components/global/form) (`inputField`, `numberField`, `decimalField`, `select`, `combobox`, `dateField`, `dateTimeField`, `checkbox`, `switch`, `textArea`, `multiSelect`).
+- **Lista grande → `Combobox` (pesquisável); lista curta → `Select`.** O `Select` global liga a busca sozinho acima do limiar de opções (`searchable` explícito força). Campo opcional ganha `clearable` (botão "X" que volta a `''`) — sem ele o usuário não consegue desfazer a escolha.
+- **`DecimalField` × `NumberField`:** `NumberField` mascara na digitação (casas fixas, estilo centavos) — é o padrão para quantidade/moeda. [`DecimalField`](src/components/global/form/decimalField.tsx) é para digitação **livre** em pt-BR, quando a precisão é do usuário e varia por registro (ex.: uma medição onde "0,0003" e "200" convivem).
 - **Campo numérico/monetário/decimal SEMPRE via [`NumberField`](src/components/global/form/numberField.tsx) — nunca `<input type="number">`.** Ele aplica máscara pt-BR (milhar "." e decimal ",") **na digitação e na exibição**, guarda um `number` no RHF (não a string), e mostra o zero mascarado como placeholder. Para dinheiro passe `prefix="R$ "`; ajuste as casas com `maxDecimals` (padrão 2; ex.: 5 para taxas/índices). O `type="number"` nativo não formata milhar/decimal pt-BR, aceita `e`/`+`/`-` e tem setas indesejadas — não use para quantidade/valor.
 - Todos seguem o mesmo padrão: aceitam **uncontrolled** (`{...register('campo')}` + `errors`) **ou controlled** (`control` + `name` + opcional `rules`/`defaultValue`). Discriminated union impede misturar os dois modos.
 - Veja [`src/screens/session/login.tsx`](src/screens/session/login.tsx) e a story `Formulário/Formulário completo` no Storybook como referência.
@@ -901,6 +990,34 @@ Há **duas** situações de `readOnly` num `InputField`/`TextArea` — não as c
 
 - **Travado por permissão** (o form inteiro em modo leitura por falta de `update`): o campo continua **focável e selecionável** de propósito — o usuário precisa **copiar** o valor (CNPJ, código do lote, etc.). É o `readOnly` documentado em "Detalhe = Edição". **Não** o torne inerte.
 - **Campo-espelho de exibição** (mostra um valor **derivado** que o usuário nunca digita — ex.: "Cliente" espelhando o pedido de origem, "Peso líquido" calculado): renderizar como `<input readOnly>` deixa ele **focável e com realce de seleção**, o que parece um bug ("o campo disabled ainda seleciona texto"). Torne-o **inerte**: `readOnly` + `tabIndex={-1}` + `className="pointer-events-none select-none"`. Fica com o visual de campo (alinha no grid), mas sem foco nem seleção. Julgue pelo campo: se o valor vale a pena copiar (código de lote/corrida), mantenha selecionável; se é só um espelho de contexto, deixe inerte.
+
+#### `Combobox`/`Select`/`MultiSelect`: `portal` do popover — automático pelo contexto
+
+O `portal` dos campos com popover (`Combobox`, `Select` searchable, `MultiSelect`) é **resolvido automaticamente pelo contexto**, via [`InModalContext`](src/components/global/modal/inModalContext.ts): o `Modal` global embrulha seus `children` num provider, e os campos leem `useInModal()` para decidir o default — **`portal={false}` dentro de modal, `portal={true}` em página**. **Não passe `portal` manualmente** (a prop explícita é um escape hatch que sempre vence).
+
+- **Página (o caso comum): não declare `portal`.** Fora de modal o campo portala e ancora sob o campo. Nunca force `portal={false}` numa página — o popover é `position: fixed` e um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora, abrindo no canto da tela.
+- **Dentro de um `Modal`/Dialog/Drawer: nada a fazer.** O contexto já faz o campo não portalar — o popover fica **na frente** do modal (não atrás) e a **roda do mouse rola** a lista (o `react-remove-scroll` só libera o wheel em conteúdo NÃO portalado). Vale automaticamente para qualquer `Modal`, inclusive telas novas.
+- Resumo: **o `Modal` sinaliza; os campos decidem sozinhos.** Popover abrindo no canto errado numa página = algum `portal={false}` indevido.
+
+#### Máscara de quantidade e valor (pt-BR) — obrigatória (preenchimento E exibição)
+
+**Todo campo de quantidade (com casas decimais), valor monetário ou valor numérico com decimais usa máscara pt-BR (milhar `.` e decimal `,`) — sem exceção.** Vale tanto para **entrada** (formulários) quanto para **exibição** (tabelas, detalhes, resumos). Número decimal cru na tela (`1500` onde deveria ser `1.500,00`, ou `10000` ambíguo num input) é bug de produto.
+
+- **Entrada:** use o [`NumberField`](src/components/global/form/numberField.tsx) — mascara **na digitação** (os dígitos preenchem da direita, `150000` → `1.500,00`) e guarda um **`number`** no formulário. Para dinheiro, `prefix="R$ "`. **Nunca** `<InputField type="number">` para quantidade/valor.
+- **Schema:** o campo é `z.number(...)` (o `NumberField` já entrega número); vazio → `undefined` → o `z.number` acusa "obrigatório". Não use `z.coerce.number()` sobre string mascarada.
+- **Exibição:** formate com `toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })` — ou reaproveite o valor **já formatado** quando o backend o entrega pronto. Não jogue número cru em célula/rótulo.
+
+#### Field-arrays grandes: assinaturas ESCOPADAS (nunca `useWatch` no array inteiro)
+
+**Em formulário com `useFieldArray` (lista de linhas, ainda mais se aninhado), NUNCA use `useWatch({ name: 'arrayInteiro' })` no componente pai.** Isso assina TODAS as mudanças de QUALQUER campo de QUALQUER linha; digitar uma tecla dispara re-render do pai e, em cascata, de **todas** as linhas — o formulário "trava independente de onde se mexe".
+
+- **A lista/estrutura vem do `useFieldArray`** (`fields`) — ele re-renderiza só em mudança **estrutural** (append/remove/move/replace), não a cada tecla. Se o pai precisa de `replace` e um filho precisa de `fields`, pegue ambos do mesmo `useFieldArray` e **passe `fields` como prop** (evite dois `useFieldArray` no mesmo `name`).
+- **Cada linha é um COMPONENTE próprio** (`<Row index={i} />`) que assina só o **seu** estado com ``useWatch({ name: `arr.${i}.campo` })``. Digitar numa linha re-renderiza no máximo aquela linha.
+- **Dados estáticos da linha** (nome, unidade, grupo) saem do `fields[i]`, não de `useWatch`.
+- **Agregados** (ex.: "selecionar todos") assinam só a projeção necessária: ``useWatch({ name: fields.map((_, i) => `arr.${i}.flag`) })`` — não o array inteiro.
+- **Efeito que reage à MUDANÇA de um campo compara com o valor ANTERIOR (ref), nunca um guard "montou".** Sob **StrictMode** o efeito roda 2× no mount e o guard de mount dispara na 2ª passada — sujando o form (`shouldDirty`) e **sobrescrevendo valores carregados** (Descartar/Salvar aparecem sem edição). Use `const prevRef = useRef(campo); useEffect(() => { if (prevRef.current === campo) return; prevRef.current = campo; ...reset... }, [campo])`.
+- **Memoize a linha (`React.memo`) com callbacks ESTÁVEIS** — para adicionar/remover um item montar só a linha nova. Handlers recebem o índice por parâmetro e são `useCallback` estáveis; `options` memoizadas. Sem isso, `React.memo` não segura (props com identidade nova a cada render).
+- **Regras de hooks:** todos os `useWatch` da linha vêm ANTES de qualquer `return` condicional.
 
 #### Cobertura obrigatória com Zod
 
@@ -966,18 +1083,55 @@ Wrappers sobre primitivos do shadcn que padronizam API, defaults visuais (inclui
 
 Use estes antes de cair direto no `components/ui/`:
 
-| Abstração       | Caminho                                                                                    | Quando usar                                                                                                                                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Card`          | [`card/card.tsx`](src/components/global/card/card.tsx)                                     | Container de conteúdo com `title` + `description` + `children`. Já trata `bg-card`, borda, `shadow-sm` (light) e `dark:shadow-none`.                                                                                    |
-| `Modal`         | [`modal/modal.tsx`](src/components/global/modal/modal.tsx)                                 | Dialog no desktop, drawer no mobile. Props: `title`, `description`, `children`, `open`, `setOpen`, `size` (`default`/`lg`/`xl` — largura no desktop; no mobile é sempre full-width), `onBack`/`backLabel` (ver abaixo). |
-| `ModalFooter`   | [`modal/modal.tsx`](src/components/global/modal/modal.tsx)                                 | Rodapé de ações de um modal. Envolve o(s) botão(ões) de ação (Salvar/Criar) para que ocupem **100% da largura** do modal (empilhados quando há mais de um). Padrão único de todos os modais de ação.                    |
-| `Empty`         | [`empty/empty.tsx`](src/components/global/empty/empty.tsx)                                 | Empty state. Props: `title`, `description` (obrigatórios), `icon`, `children` (opcionais).                                                                                                                              |
-| `Skeleton*`     | [`skeleton/skeleton.tsx`](src/components/global/skeleton/skeleton.tsx)                     | `SkeletonText`, `SkeletonValue`, `SkeletonBadge`, `SkeletonAvatar`. **Skeleton só no dado, nunca no card inteiro** — rótulos, títulos e estrutura permanecem visíveis durante o load.                                   |
-| `Button`        | [`button/button.tsx`](src/components/global/button/button.tsx)                             | Estende o Button do shadcn com prop `loading` — exibe spinner antes do label e desabilita o botão automaticamente. Mantém todas as variantes/props do primitivo.                                                        |
-| `ConfirmDialog` | [`confirmDialog/confirmDialog.tsx`](src/components/global/confirmDialog/confirmDialog.tsx) | Confirmação para ações destrutivas/reversíveis. **Uncontrolled** (`trigger` prop, estado interno) ou **controlled** (`open`/`setOpen`). Loading interno automático e auto-close.                                        |
-| `PageHeader`    | [`pageHeader/pageHeader.tsx`](src/components/global/pageHeader/pageHeader.tsx)             | Cabeçalho padrão de tela: `title`, `description`, `actions` opcional. Usado em `home/`.                                                                                                                                 |
-| `InfoTooltip`   | [`infoTooltip/infoTooltip.tsx`](src/components/global/infoTooltip/infoTooltip.tsx)         | Ícone `i` com tooltip acessível (hover/foco) ao lado de um rótulo/campo. Traz o próprio `TooltipProvider`; props `label`/`triggerLabel`/`className`.                                                                    |
-| `FileDropzone`  | [`fileDropzone/fileDropzone.tsx`](src/components/global/fileDropzone/fileDropzone.tsx)     | Área de upload com arrastar-e-soltar, seleção por clique/teclado e prévia (nome + tamanho + remover). Controlado por `file`/`onFileChange`; props `accept`/`hint`/`disabled`/`id`.                                      |
+| Abstração          | Caminho                                                                                                | Quando usar                                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Card`             | [`card/card.tsx`](src/components/global/card/card.tsx)                                                 | Container de conteúdo com `title` + `description` + `children`. Já trata `bg-card`, borda, `shadow-sm` (light) e `dark:shadow-none`. Com `expanded`/`onToggle` vira **seção recolhível** (ver abaixo).                                                                       |
+| `Modal`            | [`modal/modal.tsx`](src/components/global/modal/modal.tsx)                                             | Dialog no desktop, drawer no mobile. Props: `title`, `description`, `children`, `open`, `setOpen`, `size` (`default`/`lg`/`xl`/`2xl` — largura no desktop; no mobile é sempre full-width), `icon`, `onBack`/`backLabel` (ver abaixo).                                        |
+| `ModalFooter`      | [`modal/modal.tsx`](src/components/global/modal/modal.tsx)                                             | Rodapé de ações de um modal. Envolve o(s) botão(ões) de ação (Salvar/Criar) para que ocupem **100% da largura** do modal (empilhados quando há mais de um). Padrão único de todos os modais de ação.                                                                         |
+| `Empty`            | [`empty/empty.tsx`](src/components/global/empty/empty.tsx)                                             | Empty state. Props: `title`, `description` (obrigatórios), `icon`, `children` (opcionais).                                                                                                                                                                                   |
+| `Skeleton*`        | [`skeleton/skeleton.tsx`](src/components/global/skeleton/skeleton.tsx)                                 | `SkeletonText`, `SkeletonValue`, `SkeletonBadge`, `SkeletonAvatar`. **Skeleton só no dado, nunca no card inteiro** — rótulos, títulos e estrutura permanecem visíveis durante o load.                                                                                        |
+| `Button`           | [`button/button.tsx`](src/components/global/button/button.tsx)                                         | Estende o Button do shadcn com `loading` (spinner + desabilita) e **`tooltip`** (tooltip no hover/foco + `aria-label` — obrigatório em botão só-ícone; traz o próprio `TooltipProvider`). Mantém variantes/props do primitivo.                                               |
+| `ConfirmDialog`    | [`confirmDialog/confirmDialog.tsx`](src/components/global/confirmDialog/confirmDialog.tsx)             | Confirmação para ações destrutivas/reversíveis. **Uncontrolled** (`trigger` prop, estado interno) ou **controlled** (`open`/`setOpen`). Loading interno automático e auto-close.                                                                                             |
+| `PageHeader`       | [`pageHeader/pageHeader.tsx`](src/components/global/pageHeader/pageHeader.tsx)                         | Cabeçalho padrão de tela: `title`, `description`, `actions` opcional. Usado em `home/`.                                                                                                                                                                                      |
+| `InfoTooltip`      | [`infoTooltip/infoTooltip.tsx`](src/components/global/infoTooltip/infoTooltip.tsx)                     | Ícone `i` com tooltip acessível (hover/foco) ao lado de um rótulo/campo. Traz o próprio `TooltipProvider`; props `label`/`triggerLabel`/`className`.                                                                                                                         |
+| `FileDropzone`     | [`fileDropzone/fileDropzone.tsx`](src/components/global/fileDropzone/fileDropzone.tsx)                 | Área de upload com arrastar-e-soltar, seleção por clique/teclado e prévia (nome + tamanho + remover). **Um** arquivo (`file`/`onFileChange`) ou **vários** (`multiple` + `onFilesChange`, sem prévia — quem consome é dono da lista); props `accept`/`hint`/`disabled`/`id`. |
+| `ImageUploadField` | [`imageUploadField/imageUploadField.tsx`](src/components/global/imageUploadField/imageUploadField.tsx) | Upload + galeria de imagens (prévia, abrir em nova aba, remover). Sobe as fotos em paralelo e anexa só as que subiram. **Nunca duplique dropzone+galeria numa tela** — use este. `type` separa seções de foto que dividem o mesmo array.                                     |
+| `RowActions`       | [`rowActions/rowActions.tsx`](src/components/global/rowActions/rowActions.tsx)                         | Ações de linha como botões-ícone visíveis (`tone` por ação, `disabled`+`disabledReason`, `href` que vira link de verdade). **Só em telas operacionais** — ver "Ações de item". Numa `DataTable`, use `rowActionsColumn`.                                                     |
+| `CollapsibleCard`  | [`collapsibleCard/collapsibleCard.tsx`](src/components/global/collapsibleCard/collapsibleCard.tsx)     | **Item de lista** recolhível (cabeçalho tonado + resumo + ações, corpo animado). Controlado por `expanded`/`onToggle`. Para **seção de página**, use o `Card` com `expanded` — ver abaixo.                                                                                   |
+| `FormTable`        | [`formTable/formTable.tsx`](src/components/global/formTable/formTable.tsx)                             | "Chrome" de tabela dentro de formulário — coleção editável inline (borda arredondada + cabeçalho na marca). Não confundir com a `DataTable` (listagem paginada server-side).                                                                                                 |
+
+#### Seção de página recolhível: `Card` com `expanded`/`onToggle` (não `CollapsibleCard`)
+
+Tela longa cujas seções o usuário quer recolher usa o **`Card` global** com `expanded` + `onToggle` — o título vira o gatilho (chevron + clique) e o corpo anima a altura. **Não** troque o `Card` pelo `CollapsibleCard` para isso: o `CollapsibleCard` é o **item de lista** (fundo `bg-muted/40`, borda fina, sem `description`) usado dentro de um card. Os dois convivem: seção de página = `Card`; item dentro dela = `CollapsibleCard`.
+
+- **Controlado, sempre.** A tela guarda quais seções estão abertas (`Set` no `useState`) — é o que permite decidir o padrão de abertura e **revelar** uma seção recolhida por conta própria.
+- **Erro de validação escondido não pode existir (regra dura).** Se uma seção recolhida tem campo obrigatório, o `Salvar` falharia **em silêncio** — o formulário não submete e a mensagem fica dentro do bloco fechado. No `handleSubmit`, passe o **segundo callback** (`onInvalid`) e abra as seções com erro, mapeando campo → seção num `Map` (nunca objeto indexado por variável).
+- **O que abre por padrão depende do modo:** no **detalhe**, só a primeira (identificação) — a tela abre no que identifica o registro; na **criação**, todas as seções, porque é preciso preencher todas para cadastrar.
+- Os campos das seções recolhidas **desmontam**, mas o valor permanece no formulário (o RHF não desregistra ao desmontar) — recolher uma seção não perde o que foi digitado nem altera o que é enviado.
+
+**Botão "Adicionar item" de uma coleção INLINE fica alinhado à DIREITA (regra dura).** Os botões de append de um `useFieldArray` que ficam **no corpo** (abaixo/acima da lista, não no cabeçalho de um `Card`) são **outline** (`Plus` + texto) e **sempre alinhados à direita** — envolva num `<div className="flex justify-end">`. Nunca à esquerda. (Quando a ação é a primária **de um `Card`**, ela vai no `action` do cabeçalho; este caso é o "adicionar mais uma linha" de uma coleção editável inline, que não tem cabeçalho próprio.)
+
+```tsx
+{
+  !readOnly && (
+    <div className="flex justify-end">
+      <Button type="button" variant="outline" onClick={() => append(NEW_ITEM)}>
+        <Plus />
+        Adicionar contato
+      </Button>
+    </div>
+  );
+}
+```
+
+#### Cabeçalho do modal: faixa própria, e o `icon` do contexto
+
+O cabeçalho de **todo** modal vem numa **faixa própria** (`bg-muted/40`, o mesmo tom do `CollapsibleCard`), separada do corpo por `border-b` e com um **fio de 2px na cor da marca** no topo. Isso vive no `Modal` global (`HEADER_BAND`) — nenhuma tela configura nada. Sem a faixa, o cabeçalho divide o mesmo plano branco dos campos e o modal fica sem âncora, enquanto **toda tabela do sistema** já tem cabeçalho tonado.
+
+- **Passe o `icon`** quando existir um ícone que **levou** até o modal — o item do menu, a ação da linha, o ícone do módulo. Ele aparece num quadrado tonado (`bg-primary/15`) à esquerda do título e faz o modal **continuar** o passo anterior em vez de recomeçar num bloco de texto. É decorativo (`aria-hidden`): quem nomeia o modal é o `title`. Reaproveite o **mesmo** mapa de ícones que o passo anterior usa — não duplique o mapa.
+- Ícone escolhido em tempo de execução vai por **`createElement`**, não por variável `Maiúscula` usada como JSX: `const Icon = cond ? A : B; <Icon />` no corpo do render dispara `react-hooks/static-components`.
+- **Não** ponha `overflow-hidden` no `DialogContent` para arredondar a faixa. O `DialogContent` tem `transform`, logo é o bloco de contenção dos filhos `fixed`, e o popover dos `Select`/`Combobox` — que dentro do modal **não** portalam — seria **recortado**. Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela. O `p-0 gap-0` do `DialogContent` é o que deixa a faixa sangrar até a borda; o padding passou para a faixa e para o corpo.
+- **Tabela larga dentro de modal rola DENTRO dele.** O corpo é um `ScrollArea` com `min-w-0`: sem isso, como item do grid do `DialogContent`, ele cresceria até a largura do conteúdo (`min-width:auto`) e a tabela **vazaria** para fora do modal. Com `min-w-0`, o `overflow-x-auto` do container da tabela aciona o scroll lateral dentro do modal. Vale para qualquer tabela larga, sem ajuste por tela.
 
 **`Modal` — botões de ação (`ModalFooter`), dirty-gate e botão de voltar (`onBack`):** três regras para todo modal de ação seguir o mesmo padrão.
 
@@ -990,11 +1144,13 @@ Use estes antes de cair direto no `components/ui/`:
 **Lista suspensa (dropdown/popover) dentro de Dialog/Drawer: scroll NATIVO + conteúdo NÃO portalado.** Para a roda do mouse rolar a lista de um popover que vive dentro de um `Modal` (opções de um combobox, menu longo, etc.), **duas** coisas precisam ser verdade — uma só não basta:
 
 1. **Container de overflow nativo** (`max-h-* overflow-y-auto`), nunca o `ScrollArea` do Radix. O `react-remove-scroll` do Dialog/Drawer só reconhece scroll nativo.
-2. **Conteúdo do popover NÃO portalado** (`PopoverContent portal={false}`). O `react-remove-scroll` bloqueia o wheel em tudo que está **fora** da subárvore do Dialog; como o `PopoverContent` portala para o `body` por padrão, a lista fica fora dessa subárvore e o wheel é bloqueado mesmo com overflow nativo. Com `portal={false}` o conteúdo renderiza dentro do Dialog (dentro do allowlist do RemoveScroll) e a roda funciona. O Popover é `position: fixed` (Floating UI), então não portalar **não** causa recorte por `overflow` nem erra o posicionamento.
+2. **Conteúdo do popover NÃO portalado.** O `react-remove-scroll` bloqueia o wheel em tudo que está **fora** da subárvore do Dialog; conteúdo portalado no `body` fica fora dessa subárvore e o wheel é bloqueado mesmo com overflow nativo. Não portalado, o conteúdo renderiza dentro do Dialog (no allowlist do RemoveScroll) e a roda funciona; como o Popover é `position: fixed` (Floating UI), não portalar **não** causa recorte por `overflow` nem erra o posicionamento.
 
-Sintoma de esquecer o item 2: a lista rola pela barra mas **não pela roda do mouse** dentro do modal. O `PopoverContent` de [`ui/popover.tsx`](src/components/ui/popover.tsx) já expõe o prop `portal` (padrão `true`) exatamente para esse opt-out — passe `portal={false}` quando o popover vive dentro de um `Modal`.
+Sintoma de esquecer o item 2: a lista rola pela barra mas **não pela roda do mouse** dentro do modal.
 
-**Regra dura — qualquer campo com popover próprio (Combobox/Select pesquisável) nasce com `portal={true}` (padrão de PÁGINA).** Se você criar uma abstração de campo que abre um `Popover` (ex.: um `Combobox` pesquisável, um `Select` com busca), o default do `portal` **tem que ser `true`** (portala — igual ao `PopoverContent` e ao `Select`), **nunca `false`**. Em página o popover é `position: fixed`; sem portal, um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora e ele abre no **canto da tela**. O único lugar que passa `portal={false}` é **DENTRO de um `Modal`/Dialog/Drawer** (pelo motivo da roda do mouse acima). Nunca inverta esse default "para consertar o scroll do modal" — isso quebra TODAS as telas de página. Resumo: **default portala (página ancora); `portal={false}` só dentro de modal.** Mantenha o mesmo default entre todos os componentes que envolvem `Popover` — defaults divergentes entre `Select` e um `Combobox` são a origem clássica desse bug reaparecer.
+**Para os campos globais (`Combobox`/`Select` searchable/`MultiSelect`) o item 2 é automático:** o `Modal` marca a subárvore via [`InModalContext`](src/components/global/modal/inModalContext.ts) e os campos leem `useInModal()` para não portalar dentro de modal (e portalar em página). **Não passe `portal={false}` manualmente** — o contexto resolve. O `PopoverContent` ([`ui/popover.tsx`](src/components/ui/popover.tsx)) segue com o prop `portal` (padrão `true`) para popovers montados à mão fora desses campos; nesses casos, passe `portal={false}` quando estiverem dentro de um Dialog/Drawer.
+
+**Regra dura — campo com popover próprio decide o `portal` pelo CONTEXTO, nunca por um default fixo.** Se você criar uma abstração de campo que abre um `Popover`, o default vem de `useInModal()` (`portal = props.portal ?? !inModal`): portala em página, não portala em modal. Em página o popover é `position: fixed`; sem portal, um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora e ele abre no **canto da tela**. Dentro de modal, portalar abre o popover **atrás** dele e mata a roda do mouse. Nunca chumbe `false` "para consertar o scroll do modal" (quebra todas as páginas) nem `true` "para ancorar" (quebra todos os modais) — e mantenha o mesmo mecanismo em todos os campos: defaults divergentes entre `Select` e `Combobox` são a origem clássica desse bug reaparecer.
 
 **Empilhamento (z-index) do popover portalado — não regredir.** Como o popover portala no `body`, ele disputa empilhamento no root e cobriria o header/breadcrumb se tivesse z-index maior. A convenção é: **`PopoverContent` = `z-30`** (`ui/popover.tsx`) + `collisionPadding={{ top: 68 }}` (fica abaixo do header quando possível); **header/breadcrumb do layout = `z-40` com `bg-background`** (`layout.tsx` — ACIMA do popover para ele nunca cobrir o breadcrumb/ações, sem vazar pelo bg opaco); **sidebar mobile (Sheet) e modais = `z-50`** (cobrem o header quando abertos). Não suba o header acima de 50 (quebra mobile/modais) nem o popover acima de 30 (voltaria a cobrir o breadcrumb).
 
@@ -1054,21 +1210,40 @@ A cor primária do sistema vive em **uma única variável** no topo de [`src/ind
 
 ```css
 :root {
-  --brand: oklch(0.46 0.235 308.433); /* roxo Vallen (#7D00B8) */
-  --brand-foreground: oklch(1 0 0);
+  --brand: oklch(0.488 0.243 264.376); /* marca do projeto */
+  --brand-foreground: oklch(0.97 0.014 254.604);
 }
 .dark {
-  --brand: oklch(0.639 0.273 312.16); /* mesma marca, tonada para dark */
+  --brand: oklch(0.424 0.199 265.638); /* mesma marca, tonada para dark */
 }
 ```
 
 `--primary`, `--primary-foreground`, `--sidebar-primary` e `--sidebar-primary-foreground` são apenas aliases (`var(--brand)`) — não duplicar valores. Pra trocar a marca em um novo projeto, mude apenas `--brand` (light + dark).
 
-**A paleta de gráficos faz parte da marca.** `--chart-1..5` é um ramp de 5 tons harmonizados com `--brand` (mesmo hue, luminosidade escalonada) — não uma paleta independente. Ao trocar a marca, atualize o ramp de gráficos para o novo hue, senão os gráficos destoam do resto da UI. Mantenha a estrutura de luminosidade (do tom mais claro no `--chart-1` ao mais escuro no `--chart-5`) e mude só o hue/croma para acompanhar `--brand`.
+**Há DUAS paletas de gráfico, com papéis diferentes — não as confunda:**
+
+- **`--chart-1..5` (SEQUENCIAL) faz parte da marca**: um ramp de 5 tons harmonizados com `--brand` (mesmo hue, luminosidade escalonada). Serve para **uma** medida em intensidades — barra empilhada, área, mapa de calor. Ao trocar a marca, regere o ramp no novo hue, senão os gráficos destoam do resto da UI (mantenha a estrutura de luminosidade: mais claro no `--chart-1`, mais escuro no `--chart-5`).
+- **`--series-1..5` (CATEGÓRICA) NÃO faz parte da marca**: hues distintos, para **séries diferentes** no mesmo gráfico, onde o leitor precisa separar uma linha da outra. **Não regere ao trocar a identidade** — os valores são validados como conjunto (contraste entre pares adjacentes em visão normal **e** em deficiência de cor, nas duas superfícies). A **ordem dos slots é o mecanismo de segurança**: use sempre na sequência, nunca ciclando nem escolhendo "a que combina". Como dois dos tons ficam abaixo de 3:1 no fundo claro, a legenda e o traçado de cada série carregam a identidade **junto** com a cor (nunca só a cor).
+
+Tons do mesmo hue não se distinguem entre si: usar o ramp sequencial para séries diferentes é o erro clássico.
 
 **Não fazem parte da marca**: `--ring`/`--sidebar-ring` (neutros, convenção shadcn) e os tokens neutros (background, border, muted, etc.).
 
 **Dark mode em superfícies "card-like"**: use `bg-card` em vez de `bg-background` (o `.dark` já clareia `--card` em relação ao `--background` pra dar elevação) e adicione `dark:shadow-none` — sombras não rendem em fundo escuro. O `Card` global já faz isso automaticamente.
+
+### Tags e badges — cor semântica vem do tema (regra dura)
+
+Toda tag/pílula ([`Badge`](src/components/ui/badge.tsx)) tira a cor de uma **variante semântica**, e a cor de cada variante vive **só** nos tokens da paleta de status em [`src/index.css`](src/index.css) (`--success`, `--info`, `--warning`, `--destructive`, calibrados para contraste AA em claro **e** dark). Nunca escreva cor solta numa tela (`bg-green-100`, `text-red-700`, `className` com cor) nem use `variant="default"` (cor sólida da marca) como tag — texto branco sobre a marca reprova no contraste e destoa das tags soft-tint. As variantes soft-tint têm o mesmo tratamento (texto na cor cheia sobre fundo com 10%/20% do tom).
+
+Mapa de significado (use a variante, não invente cor):
+
+- **`success`** (verde) — positivo / ativo / concluído.
+- **`info`** (azul) — informativo / em andamento.
+- **`warning`** (âmbar) — atenção / pendência.
+- **`destructive`** (vermelho) — erro / negativo / destrutivo.
+- **`secondary`** (cinza) e **`outline`** (contorno) — **neutro**: rótulos e **totalizadores** (contadores/somatórios como "5 registros", "Total: 1.500 kg"). Totalizador **não tem status** → não recebe cor semântica (nada de arco-íris ciclando `success`/`info`).
+
+Mapa de status→variante que se repete numa tela vive num `Map<string, BadgeVariant>` (sem object-injection). Ao precisar de uma cor nova, **adicione um token na paleta + uma variante no `Badge`** (e atualize a story `stories/ui-primitivos/badge`), nunca cor solta na tela. O mesmo vale para o `Alert` global e para os tons do `RowActions`.
 
 ### Tipografia
 
@@ -1101,10 +1276,64 @@ Regras:
 - **Defaults limpos**: filtro no valor default não suja a URL (ex.: `status=all` não precisa aparecer) — mantenha a URL curta e o link legível.
 - **Restaura ao voltar pelo breadcrumb.** Ao entrar num detalhe/criar, a URL da lista (com seus filtros) sai da barra; para voltar à listagem com os mesmos filtros, o `Layout` lembra o último search de cada rota via [`rememberSearch`](src/lib/navigation/searchMemory.ts) e o breadcrumb reanexa esse search no link de volta (`getRememberedSearch`). A URL segue como fonte de verdade (reload restaura pela própria URL); a memória só cobre o "voltar" onde a URL de destino não carrega mais os filtros.
 
+#### Voltar para a listagem preserva os filtros — use `useReturnToList` (regra dura)
+
+**Todo retorno de um detalhe/criação para a listagem usa [`useReturnToList(listPath)`](src/hooks/useReturnToList.ts)** — depois de salvar, criar, excluir e no `Cancelar`/`Descartar`. Ele lê o último search daquele caminho no [`searchMemory`](src/lib/navigation/searchMemory.ts) (alimentado a cada navegação pelo `Layout`, e usado também pelo breadcrumb) e o reaplica.
+
+- **`navigate({ to: '/lista' })` cru é regressão**: a URL do detalhe não carrega os filtros da lista, então a listagem reabre limpa e a busca do usuário é descartada. Quem revisa vários registros do mesmo filtro refiltra a cada um.
+- Deep link/F5 direto no detalhe cai na listagem sem filtro — a memória reinicia no reload e a URL volta a ser a fonte de verdade. É o comportamento esperado, não um caso a tratar.
+- Quando a tela pode ter sido aberta a partir de **mais de um lugar**, o retorno certo é "para onde o usuário veio" (`history.back`) — intenções diferentes, hooks diferentes.
+- **Ao escrever o e2e de uma tela dessas**, a asserção do retorno é `waitForURL(/\/lista\?filters=/)` (a listagem **com** o filtro), não `'**/lista'`. Assertar a URL limpa passa com o bug de volta.
+
+### Barra de filtros e cabeçalho de tela — padrão visual (obrigatório)
+
+Telas de **listagem / consulta / relatório** seguem o MESMO padrão visual da barra de filtros da `DataTable` ([`dataTable/filters.tsx`](src/components/global/dataTable/filters.tsx)). Quando a tela **não** usa `DataTable` e monta uma barra própria, replique esse padrão — não invente layout:
+
+- **Filtros NÃO ficam dentro de card.** Os campos de filtro ficam soltos no corpo da tela — **nunca** dentro de `Card`/`bg-card`/`rounded-md border p-4`.
+- **Layout dos campos = `flex flex-wrap items-end gap-4`, cada campo com largura fixa `w-full sm:w-60`.** **Nunca** use `grid` com nº fixo de colunas (`lg:grid-cols-3` etc.) — trava em poucas colunas e desperdiça largura. Com `flex-wrap` + `w-60`, cabem ~6 campos por linha no FullHD e a barra **reflui sozinha**.
+- **`w-full sm:w-60` é a largura de TODO campo de filtro** — texto, `Select`, `Combobox`, `MultiSelect`, numérico, data. Larguras variadas na mesma barra desalinham a linha e fazem a tela parecer improvisada. O tamanho **não** acompanha o conteúdo esperado: um campo de 2 dígitos tem a mesma largura de um de código.
+  - **Sem exceção, nem para `DateTimeField`.** Ele cabe em `sm:w-60`: os três adornos (limpar/relógio/calendário) ficam AGRUPADOS num flex à direita e o input reserva `pr-22`. Se um campo novo não couber, **conserte o campo** (agrupe adornos, reduza padding) em vez de alargar a coluna.
+  - Filtro de **faixa** (data/número) são dois campos `sm:w-60` lado a lado — não um campo largo.
+- **Sem bloco de título/descrição no corpo da tela.** Não use `PageHeader` em tela de listagem/consulta/relatório — o **breadcrumb global** (via `staticData.breadcrumb`) já identifica a tela. (O `PageHeader` é reservado a telas tipo dashboard/`home`.) Ações da tela vão no `PageActions` (topo).
+- **Botões da barra = padrão da `DataTable`**: alinhados à direita, **"Limpar"** (`variant="ghost"`) + **"Buscar"** (`variant="default"`), ambos com **altura padrão** — **NUNCA** `size="sm"` nesses dois.
+- **Ícones padrão (todas as telas):** "Buscar" leva **lupa** (`Search`) e "Limpar"/"Limpar filtros" leva **borracha** (`Eraser`), sempre antes do texto. Não crie botão de buscar/limpar sem esses ícones.
+- **O texto do botão que aplica os filtros é "Buscar"** — nunca "Filtrar", "Aplicar" ou similar. O que limpa é "Limpar".
+- **Totalizadores/badges da tela ficam na MESMA linha dos botões**, à esquerda deles (slot "leading", `mr-auto`) — é o `filtersLeadingActions` da `DataTable`. Não empilhe os badges numa faixa separada acima do conteúdo.
+
+#### TODOS os filtros esperam o "Buscar" — sem exceção por tipo de campo (regra dura)
+
+**Nenhum campo de filtro aplica sozinho.** Vale para **todos** eles: texto, `Select`, `Combobox`, `MultiSelect`, data, switch e os **atalhos/presets**. Todo campo escreve num **rascunho local** (`useState`) e só o **"Buscar"** promove o rascunho para a URL/consulta.
+
+Por quê: misturar campos que filtram na hora com campos que esperam o botão é o pior dos mundos — o usuário troca o select (a tela muda), digita no texto (nada acontece) e conclui que o filtro travou. Ou pior: aplica um select por engano e perde o resultado que estava analisando.
+
+- Cada campo é **controlado pelo rascunho** (`value={xDraft}`), nunca pelo valor aplicado vindo da URL. Quem filtra a lista continua sendo o valor **aplicado**.
+- **Ressincronize o rascunho quando a URL mudar por fora** (voltar/avançar do navegador, link compartilhado): compare com o valor anterior em `useState`, sem `useEffect`.
+- **`Limpar` reseta o rascunho E a URL**, senão o campo continua exibindo o filtro antigo.
+- **Preset/atalho só PREENCHE o rascunho** (e destaca-se comparando com o rascunho, não com o valor aplicado); quem dispara é o "Buscar". Atalhos podem ser `size="sm" variant="outline"` — são controles auxiliares.
+- `Enter` num campo de texto equivale a clicar em "Buscar".
+- Toda tela com filtro tem o par **"Limpar" + "Buscar"** — se não tem, está fora do padrão.
+
+Exceção: filtro puramente **client-side de refino instantâneo** dentro de um resultado já carregado só é aceitável se **não houver** botão "Buscar" na tela — nunca conviva os dois comportamentos na mesma barra.
+
+### Tabelas — cabeçalho na cor da marca (regra dura)
+
+**Toda tabela do sistema tem o cabeçalho num tom claro da marca (`bg-primary/35`) com texto escuro (`text-foreground`, o padrão do `TableHead`).** O estilo está **embutido na base** ([`components/ui/table.tsx`](src/components/ui/table.tsx) → `TableHeader`), então **toda** tabela que usa o primitivo `Table` herda o cabeçalho na marca **automaticamente** — `DataTable`, `FormTable` e qualquer tabela montada à mão com `Table`/`TableHeader`. Numa tela nova não há o que configurar.
+
+- **Nunca monte tabela com `<table>`/`<thead>` cru** (HTML nativo). Isso pula o cabeçalho tonado **e** todo o estilo do primitivo (padding, borda, truncamento, scroll horizontal). Use `Table`/`TableHeader`/`TableRow`/`TableCell` de [`@/components/ui/table`](src/components/ui/table.tsx), ou uma das abstrações:
+  - **`DataTable`** ([`components/global/dataTable`](src/components/global/dataTable)) — listagens paginadas/filtráveis server-side.
+  - **`FormTable` + `FormTableHeader`** ([`components/global/formTable/formTable.tsx`](src/components/global/formTable/formTable.tsx)) — tabelas de **formulário/coleção editável inline**. Dão o container com cantos arredondados + o cabeçalho da marca; componha com `TableBody`/`TableRow`/`TableCell` (reexportados).
+- **Não sobrescreva o fundo do cabeçalho para um tom neutro** (`bg-muted`, ou sem fundo). O tom claro da marca é o padrão do sistema — trocá-lo é regressão.
+- `bg-primary/35` é calibrado para light e dark, com o texto escuro padrão (contraste AA). Se precisar montar o cabeçalho manualmente, replique `bg-primary/35 hover:bg-primary/35` na linha do cabeçalho (padrão do `FormTableHeader`).
+
 ### DataTable
 
 - Padrão de tabela com paginação/filtro server-side em [`src/components/global/dataTable/`](src/components/global/dataTable). Use [`useDataTableQuery`](src/components/global/dataTable/useDataTableQuery.ts) (estado da URL via [`useDataTableUrlQuery`](src/components/global/dataTable/useDataTableUrlQuery.ts)).
 - Empty state automático: quando não há resultados e há filtros ativos, exibe um `Empty` com botão "Limpar filtros" que dispara `onSearch({})`. Sem filtros, mostra "Ainda não há registros para exibir.".
+- **Linha clicável (`onRowClick` + `getRowHref`)** dá à linha comportamento de link nativo: clique do meio e Ctrl/Cmd/Shift+clique abrem em nova aba. Arrastar para **selecionar texto** numa linha clicável **não** navega (a tabela detecta a seleção ativa) — não recrie esse guard na tela.
+- **`rowCount`** (opt-in) habilita a "Próxima" por total exato, para quando o número de **linhas exibidas** não corresponde ao tamanho da página (um item da página vira várias linhas). Sem ele, vale a heurística `data.length < pageSize`, que dispensa `COUNT` no servidor.
+- **`renderSubRow`** expande uma sub-linha com detalhes que não cabem numa célula; a coluna do chevron é **injetada automaticamente** (não declare uma). Expandir e clicar na linha são gestos independentes.
+- **`filtersLeadingActions`** coloca conteúdo (totalizadores, avisos) na linha dos botões "Limpar"/"Buscar", à esquerda — ver "Barra de filtros".
+- Helpers de coluna em [`columnHelpers.tsx`](src/components/global/dataTable/columnHelpers.tsx): `selectColumn`, `actionsColumn` (menu "⋯"), `rowActionsColumn` (botões visíveis), `expandColumn`, `SortableHeader` e **`SortMenuHeader`** (menu de ordenação para coluna que reúne vários campos, onde um `SortableHeader` de campo único não dá conta).
 - Exemplo vivo: story `DataTable/ServerSide` no Storybook.
 
 #### Colunas ordenáveis pelo cabeçalho — padrão obrigatório

@@ -2,7 +2,10 @@ import { Download, Filter, Plus, Settings2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
-import { PageActions, PageActionsSlot } from '@/components/global/layout/pageActions';
+import {
+  PageActions,
+  PageActionsSlot,
+} from '@/components/global/layout/pageActions';
 import { Button } from '@/components/global/button/button';
 import { Card } from '@/components/global/card/card';
 import {
@@ -139,10 +142,7 @@ export const ComDropdown: Story = {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button
-          aria-label="Salvar"
-          onClick={() => toast.success('Salvo.')}
-        >
+        <Button aria-label="Salvar" onClick={() => toast.success('Salvo.')}>
           Salvar
         </Button>
       </PageActions>
@@ -152,7 +152,8 @@ export const ComDropdown: Story = {
         description="Dropdown 'Mais' agrega ações menos frequentes (duplicar, arquivar, excluir)."
       >
         <Typography variant="muted">
-          Padrão usado nos detalhes de registro quando há mais de três operações.
+          Padrão usado nos detalhes de registro quando há mais de três
+          operações.
         </Typography>
       </Card>
     </FakeHeaderShell>

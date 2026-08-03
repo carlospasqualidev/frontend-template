@@ -91,7 +91,10 @@ function VitrineDemo() {
         />
       </Card>
 
-      <Card title="Buscável" description="Campo de busca quando há muitas opções.">
+      <Card
+        title="Buscável"
+        description="Campo de busca quando há muitas opções."
+      >
         <MultiSelect
           id="ms-search"
           name="searchable"

@@ -115,12 +115,21 @@ function DateFieldBase({
     [resolvedValue]
   );
 
+  // Último valor que ESTE campo comitou. O efeito de sincronia abaixo ignora o
+  // eco do próprio commit para não apagar o texto que está sendo digitado.
+  const lastCommittedValue = React.useRef(resolvedValue);
+
   React.useEffect(() => {
+    if (resolvedValue === lastCommittedValue.current) return;
+
+    lastCommittedValue.current = resolvedValue;
     setDisplayValue(formatDisplayValue(resolvedValue));
   }, [resolvedValue]);
 
   const commitValue = React.useCallback(
     (nextValue: string) => {
+      lastCommittedValue.current = nextValue;
+
       if (!isControlled) {
         setInternalValue(nextValue);
       }
@@ -132,17 +141,22 @@ function DateFieldBase({
 
   const handleInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const nextDisplayValue = maskDisplayValue(event.target.value);
+      const inputEvent = event.nativeEvent as InputEvent | undefined;
+      const isDeleting = inputEvent?.inputType?.startsWith('delete') ?? false;
+      // Apagando, a máscara não reinsere a barra do ano — senão ela volta a cada
+      // tecla e o campo trava em `28/07/`, sem deixar apagar para trás.
+      const nextDisplayValue = maskDisplayValue(event.target.value, {
+        shouldAutoStartYear: !isDeleting,
+      });
       const nextFormValue = parseDisplayValueToFormValue(nextDisplayValue);
 
       setDisplayValue(nextDisplayValue);
 
-      if (!nextDisplayValue) {
-        commitValue('');
-        return;
-      }
-
-      commitValue(nextFormValue ?? nextDisplayValue);
+      // O valor do campo é SEMPRE ISO (`aaaa-mm-dd`) ou vazio. Enquanto a data
+      // digitada está incompleta/inexistente (`28/07/026`), o campo vale vazio —
+      // o texto parcial fica só na exibição. Comitá-lo levava a data pt-BR crua
+      // para quem consome o campo (filtro → query string → backend).
+      commitValue(nextFormValue ?? '');
     },
     [commitValue]
   );
@@ -190,9 +204,13 @@ function DateFieldBase({
   const handleInputBlur = React.useCallback(() => {
     const nextFormValue = parseDisplayValueToFormValue(displayValue);
 
-    if (nextFormValue) {
-      setDisplayValue(formatDisplayValue(nextFormValue));
-      commitValue(nextFormValue);
+    // Ao sair do campo, data incompleta/inexistente é descartada: o campo fica
+    // vazio em vez de exibir um texto que não corresponde a nenhuma data. Campo
+    // já vazio não passa por aqui — comitar apagaria "não preenchido" por
+    // "vazio" e sujaria o formulário só por passar o foco pelo campo.
+    if (displayValue) {
+      setDisplayValue(nextFormValue ? formatDisplayValue(nextFormValue) : '');
+      commitValue(nextFormValue ?? '');
     }
 
     onBlur?.();

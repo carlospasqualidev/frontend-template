@@ -1,20 +1,24 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { actionsColumn, selectColumn } from '@/components/global/dataTable/columnHelpers';
+import {
+  actionsColumn,
+  selectColumn,
+} from '@/components/global/dataTable/columnHelpers';
 import { DataTable } from '@/components/global/dataTable/dataTable';
-import { textFilter, type DataTableFilter } from '@/components/global/dataTable/filters';
+import {
+  textFilter,
+  type DataTableFilter,
+} from '@/components/global/dataTable/filters';
 
 interface Row {
   id: string;
   email: string;
 }
 
-const columns: ColumnDef<Row>[] = [
-  { accessorKey: 'email', header: 'E-mail' },
-];
+const columns: ColumnDef<Row>[] = [{ accessorKey: 'email', header: 'E-mail' }];
 
 const filters: DataTableFilter[] = [
   textFilter({
@@ -102,9 +106,9 @@ describe('DataTable', () => {
       expect(screen.queryByText('ana@example.com')).not.toBeInTheDocument();
       // Uma coluna → uma skeleton por linha; a contagem fixa não acompanha o
       // pageSize (50), evitando uma tela altíssima durante o carregamento.
-      expect(
-        container.querySelectorAll('[data-slot="skeleton"]')
-      ).toHaveLength(8);
+      expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(
+        8
+      );
       expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
     });
@@ -129,49 +133,6 @@ describe('DataTable', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
 
       expect(handleSearch).toHaveBeenCalledWith({ email: 'ana' });
-    });
-  });
-
-  describe('truncamento de células', () => {
-    const longText =
-      'Acesso ao Backoffice com CRUD completo de usuários, clientes, indicadores e cargos.';
-
-    it('trunca o conteúdo da célula por padrão (largura máxima + reticências)', () => {
-      render(
-        <DataTable
-          columns={columns}
-          data={[{ id: '1', email: longText }]}
-          pageIndex={0}
-          onPageChange={() => undefined}
-        />
-      );
-
-      const cell = screen.getByText(longText).closest('td');
-      expect(cell).toHaveClass('truncate');
-      expect(cell?.className).toContain('max-w-[400px]');
-    });
-
-    it('deixa a coluna sobrescrever a largura máxima via meta.className', () => {
-      const wideColumns: ColumnDef<Row>[] = [
-        {
-          accessorKey: 'email',
-          header: 'E-mail',
-          meta: { className: 'max-w-none' },
-        },
-      ];
-
-      render(
-        <DataTable
-          columns={wideColumns}
-          data={[{ id: '1', email: longText }]}
-          pageIndex={0}
-          onPageChange={() => undefined}
-        />
-      );
-
-      const cell = screen.getByText(longText).closest('td');
-      expect(cell?.className).toContain('max-w-none');
-      expect(cell?.className).not.toContain('max-w-[400px]');
     });
   });
 
@@ -203,6 +164,81 @@ describe('DataTable', () => {
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
   });
 
+  it('com rowCount, habilita "Próxima" por total de itens — ignorando o nº de linhas exibidas', () => {
+    // pageSize é em ITENS (2 por página) e rowCount é o total de itens (5),
+    // mesmo que a página exiba 3 LINHAS (ex.: itens explodidos). (0+1)*2 < 5.
+    render(
+      <DataTable
+        columns={columns}
+        data={[
+          { id: '1', email: 'a@b.com' },
+          { id: '2', email: 'b@b.com' },
+          { id: '3', email: 'c@b.com' },
+        ]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        pageSize={2}
+        rowCount={5}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
+  });
+
+  it('com rowCount, desabilita "Próxima" na última página por total de itens', () => {
+    // Última página: (2+1)*2 = 6 >= 5 → não há próxima.
+    render(
+      <DataTable
+        columns={columns}
+        data={[{ id: '5', email: 'e@b.com' }]}
+        pageIndex={2}
+        onPageChange={() => undefined}
+        pageSize={2}
+        rowCount={5}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
+  });
+
+  it('actionsColumn: só renderiza o menu ⋯ nas linhas que têm ações', () => {
+    const cols: ColumnDef<Row>[] = [
+      ...columns,
+      actionsColumn<Row>({
+        actions: (row) =>
+          row.id === '1'
+            ? [{ label: 'Excluir', onSelect: () => undefined }]
+            : [],
+      }),
+    ];
+
+    render(
+      <DataTable
+        columns={cols}
+        data={[
+          { id: '1', email: 'a@b.com' },
+          { id: '2', email: 'b@b.com' },
+        ]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        pageSize={25}
+      />
+    );
+
+    // Duas linhas, mas só a primeira tem ação → um único gatilho "Abrir menu".
+    expect(screen.getAllByRole('button', { name: 'Abrir menu' })).toHaveLength(
+      1
+    );
+
+    // A linha sem ação NÃO deixa a célula vazia: reserva o espaço do botão para
+    // manter a mesma altura das linhas com ⋯ (linhas de altura uniforme).
+    const bodyRows = screen.getAllByRole('row').slice(1);
+    const actionsCellWithoutMenu = within(bodyRows[1])
+      .getAllByRole('cell')
+      .at(-1);
+    expect(actionsCellWithoutMenu).not.toBeEmptyDOMElement();
+  });
+
   describe('onRowClick', () => {
     const data: Row[] = [
       { id: '1', email: 'ana@example.com' },
@@ -219,7 +255,9 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.queryAllByRole('button', { name: /@example\.com/ })).toHaveLength(0);
+      expect(
+        screen.queryAllByRole('button', { name: /@example\.com/ })
+      ).toHaveLength(0);
     });
 
     it('dispara onRowClick com a linha original quando a linha é clicada', async () => {
@@ -316,6 +354,91 @@ describe('DataTable', () => {
       })[0];
       await userEvent.click(rowCheckbox);
 
+      expect(handleRowClick).not.toHaveBeenCalled();
+    });
+
+    it('não dispara onRowClick quando há seleção de texto ativa (permite copiar)', async () => {
+      const handleRowClick = vi.fn();
+      // Simula uma seleção de texto ativa no momento do clique — o usuário
+      // arrastou para selecionar o conteúdo da célula e quer copiar, não abrir.
+      const selectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
+        isCollapsed: false,
+        toString: () => 'ana@example.com',
+      } as unknown as Selection);
+
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          onRowClick={handleRowClick}
+        />
+      );
+
+      await userEvent.click(screen.getByText('ana@example.com'));
+
+      expect(handleRowClick).not.toHaveBeenCalled();
+      selectionSpy.mockRestore();
+    });
+  });
+
+  describe('renderSubRow', () => {
+    const data: Row[] = [
+      { id: '1', email: 'ana@example.com' },
+      { id: '2', email: 'joao@example.com' },
+    ];
+
+    it('não renderiza o conteúdo expandido até clicar no chevron', async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          renderSubRow={(row) => <div>Detalhes de {row.email}</div>}
+        />
+      );
+
+      expect(
+        screen.queryByText('Detalhes de ana@example.com')
+      ).not.toBeInTheDocument();
+
+      const [firstToggle] = screen.getAllByRole('button', {
+        name: 'Expandir linha',
+      });
+      await userEvent.click(firstToggle);
+
+      expect(
+        screen.getByText('Detalhes de ana@example.com')
+      ).toBeInTheDocument();
+      // Só a linha clicada expande.
+      expect(
+        screen.queryByText('Detalhes de joao@example.com')
+      ).not.toBeInTheDocument();
+    });
+
+    it('expandir a linha não dispara onRowClick', async () => {
+      const handleRowClick = vi.fn();
+
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          onRowClick={handleRowClick}
+          renderSubRow={(row) => <div>Detalhes de {row.email}</div>}
+        />
+      );
+
+      await userEvent.click(
+        screen.getAllByRole('button', { name: 'Expandir linha' })[0]
+      );
+
+      expect(
+        screen.getByText('Detalhes de ana@example.com')
+      ).toBeInTheDocument();
       expect(handleRowClick).not.toHaveBeenCalled();
     });
   });

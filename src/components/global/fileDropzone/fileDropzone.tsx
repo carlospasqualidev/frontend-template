@@ -5,11 +5,7 @@ import { Button } from '@/components/global/button/button';
 import { Typography } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-interface IFileDropzone {
-  /** Arquivo selecionado (controlado). `null` = nenhum. */
-  file: File | null;
-  /** Disparado ao escolher, arrastar-e-soltar ou remover (`null`). */
-  onFileChange: (file: File | null) => void;
+interface IFileDropzoneBase {
   /** Filtro de extensões/MIME, ex.: `".xlsx,.csv"` (igual ao input nativo). */
   accept?: string;
   /** Texto auxiliar abaixo do título (ex.: formatos aceitos). */
@@ -17,6 +13,33 @@ interface IFileDropzone {
   disabled?: boolean;
   /** `id` do input escondido — associe uma `FieldLabel htmlFor` a ele. */
   id?: string;
+}
+
+interface ISingleFileDropzone extends IFileDropzoneBase {
+  /** Arquivo selecionado (controlado). `null` = nenhum. */
+  file: File | null;
+  /** Disparado ao escolher, arrastar-e-soltar ou remover (`null`). */
+  onFileChange: (file: File | null) => void;
+  multiple?: never;
+  onFilesChange?: never;
+}
+
+interface IMultipleFileDropzone extends IFileDropzoneBase {
+  /** Permite escolher/soltar vários arquivos de uma vez. */
+  multiple: true;
+  /**
+   * Disparado com TODOS os arquivos escolhidos (nunca vazio). Quem consome é
+   * dono da lista/prévia — o dropzone não guarda seleção neste modo.
+   */
+  onFilesChange: (files: File[]) => void;
+  file?: never;
+  onFileChange?: never;
+}
+
+type IFileDropzone = ISingleFileDropzone | IMultipleFileDropzone;
+
+function isMultiple(props: IFileDropzone): props is IMultipleFileDropzone {
+  return 'multiple' in props;
 }
 
 function formatFileSize(bytes: number): string {
@@ -50,21 +73,22 @@ function matchesAccept(file: File, accept?: string): boolean {
 }
 
 /**
- * Área de upload com arrastar-e-soltar, seleção por clique/teclado e prévia do
- * arquivo escolhido (nome + tamanho + remover). Controlado por `file`.
+ * Área de upload com arrastar-e-soltar e seleção por clique/teclado.
+ *
+ * - **Um arquivo** (`file` + `onFileChange`): mostra a prévia do escolhido
+ *   (nome + tamanho + remover).
+ * - **Vários** (`multiple` + `onFilesChange`): entrega todos os arquivos de uma
+ *   vez e segue mostrando a área de soltar — a prévia é responsabilidade de quem
+ *   consome (ex.: a galeria do `ImageUploadField`).
  */
-export function FileDropzone({
-  file,
-  onFileChange,
-  accept,
-  hint,
-  disabled,
-  id,
-}: IFileDropzone) {
+export function FileDropzone(props: IFileDropzone) {
+  const { accept, hint, disabled, id } = props;
+  const multiple = isMultiple(props);
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const selectedFile = isMultiple(props) ? null : props.file;
 
   function openPicker() {
     if (!disabled) inputRef.current?.click();
@@ -74,12 +98,36 @@ export function FileDropzone({
     if (inputRef.current) inputRef.current.value = '';
   }
 
+  function clearSelection() {
+    if (isMultiple(props)) return;
+    props.onFileChange(null);
+    clearInput();
+  }
+
+  function handleInputChange(files: FileList | null) {
+    const selected = Array.from(files ?? []);
+    if (isMultiple(props)) {
+      if (selected.length > 0) props.onFilesChange(selected);
+      // Sem seleção guardada: limpar deixa reescolher as MESMAS fotos depois.
+      clearInput();
+      return;
+    }
+    props.onFileChange(selected.at(0) ?? null);
+  }
+
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
     if (disabled) return;
-    const dropped = event.dataTransfer.files?.[0];
-    if (dropped && matchesAccept(dropped, accept)) onFileChange(dropped);
+    const dropped = Array.from(event.dataTransfer.files ?? []).filter((item) =>
+      matchesAccept(item, accept)
+    );
+    if (dropped.length === 0) return;
+    if (isMultiple(props)) {
+      props.onFilesChange(dropped);
+      return;
+    }
+    props.onFileChange(dropped.at(0)!);
   }
 
   return (
@@ -90,32 +138,30 @@ export function FileDropzone({
         id={inputId}
         type="file"
         accept={accept}
+        multiple={multiple}
         className="sr-only"
         disabled={disabled}
-        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        onChange={(event) => handleInputChange(event.target.files)}
       />
 
-      {file ? (
+      {selectedFile ? (
         <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
           <FileSpreadsheet className="size-8 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <Typography as="p" variant="small" className="truncate font-medium">
-              {file.name}
+              {selectedFile.name}
             </Typography>
             <Typography as="p" variant="muted">
-              {formatFileSize(file.size)}
+              {formatFileSize(selectedFile.size)}
             </Typography>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Remover arquivo"
+            tooltip="Remover arquivo"
             disabled={disabled}
-            onClick={() => {
-              onFileChange(null);
-              clearInput();
-            }}
+            onClick={clearSelection}
           >
             <X />
           </Button>
@@ -125,7 +171,7 @@ export function FileDropzone({
           role="button"
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
-          aria-label="Selecionar arquivo"
+          aria-label={multiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}
           onClick={openPicker}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -149,7 +195,9 @@ export function FileDropzone({
         >
           <Upload className="size-6 text-muted-foreground" />
           <Typography as="p" variant="small" className="font-medium">
-            Arraste o arquivo aqui ou clique para selecionar
+            {multiple
+              ? 'Arraste os arquivos aqui ou clique para selecionar'
+              : 'Arraste o arquivo aqui ou clique para selecionar'}
           </Typography>
           {hint && (
             <Typography as="p" variant="muted">

@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useInModal } from '@/components/global/modal/inModalContext';
 
 export type MultiSelectOption = {
   value: string;
@@ -38,8 +39,45 @@ type MultiSelectProps = {
   id?: string;
   name?: string;
   className?: string;
+  /**
+   * Exibe um botão "X" no gatilho para limpar toda a seleção sem abrir a lista.
+   * Só aparece quando há itens selecionados e o campo não está desabilitado.
+   * (A lista também tem o "Limpar seleção" no rodapé quando aberta.)
+   */
+  clearable?: boolean;
   'aria-invalid'?: boolean;
 };
+
+/**
+ * Linha de opção memoizada: só re-renderiza quando o SEU `checked` muda (ou a
+ * opção/handler). Sem isto, marcar uma opção re-renderizava TODAS as linhas
+ * (cada uma com um `Checkbox`), o que pesa com muitas opções. `onToggle` precisa
+ * ser estável (ver `useCallback` no componente pai).
+ */
+const MultiSelectOptionRow = React.memo(function MultiSelectOptionRow({
+  option,
+  checked,
+  onToggle,
+}: {
+  option: MultiSelectOption;
+  checked: boolean;
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <label
+      data-slot="multi-select-item"
+      data-checked={checked || undefined}
+      className="flex w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 pl-1.5 text-sm select-none hover:bg-accent hover:text-accent-foreground has-disabled:pointer-events-none has-disabled:opacity-50"
+    >
+      <Checkbox
+        checked={checked}
+        disabled={option.disabled}
+        onCheckedChange={() => onToggle(option.value)}
+      />
+      <span className="flex-1">{option.label}</span>
+    </label>
+  );
+});
 
 function MultiSelect({
   options,
@@ -56,6 +94,7 @@ function MultiSelect({
   id,
   name,
   className,
+  clearable,
   'aria-invalid': ariaInvalid,
 }: MultiSelectProps) {
   const isControlled = value !== undefined;
@@ -64,41 +103,66 @@ function MultiSelect({
   );
   const selected = isControlled ? value : internalValue;
 
+  // Dentro de um `Modal` não portala (o popover abriria atrás dele e a roda do
+  // mouse não rolaria a lista); em página portala. Ver `inModalContext`.
+  const inModal = useInModal();
+
   const [search, setSearch] = React.useState('');
 
-  const setSelected = (next: string[]) => {
-    if (!isControlled) {
-      setInternalValue(next);
-    }
-    onValueChange?.(next);
-  };
+  // Lookup O(1) do estado selecionado (evita `selected.includes` por opção).
+  const selectedSet = React.useMemo(() => new Set(selected), [selected]);
 
-  const toggle = (optionValue: string) => {
-    setSelected(
-      selected.includes(optionValue)
-        ? selected.filter((item) => item !== optionValue)
-        : [...selected, optionValue]
-    );
-  };
+  // `commit`/`toggle` ESTÁVEIS (deps vazias, via refs) — para as linhas memoizadas
+  // não re-renderizarem só porque o handler mudou de identidade a cada render.
+  // Os refs são sincronizados em efeito (nunca escritos durante o render).
+  const selectedRef = React.useRef(selected);
+  const isControlledRef = React.useRef(isControlled);
+  const onValueChangeRef = React.useRef(onValueChange);
+  React.useEffect(() => {
+    selectedRef.current = selected;
+    isControlledRef.current = isControlled;
+    onValueChangeRef.current = onValueChange;
+  });
 
-  const selectedLabels = options
-    .filter((option) => selected.includes(option.value))
-    .map((option) => option.label);
+  const commit = React.useCallback((next: string[]) => {
+    if (!isControlledRef.current) setInternalValue(next);
+    onValueChangeRef.current?.(next);
+  }, []);
 
-  const display =
-    selectedLabels.length === 0
-      ? null
-      : selectedLabels.length > maxDisplay
-        ? `${selectedLabels.length} selecionados`
-        : selectedLabels.join(', ');
+  const toggle = React.useCallback(
+    (optionValue: string) => {
+      const current = selectedRef.current;
+      commit(
+        current.includes(optionValue)
+          ? current.filter((item) => item !== optionValue)
+          : [...current, optionValue]
+      );
+    },
+    [commit]
+  );
+
+  const display = React.useMemo(() => {
+    const labels = options
+      .filter((option) => selectedSet.has(option.value))
+      .map((option) => option.label);
+    if (labels.length === 0) return null;
+    return labels.length > maxDisplay
+      ? `${labels.length} selecionados`
+      : labels.join(', ');
+  }, [options, selectedSet, maxDisplay]);
+
+  const showClear = Boolean(clearable && selected.length > 0 && !disabled);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredOptions =
-    searchable && normalizedSearch
-      ? options.filter((option) =>
-          option.label.toLowerCase().includes(normalizedSearch)
-        )
-      : options;
+  const filteredOptions = React.useMemo(
+    () =>
+      searchable && normalizedSearch
+        ? options.filter((option) =>
+            option.label.toLowerCase().includes(normalizedSearch)
+          )
+        : options,
+    [options, searchable, normalizedSearch]
+  );
 
   return (
     <Popover
@@ -108,29 +172,42 @@ function MultiSelect({
         }
       }}
     >
-      <PopoverTrigger
-        id={id}
-        type="button"
-        role="combobox"
-        disabled={disabled}
-        aria-invalid={ariaInvalid}
-        data-slot="multi-select-trigger"
-        data-size={size}
-        className={cn(
-          "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-          className
-        )}
-      >
-        <span
+      <div className={cn('relative w-fit', className)}>
+        <PopoverTrigger
+          id={id}
+          type="button"
+          role="combobox"
+          disabled={disabled}
+          aria-invalid={ariaInvalid}
+          data-slot="multi-select-trigger"
+          data-size={size}
           className={cn(
-            'line-clamp-1 text-left',
-            !display && 'text-muted-foreground'
+            'flex w-full cursor-pointer items-center rounded-lg border border-input bg-transparent py-2 pr-8 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
+            showClear && 'pr-14'
           )}
         >
-          {display ?? placeholder}
-        </span>
-        <ChevronDownIcon className="size-4 text-muted-foreground" />
-      </PopoverTrigger>
+          <span
+            className={cn(
+              'line-clamp-1 flex-1 text-left',
+              !display && 'text-muted-foreground'
+            )}
+          >
+            {display ?? placeholder}
+          </span>
+        </PopoverTrigger>
+        {/* Seta e X são absolutos (fora do flow) para o X não empurrar/cobrir a seta. */}
+        <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        {showClear && (
+          <button
+            type="button"
+            aria-label="Limpar seleção"
+            onClick={() => commit([])}
+            className="absolute top-1/2 right-8 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:hover:bg-muted/50"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
+      </div>
 
       {name &&
         selected.map((item) => (
@@ -139,6 +216,7 @@ function MultiSelect({
 
       <PopoverContent
         align="start"
+        portal={!inModal}
         data-slot="multi-select-content"
         className="w-(--radix-popover-trigger-width) gap-1.5 p-1"
       >
@@ -161,24 +239,14 @@ function MultiSelect({
                 {emptyText}
               </p>
             ) : (
-              filteredOptions.map((option) => {
-                const checked = selected.includes(option.value);
-                return (
-                  <label
-                    key={option.value}
-                    data-slot="multi-select-item"
-                    data-checked={checked || undefined}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 pl-1.5 text-sm select-none hover:bg-accent hover:text-accent-foreground has-disabled:pointer-events-none has-disabled:opacity-50"
-                  >
-                    <Checkbox
-                      checked={checked}
-                      disabled={option.disabled}
-                      onCheckedChange={() => toggle(option.value)}
-                    />
-                    <span className="flex-1">{option.label}</span>
-                  </label>
-                );
-              })
+              filteredOptions.map((option) => (
+                <MultiSelectOptionRow
+                  key={option.value}
+                  option={option}
+                  checked={selectedSet.has(option.value)}
+                  onToggle={toggle}
+                />
+              ))
             )}
           </div>
         </ScrollArea>
@@ -186,8 +254,8 @@ function MultiSelect({
         {selected.length > 0 && (
           <button
             type="button"
-            onClick={() => setSelected([])}
-            className="flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            onClick={() => commit([])}
+            className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <XIcon className="size-3.5" />
             Limpar seleção

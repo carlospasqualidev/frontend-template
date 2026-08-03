@@ -1,18 +1,26 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import {
+  Modal,
+  ModalFooter,
+  type ModalSize,
+} from '@/components/global/modal/modal';
 
 function Harness({
   initialOpen = false,
+  size,
   onBack,
   backLabel,
+  icon,
 }: {
   initialOpen?: boolean;
+  size?: ModalSize;
   onBack?: () => void;
   backLabel?: string;
+  icon?: ReactNode;
 }) {
   const [open, setOpen] = useState(initialOpen);
 
@@ -24,10 +32,12 @@ function Harness({
       <Modal
         open={open}
         setOpen={setOpen}
+        size={size}
         title="Editar perfil"
         description="Atualize seus dados."
         onBack={onBack}
         backLabel={backLabel}
+        icon={icon}
       >
         <p>Conteúdo do modal</p>
       </Modal>
@@ -74,25 +84,56 @@ describe('Modal (global)', () => {
     expect(screen.getByText('Editar perfil')).toBeInTheDocument();
   });
 
+  it('aplica a largura padrão no desktop', () => {
+    render(<Harness initialOpen />);
+
+    expect(screen.getByRole('dialog')).toHaveClass('sm:max-w-lg');
+  });
+
+  it('aplica a largura maior quando size="xl"', () => {
+    render(<Harness initialOpen size="xl" />);
+
+    expect(screen.getByRole('dialog')).toHaveClass('sm:max-w-5xl');
+  });
+
+  it('aplica a largura máxima quando size="2xl"', () => {
+    render(<Harness initialOpen size="2xl" />);
+
+    expect(screen.getByRole('dialog')).toHaveClass('sm:max-w-6xl');
+  });
+
   it('não mostra o botão de voltar quando onBack não é informado', () => {
     render(<Harness initialOpen />);
 
-    expect(screen.queryByRole('button', { name: 'Voltar' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Voltar' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Voltar' })
+    ).not.toBeInTheDocument();
   });
 
   it('mostra o botão de voltar com o rótulo padrão e dispara onBack ao clicar', async () => {
     const onBack = vi.fn();
     render(<Harness initialOpen onBack={onBack} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    const backButton = screen.getByRole('button', { name: 'Voltar' });
+    await userEvent.click(backButton);
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('usa backLabel como nome acessível do botão de voltar', () => {
-    render(<Harness initialOpen onBack={() => undefined} backLabel="Trocar etapa" />);
+    render(
+      <Harness initialOpen onBack={() => undefined} backLabel="Trocar opção" />
+    );
+    render(
+      <Harness initialOpen onBack={() => undefined} backLabel="Trocar opção" />
+    );
 
-    expect(screen.getByRole('button', { name: 'Trocar etapa' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Trocar opção' })
+    ).toBeInTheDocument();
   });
 });
 

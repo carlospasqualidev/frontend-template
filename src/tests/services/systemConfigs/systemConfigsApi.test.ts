@@ -43,7 +43,9 @@ describe('updateSystemConfig', () => {
     try {
       await updateSystemConfig('cfg_app_name', 'Novo Nome');
       const after = await fetchSystemConfigs();
-      expect(after.find((config) => config.id === 'cfg_app_name')?.value).toBe('Novo Nome');
+      expect(after.find((config) => config.id === 'cfg_app_name')?.value).toBe(
+        'Novo Nome'
+      );
     } finally {
       // Restaura o mock para não vazar estado entre testes.
       await updateSystemConfig('cfg_app_name', original);

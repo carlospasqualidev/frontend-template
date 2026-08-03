@@ -25,3 +25,29 @@ export function hasResponseMessage(
     typeof (value as { message: unknown }).message === 'string'
   );
 }
+
+/**
+ * Extrai a mensagem amigável de um erro da API. Cobre o formato plano
+ * (`{ message }`) e o **envelopado** em uma chave (`{ ServerMessage: { message } }`,
+ * `{ error: { message } }`, …) — comum em backends que padronizam a resposta.
+ * Retorna `null` quando não há mensagem.
+ *
+ * Confira o contrato REAL de erro do backend ao integrar: sem isto, toda falha
+ * envelopada cai no toast genérico ("Erro 400") e o usuário perde a explicação
+ * que o servidor mandou.
+ */
+export function extractResponseMessage(value: unknown): string | null {
+  if (hasResponseMessage(value)) {
+    return value.message;
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    for (const nested of Object.values(value)) {
+      if (hasResponseMessage(nested)) {
+        return nested.message;
+      }
+    }
+  }
+
+  return null;
+}

@@ -5,7 +5,10 @@ import { thenHandler, catchHandler } from './errorHandlers';
 import { env } from '@/lib/env';
 
 //#region CONFIG
-const axiosApi = axios.create({
+// Exportada para os helpers de transporte que precisam da resposta COMPLETA (o
+// `api` abaixo devolve só o `data`) — ex.: o download, que lê o nome do arquivo
+// do `Content-Disposition`.
+export const axiosApi = axios.create({
   baseURL: env.VITE_API_URL,
   withCredentials: true,
 });

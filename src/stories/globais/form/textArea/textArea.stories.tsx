@@ -25,10 +25,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const schema = z.object({
-  observations: z
-    .string()
-    .trim()
-    .min(10, 'Escreva pelo menos 10 caracteres.'),
+  observations: z.string().trim().min(10, 'Escreva pelo menos 10 caracteres.'),
 });
 
 function UncontrolledFormDemo() {

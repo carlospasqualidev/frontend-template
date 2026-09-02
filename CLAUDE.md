@@ -1062,6 +1062,7 @@ type FormData = z.infer<typeof schema>;
 - Validadas em [`src/lib/env.ts`](src/lib/env.ts) com Zod no boot — falha rápido se faltar.
 - Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example).
 - Variáveis devem começar com `VITE_` para serem expostas ao cliente.
+- **A suíte não lê `.env`.** Como o `env.ts` valida **no import**, qualquer teste cuja cadeia de imports passe por ele (`api`, `sidebar`, telas) quebra na coleta se faltar uma env — e dependeria de um `.env` local, que não é versionado. Os valores usados nos testes são fixos em `test.env` no [`vitest.config.ts`](vitest.config.ts). Portanto, env nova e **obrigatória** entra em **três** lugares: schema + [`.env.example`](.env.example) + `test.env`. Esquecer o terceiro faz o `npm test` falhar com "Variáveis de ambiente inválidas" antes de rodar qualquer teste.
 
 ### Notificações
 

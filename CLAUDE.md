@@ -91,6 +91,7 @@ inexistente.
 - Inferência só quando o tipo é óbvio pela atribuição.
 - Marque return type explicitamente em funções públicas/exportadas.
 - Use `unknown` quando o tipo é genuinamente desconhecido — restrinja antes de usar.
+- Mantenha o `tsconfig` em `strict`. Não relaxe flags (`strictNullChecks`, `noImplicitAny`…) para "fazer compilar" — conserte o tipo.
 
 ---
 
@@ -179,6 +180,7 @@ A versão enxuta mostra **o que** o bloco é (uma seção de resumo com 3 elemen
 - **Nunca** exponha stack trace ou detalhes técnicos ao usuário final — use toast/mensagens amigáveis em pt-BR.
 - Os interceptors do `api` ([`src/services/api`](src/services/api)) já exibem toasts de erro. Não duplique no chamador a menos que o caso exija tratamento específico.
 - Sem `catch` vazio que engole erro.
+- **Erros de render** são capturados pelo `ErrorBoundary` do [`App.tsx`](src/App.tsx) (com o [`ErrorFallback`](src/components/global/errorFallback/index.tsx) global e report via `sendErrorMessage`) — não por `try/catch`. Não embrulhe render em `try/catch` esperando pegar erro de componente.
 
 ---
 
@@ -260,6 +262,7 @@ Regras práticas:
 - Code-splitting por rota já está em uso (`lazyRouteComponent`) — mantenha o padrão.
 - TanStack Query: configure `staleTime` em queries que não precisam refazer a cada navegação. Não use `useEffect` + `fetch`.
 - Liste só o necessário: para tabelas grandes, use paginação server-side via [`useDataTableQuery`](src/components/global/dataTable/useDataTableQuery.ts).
+- **Não passe objeto/função inline** como prop para componente memoizado (linha de tabela, item de lista, célula custom) — recria a referência a cada render e mata a memoização. Handlers em `useCallback` estáveis, `options`/`columns` em `useMemo`.
 - Memoize (`useMemo`/`useCallback`) apenas com benefício mensurável — não por reflexo.
 
 ---
@@ -412,6 +415,8 @@ Radix (via shadcn) dá a base de a11y — foco, ARIA, navegação por teclado. M
 - **Texto sempre dentro do elemento certo.** Não envolva texto em `<div onClick={...}>` — use `<button>` (ou `<Button variant="link">`). Div clicável não é focável por teclado, não tem role de botão, não dispara em `Enter`/`Space`.
 - **Imagens precisam de `alt`.** Decorativa: `alt=""` (explícito). Informativa: descrição curta em pt-BR. Avatar: `alt={nome}` com fallback nas iniciais.
 - **Contraste mínimo de 4.5:1** para texto sobre fundo (WCAG AA). Os tokens do projeto (`text-foreground` sobre `bg-background`, `text-muted-foreground` sobre `bg-card`) já passam — desvio só com motivo claro.
+- **Estado e significado nunca só pela cor.** Status, erro, seleção e obrigatoriedade precisam de um segundo canal (texto, ícone, borda, `aria-*`): daltônico e leitor de tela não recebem "vermelho". Estado de controle vai também em ARIA (`aria-invalid`, `aria-selected`, `aria-disabled`, `aria-busy`), não apenas na classe visual.
+- **Alvo de clique mínimo de 24×24 px** (WCAG 2.2 AA, "Target Size (Minimum)"). Os tamanhos do sistema já passam (`size="icon"` = `size-8`, botão padrão `h-8`) — o erro é encolher abaixo disso ou usar um ícone nu como gatilho. Ícone pequeno ganha área pelo padding do botão, nunca pelo alvo menor.
 - **Foco inicial em Modal/Drawer/ConfirmDialog**: Radix põe foco no primeiro elemento focável; se há campo de input principal, garanta que ele seja o primeiro. Em `ConfirmDialog` destrutivo, **foco fica no botão de cancelar**, não no de confirmar (evita confirmação acidental no `Enter`).
 - **Toasts (`sonner`)**: já anunciam via `aria-live` por padrão. Não envolva toast em wrapper que sobrescreva role.
 - **Listas com seleção/navegação por teclado**: use `role="listbox"` + `role="option"` + `aria-selected`, ou simplesmente reuse `Select` / `MultiSelect` globais que já têm isso.
@@ -1230,6 +1235,16 @@ Tons do mesmo hue não se distinguem entre si: usar o ramp sequencial para séri
 **Não fazem parte da marca**: `--ring`/`--sidebar-ring` (neutros, convenção shadcn) e os tokens neutros (background, border, muted, etc.).
 
 **Dark mode em superfícies "card-like"**: use `bg-card` em vez de `bg-background` (o `.dark` já clareia `--card` em relação ao `--background` pra dar elevação) e adicione `dark:shadow-none` — sombras não rendem em fundo escuro. O `Card` global já faz isso automaticamente.
+
+### Sempre projete para claro E escuro (obrigatório)
+
+**Todo componente e toda tela nascem suportando os dois temas — não é opcional nem "depois".** O tema segue a preferência do usuário (`ToggleTheme`/`prefers-color-scheme`), então cada superfície precisa ficar correta e legível nos dois. Regressão comum: construir e olhar só no tema em que você trabalha e o outro sair quebrado (texto sem contraste, borda invisível, sombra fantasma).
+
+- **Cor só via token do tema** (as CSS vars de [`src/index.css`](src/index.css) consumidas pelas classes semânticas: `bg-card`, `text-muted-foreground`, `border-border`, `bg-primary`…) — **nunca** cor da paleta crua do Tailwind (`bg-green-100`, `text-red-700`) nem hex/`rgb()` solto num componente ou tela. Se um tom novo é necessário, adicione o token em `:root` **e** em `.dark`, e exponha-o como variante do componente (ver "Tags e badges").
+- **Verifique nos dois temas antes de considerar pronto.** Alterne o tema e confira contraste, elevação e bordas em claro e escuro. Contraste mínimo 4.5:1 (ver Acessibilidade).
+- **Elevação no dark vem de `bg-card` mais claro que `bg-background`**, não de sombra — sombra não rende em fundo escuro; use `dark:shadow-none` (o `Card` global já faz).
+- **Nada de estilo condicional em JS para tema.** Não leia o tema em JavaScript para escolher cor; use as variantes `dark:` (ou o token semântico, que já muda sozinho). Estilo condicional em JS não acompanha a troca de tema sem re-render.
+- **Ilustração/ícone/imagem também tem os dois modos**: SVG inline usa `currentColor` ou token; imagem com fundo branco precisa de tratamento (`dark:` variante ou fundo próprio), senão aparece um bloco branco no dark.
 
 ### Tags e badges — cor semântica vem do tema (regra dura)
 

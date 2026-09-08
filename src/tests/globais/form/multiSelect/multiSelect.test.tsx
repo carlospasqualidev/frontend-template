@@ -91,6 +91,12 @@ describe('MultiSelect (global, wrapper de formulário)', () => {
 
     await userEvent.click(screen.getByRole('combobox'));
     await userEvent.click(await screen.findByText('Administrador'));
+
+    // Fecha a lista ANTES de submeter. O popover é `modal` (como o `Select` do
+    // Radix): enquanto está aberto ele tranca o scroll da página e o clique
+    // fora só o dispensa — não ativa o botão embaixo. É o mesmo gesto do
+    // usuário na barra de filtros (ver `e2e/auditLogs.spec.ts`).
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
 
     expect(onValues).toHaveBeenCalledWith({ roles: ['admin'] });

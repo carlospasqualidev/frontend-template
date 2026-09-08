@@ -26,6 +26,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
+          // Sonner traz `z-index: 999999999` no próprio CSS — um número fora de
+          // qualquer escala. Trazemos o toaster para a escala de camadas do
+          // projeto (topo dela: acima de modal, popover e tooltip). Ver a seção
+          // "CAMADAS (z-index)" em `src/index.css`.
+          zIndex: 'var(--z-toast)',
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
@@ -38,11 +43,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
           // lado errado (verde chegava a virar laranja no dark) — em srgb o
           // matiz é preservado. Mistura sobre `--popover` (superfície) para tint
           // opaco.
-          '--success-bg': 'color-mix(in srgb, var(--success) 12%, var(--popover))',
-          '--success-border': 'color-mix(in srgb, var(--success) 55%, var(--popover))',
+          '--success-bg':
+            'color-mix(in srgb, var(--success) 12%, var(--popover))',
+          '--success-border':
+            'color-mix(in srgb, var(--success) 55%, var(--popover))',
           '--success-text': 'var(--success)',
-          '--error-bg': 'color-mix(in srgb, var(--destructive) 12%, var(--popover))',
-          '--error-border': 'color-mix(in srgb, var(--destructive) 55%, var(--popover))',
+          '--error-bg':
+            'color-mix(in srgb, var(--destructive) 12%, var(--popover))',
+          '--error-border':
+            'color-mix(in srgb, var(--destructive) 55%, var(--popover))',
           '--error-text': 'var(--destructive)',
         } as React.CSSProperties
       }

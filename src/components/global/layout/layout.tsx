@@ -32,11 +32,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <IdleTimeout />
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
-        {/* z-40 + bg opaco: o header/breadcrumb fica ACIMA dos popovers de
-            Select/Combobox (z-30, portalados no body) para eles nunca o cobrirem;
-            fica ABAIXO do sidebar mobile (Sheet) e dos modais (z-50). O bg-background
-            impede o popover de "vazar" através do header. */}
-        <header className="relative z-40 flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+        {/* Camada `--z-header`: ACIMA do conteúdo da página e do sidebar, ABAIXO
+            dos modais (`--z-overlay`) e dos flutuantes (`--z-floating`). O que
+            impede um popover de cobrir o breadcrumb NÃO é o z-index (ele perde
+            para os flutuantes, de propósito, para que menus abram na frente de
+            modais) e sim o `collisionPadding` de topo deles —
+            `FLOATING_COLLISION_TOP` (68px) casa com o `h-16` daqui. Ao mudar a
+            altura do header, ajuste `lib/constants/layers.ts` junto. O
+            `bg-background` mantém o header opaco sobre o conteúdo que rola. */}
+        <header className="relative z-(--z-header) flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1 cursor-pointer" />
             <Separator orientation="vertical" className="mr-2 h-5" />

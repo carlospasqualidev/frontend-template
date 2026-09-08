@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DateField } from '@/components/global/form/dateField';
+import { Modal } from '@/components/global/modal/modal';
 
 /**
  * Espelha o uso real numa barra de filtros: o valor do campo é guardado pelo pai
@@ -159,5 +160,42 @@ describe('DateField (global) — valor entregue ao consumidor', () => {
     await user.click(screen.getByLabelText('Outro campo'));
 
     expect(handleChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('DateField — camadas e portal dentro de Modal', () => {
+  /**
+   * Regressão do "o calendário abriu ATRÁS da modal". São duas garantias
+   * independentes e este teste trava a que dá para observar no DOM:
+   *
+   * 1. Dentro de um `Modal` o popover NÃO portala (`InModalContext` →
+   *    `PopoverContent`), então ele nasce DENTRO do dialog — é isso que faz a
+   *    roda do mouse funcionar (o `react-remove-scroll` do Dialog só libera o
+   *    wheel na própria subárvore).
+   * 2. `--z-floating` > `--z-overlay` (ver `src/index.css`) mantém qualquer
+   *    flutuante na frente do modal mesmo se ele portalar.
+   *
+   * O popover do Radix também tem `role="dialog"`, por isso identificamos o
+   * modal pelo nome acessível (o título).
+   */
+  it('renderiza o calendário DENTRO do dialog do modal (não portala para o body)', async () => {
+    const user = userEvent.setup();
+    render(
+      <Modal
+        open
+        setOpen={() => undefined}
+        title="Editar lote"
+        description="Descrição"
+      >
+        <DateField id="fabricacao" label="Data de fabricação" />
+      </Modal>
+    );
+
+    const modal = screen.getByRole('dialog', { name: 'Editar lote' });
+    await user.click(
+      within(modal).getByRole('button', { name: 'Abrir calendário' })
+    );
+
+    expect(await within(modal).findByRole('grid')).toBeInTheDocument();
   });
 });

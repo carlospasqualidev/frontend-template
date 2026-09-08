@@ -57,6 +57,44 @@
   color-scheme: light;
 
   /* ────────────────────────────────────────────────────────────────
+     CAMADAS (z-index) — FONTE ÚNICA DE VERDADE
+     Todo componente que empilha (portal, overlay, sticky) usa um destes
+     tokens via `z-(--z-*)`. NUNCA escreva `z-50`/`z-[999]` solto numa
+     camada global: os portais (Radix) renderizam no `body` e disputam
+     empilhamento no root, então um número avulso quebra silenciosamente
+     outro componente. (Empilhamento LOCAL — `z-10` dentro de um componente
+     que já tem `isolate`/`relative`, como as células do `Calendar` ou o
+     badge do `Avatar` — continua livre: não escapa para o root.)
+     A ordem abaixo é a ordem visual, de baixo para cima:
+
+       sidebar        → navegação fixa da página
+       sidebar-rail   → alça de redimensionar (acima do sidebar)
+       header         → header/breadcrumb do Layout (acima do conteúdo)
+       overlay        → Dialog / AlertDialog / Sheet / Drawer (+ overlays)
+       floating       → Popover / DropdownMenu / Select / HoverCard /
+                        Combobox / MultiSelect / Calendar
+       tooltip        → Tooltip (pode nascer DENTRO de um flutuante)
+       toast          → Sonner (sempre no topo, inclusive sobre modais)
+
+     REGRA DURA: `floating` fica ACIMA de `overlay`. É isso que faz o
+     calendário de um `DateField`, a lista de um `Combobox` ou um
+     `DropdownMenu` abrirem NA FRENTE de um modal — portalados ou não. O
+     inverso (o histórico `z-30` do popover) é exatamente o bug do "menu
+     abriu atrás da modal"; não volte atrás.
+
+     O header NÃO é protegido por z-index (fica ABAIXO dos flutuantes):
+     quem impede um popover de cobrir o breadcrumb é o `collisionPadding`
+     de topo (`FLOATING_COLLISION_PADDING` em `lib/constants/layers.ts`).
+     ──────────────────────────────────────────────────────────────── */
+  --z-sidebar: 10;
+  --z-sidebar-rail: 20;
+  --z-header: 40;
+  --z-overlay: 50;
+  --z-floating: 60;
+  --z-tooltip: 70;
+  --z-toast: 80;
+
+  /* ────────────────────────────────────────────────────────────────
      COR DA MARCA — altere aqui (e em .dark abaixo) para trocar a
      identidade visual entre projetos.
      ──────────────────────────────────────────────────────────────── */

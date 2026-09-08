@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DateTimeField } from '@/components/global/form/dateTimeField';
+import { Modal } from '@/components/global/modal/modal';
 import { useZodForm } from '@/lib/forms/useZodForm';
 
 const schema = z.object({
@@ -162,5 +163,30 @@ describe('DateTimeField (global) — botão "Definir horário atual"', () => {
     expect(
       await screen.findByText(/Informe a data e hora|expected string/i)
     ).toBeInTheDocument();
+  });
+});
+
+describe('DateTimeField — camadas e portal dentro de Modal', () => {
+  // Mesma regressão do `DateField`: dentro de um `Modal` o popover não portala
+  // (fica dentro do dialog) e, no eixo z, `--z-floating` > `--z-overlay`.
+  it('renderiza o calendário DENTRO do dialog do modal (não portala para o body)', async () => {
+    const user = userEvent.setup();
+    render(
+      <Modal
+        open
+        setOpen={() => undefined}
+        title="Agendar coleta"
+        description="Descrição"
+      >
+        <DateTimeField id="coleta" label="Data e hora" />
+      </Modal>
+    );
+
+    const modal = screen.getByRole('dialog', { name: 'Agendar coleta' });
+    await user.click(
+      within(modal).getByRole('button', { name: 'Abrir calendário e horário' })
+    );
+
+    expect(await within(modal).findByRole('grid')).toBeInTheDocument();
   });
 });

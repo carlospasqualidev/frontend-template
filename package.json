@@ -22,7 +22,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "clean": "node -e \"const{rmSync,existsSync}=require('node:fs');for(const p of ['dist','node_modules/.tmp','node_modules/.vite','node_modules/.cache','storybook-static','playwright-report','test-results']){if(existsSync(p)){rmSync(p,{recursive:true,force:true});console.log('removed',p);}}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:layers": "playwright test --config=playwright.storybook.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.2.8",

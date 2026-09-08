@@ -9,7 +9,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useInModal } from '@/components/global/modal/inModalContext';
 
 export type MultiSelectOption = {
   value: string;
@@ -102,10 +101,6 @@ function MultiSelect({
     defaultValue ?? []
   );
   const selected = isControlled ? value : internalValue;
-
-  // Dentro de um `Modal` não portala (o popover abriria atrás dele e a roda do
-  // mouse não rolaria a lista); em página portala. Ver `inModalContext`.
-  const inModal = useInModal();
 
   const [search, setSearch] = React.useState('');
 
@@ -216,7 +211,6 @@ function MultiSelect({
 
       <PopoverContent
         align="start"
-        portal={!inModal}
         data-slot="multi-select-content"
         className="w-(--radix-popover-trigger-width) gap-1.5 p-1"
       >

@@ -17,7 +17,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useInModal } from '@/components/global/modal/inModalContext';
 import {
   hasFieldErrors,
   resolveFieldErrors,
@@ -45,9 +44,10 @@ export interface ComboboxInputProps {
   emptyText?: string;
   disabled?: boolean;
   /**
-   * Portala o popover para o `body`. **Por padrão é automático pelo contexto**:
-   * `false` dentro de um `Modal` (senão abre atrás dele e a roda não rola a lista),
-   * `true` em página (ancora sob o campo). Só passe explicitamente para forçar.
+   * Escape hatch: força o portal do popover. **Não passe** — o `PopoverContent`
+   * já resolve pelo contexto (`false` dentro de `Modal`, para a roda do mouse
+   * rolar a lista; `true` em página, para ancorar sob o campo). O empilhamento
+   * não depende disto: `--z-floating` > `--z-overlay`.
    */
   portal?: boolean;
   /**
@@ -77,12 +77,6 @@ export function ComboboxInput({
 }: ComboboxInputProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-
-  // Default do portal pelo contexto: dentro de um `Modal` NÃO portala (o popover
-  // abriria atrás do modal e a roda do mouse não rolaria); em página, portala
-  // (ancora sob o campo). A prop `portal` explícita sempre vence.
-  const inModal = useInModal();
-  const resolvedPortal = portal ?? !inModal;
 
   const selectedLabel =
     options.find((option) => option.value === value)?.label ?? null;
@@ -140,7 +134,7 @@ export function ComboboxInput({
 
       <PopoverContent
         align="start"
-        portal={resolvedPortal}
+        portal={portal}
         className="w-(--radix-popover-trigger-width) gap-1.5 p-1"
       >
         <div className="relative">
@@ -205,10 +199,9 @@ interface ComboboxBaseProps {
   errors?: FormFieldErrors;
   disabled?: boolean;
   /**
-   * Portala o conteúdo do popover para o `body`. **Automático pelo contexto**:
-   * `false` dentro de um `Modal` (o `InModalContext` sinaliza), `true` em página.
-   * Não é preciso passar manualmente; a prop existe só como escape hatch para
-   * forçar. Ver `CLAUDE.md` → "Lista suspensa dentro de Dialog/Drawer".
+   * Escape hatch: força o portal do popover. **Não passe** — o `PopoverContent`
+   * resolve pelo contexto (`InModalContext`). Ver `CLAUDE.md` → "Camadas
+   * (z-index) e portais".
    */
   portal?: boolean;
   /**

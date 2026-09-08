@@ -23,7 +23,6 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { InModalContext } from '@/components/global/modal/inModalContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 
@@ -159,12 +158,12 @@ export function Modal({
 }: IModal) {
   const isMobile = useIsMobile();
 
-  // Marca a subárvore como "dentro de modal" para os campos com popover
-  // (Select/Combobox/MultiSelect) não portalarem por padrão — senão abririam atrás
-  // do modal e a roda do mouse não rolaria a lista. Ver `inModalContext`.
-  const body = (
-    <InModalContext.Provider value={true}>{children}</InModalContext.Provider>
-  );
+  // O "dentro de modal" NÃO é marcado aqui: quem provê o `InModalContext` é o
+  // próprio `DialogContent`/`DrawerContent` (e `SheetContent`/`AlertDialogContent`),
+  // para valer também em overlays montados à mão. O `PopoverContent` lê o contexto
+  // e não portala aqui dentro, liberando a roda do mouse nas listas. Isso NÃO é o
+  // que coloca o popover na frente do modal — quem faz isso é `--z-floating` >
+  // `--z-overlay`. Ver `hooks/useInModal.ts` e a seção "CAMADAS" em `src/index.css`.
 
   if (isMobile) {
     return (
@@ -188,7 +187,7 @@ export function Modal({
             drawer". `flex-1 min-h-0` limita a altura ao espaço restante do
             drawer (`max-h`), habilitando o scroll interno.
           */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">{body}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
         </DrawerContent>
       </Drawer>
     );
@@ -201,7 +200,8 @@ export function Modal({
         para o corpo, senão a faixa não sangra até a borda do modal. NÃO use
         `overflow-hidden` aqui para arredondar a faixa — o `DialogContent` tem
         `transform`, então é o bloco de contenção dos filhos `fixed`, e o popover
-        dos Select/Combobox (que dentro do modal NÃO portalam) seria recortado.
+        dos campos (que dentro do modal NÃO portalam: Select searchable, Combobox,
+        MultiSelect, DateField, DateTimeField) seria recortado.
         Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela.
       */}
       <DialogContent className={cn('gap-0 p-0', sizeClassName(size))}>
@@ -228,7 +228,7 @@ export function Modal({
           bloco passou a cuidar do seu espaçamento.
         */}
         <ScrollArea className="min-w-0" viewportClassName="max-h-[70dvh] p-4">
-          {body}
+          {children}
         </ScrollArea>
       </DialogContent>
     </Dialog>

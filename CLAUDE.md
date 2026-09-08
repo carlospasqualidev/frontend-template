@@ -996,13 +996,18 @@ Há **duas** situações de `readOnly` num `InputField`/`TextArea` — não as c
 - **Travado por permissão** (o form inteiro em modo leitura por falta de `update`): o campo continua **focável e selecionável** de propósito — o usuário precisa **copiar** o valor (CNPJ, código do lote, etc.). É o `readOnly` documentado em "Detalhe = Edição". **Não** o torne inerte.
 - **Campo-espelho de exibição** (mostra um valor **derivado** que o usuário nunca digita — ex.: "Cliente" espelhando o pedido de origem, "Peso líquido" calculado): renderizar como `<input readOnly>` deixa ele **focável e com realce de seleção**, o que parece um bug ("o campo disabled ainda seleciona texto"). Torne-o **inerte**: `readOnly` + `tabIndex={-1}` + `className="pointer-events-none select-none"`. Fica com o visual de campo (alinha no grid), mas sem foco nem seleção. Julgue pelo campo: se o valor vale a pena copiar (código de lote/corrida), mantenha selecionável; se é só um espelho de contexto, deixe inerte.
 
-#### `Combobox`/`Select`/`MultiSelect`: `portal` do popover — automático pelo contexto
+#### Campos com popover (`Combobox`/`Select`/`MultiSelect`/`DateField`/`DateTimeField`): nada a configurar
 
-O `portal` dos campos com popover (`Combobox`, `Select` searchable, `MultiSelect`) é **resolvido automaticamente pelo contexto**, via [`InModalContext`](src/components/global/modal/inModalContext.ts): o `Modal` global embrulha seus `children` num provider, e os campos leem `useInModal()` para decidir o default — **`portal={false}` dentro de modal, `portal={true}` em página**. **Não passe `portal` manualmente** (a prop explícita é um escape hatch que sempre vence).
+Todo campo que abre um popover herda o comportamento certo do próprio [`PopoverContent`](src/components/ui/popover.tsx) — **não passe `portal` e não escreva `z-index`**. Duas mecânicas independentes, ambas centralizadas:
 
-- **Página (o caso comum): não declare `portal`.** Fora de modal o campo portala e ancora sob o campo. Nunca force `portal={false}` numa página — o popover é `position: fixed` e um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora, abrindo no canto da tela.
-- **Dentro de um `Modal`/Dialog/Drawer: nada a fazer.** O contexto já faz o campo não portalar — o popover fica **na frente** do modal (não atrás) e a **roda do mouse rola** a lista (o `react-remove-scroll` só libera o wheel em conteúdo NÃO portalado). Vale automaticamente para qualquer `Modal`, inclusive telas novas.
-- Resumo: **o `Modal` sinaliza; os campos decidem sozinhos.** Popover abrindo no canto errado numa página = algum `portal={false}` indevido.
+- **Empilhamento:** `--z-floating` > `--z-overlay` (ver a seção "CAMADAS (z-index)" em [`src/index.css`](src/index.css)). Qualquer flutuante abre **na frente** de um modal, portalado ou não.
+- **Portal:** o `PopoverContent` lê [`useInModal()`](src/hooks/useInModal.ts) e resolve sozinho — **não portala dentro de um `Modal`** (para o `react-remove-scroll` do Dialog liberar a roda do mouse na lista), **portala em página** (para ancorar sob o campo mesmo com ancestrais que criam bloco de contenção).
+
+Sintomas e causas:
+
+- Popover abrindo **no canto da tela** numa página → alguém forçou `portal={false}` indevidamente.
+- Lista que rola pela barra mas **não pela roda do mouse** dentro de um modal → alguém forçou `portal={true}` dentro do modal, ou o container de scroll não é nativo (ver "Lista suspensa dentro de Dialog/Drawer").
+- Menu abrindo **atrás da modal** → alguém escreveu um `z-` solto em vez do token `z-(--z-floating)`.
 
 #### Máscara de quantidade e valor (pt-BR) — obrigatória (preenchimento E exibição)
 
@@ -1136,7 +1141,7 @@ O cabeçalho de **todo** modal vem numa **faixa própria** (`bg-muted/40`, o mes
 
 - **Passe o `icon`** quando existir um ícone que **levou** até o modal — o item do menu, a ação da linha, o ícone do módulo. Ele aparece num quadrado tonado (`bg-primary/15`) à esquerda do título e faz o modal **continuar** o passo anterior em vez de recomeçar num bloco de texto. É decorativo (`aria-hidden`): quem nomeia o modal é o `title`. Reaproveite o **mesmo** mapa de ícones que o passo anterior usa — não duplique o mapa.
 - Ícone escolhido em tempo de execução vai por **`createElement`**, não por variável `Maiúscula` usada como JSX: `const Icon = cond ? A : B; <Icon />` no corpo do render dispara `react-hooks/static-components`.
-- **Não** ponha `overflow-hidden` no `DialogContent` para arredondar a faixa. O `DialogContent` tem `transform`, logo é o bloco de contenção dos filhos `fixed`, e o popover dos `Select`/`Combobox` — que dentro do modal **não** portalam — seria **recortado**. Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela. O `p-0 gap-0` do `DialogContent` é o que deixa a faixa sangrar até a borda; o padding passou para a faixa e para o corpo.
+- **Não** ponha `overflow-hidden` no `DialogContent` para arredondar a faixa. O `DialogContent` tem `transform`, logo é o bloco de contenção dos filhos `fixed`, e o popover dos campos — que dentro do modal **não** portalam (`Select` searchable, `Combobox`, `MultiSelect`, `DateField`, `DateTimeField`) — seria **recortado**. Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela. O `p-0 gap-0` do `DialogContent` é o que deixa a faixa sangrar até a borda; o padding passou para a faixa e para o corpo.
 - **Tabela larga dentro de modal rola DENTRO dele.** O corpo é um `ScrollArea` com `min-w-0`: sem isso, como item do grid do `DialogContent`, ele cresceria até a largura do conteúdo (`min-width:auto`) e a tabela **vazaria** para fora do modal. Com `min-w-0`, o `overflow-x-auto` do container da tabela aciona o scroll lateral dentro do modal. Vale para qualquer tabela larga, sem ajuste por tela.
 
 **`Modal` — botões de ação (`ModalFooter`), dirty-gate e botão de voltar (`onBack`):** três regras para todo modal de ação seguir o mesmo padrão.
@@ -1154,11 +1159,52 @@ O cabeçalho de **todo** modal vem numa **faixa própria** (`bg-muted/40`, o mes
 
 Sintoma de esquecer o item 2: a lista rola pela barra mas **não pela roda do mouse** dentro do modal.
 
-**Para os campos globais (`Combobox`/`Select` searchable/`MultiSelect`) o item 2 é automático:** o `Modal` marca a subárvore via [`InModalContext`](src/components/global/modal/inModalContext.ts) e os campos leem `useInModal()` para não portalar dentro de modal (e portalar em página). **Não passe `portal={false}` manualmente** — o contexto resolve. O `PopoverContent` ([`ui/popover.tsx`](src/components/ui/popover.tsx)) segue com o prop `portal` (padrão `true`) para popovers montados à mão fora desses campos; nesses casos, passe `portal={false}` quando estiverem dentro de um Dialog/Drawer.
+**Para os campos e para qualquer popover, o item 2 é automático:** o `Modal` marca a subárvore via [`InModalContext`](src/hooks/useInModal.ts) e é o **próprio `PopoverContent`** ([`ui/popover.tsx`](src/components/ui/popover.tsx)) que lê `useInModal()` e decide — `portal={false}` dentro de modal, `portal={true}` em página. Isso vale para `Combobox`, `Select` searchable, `MultiSelect`, `DateField`, `DateTimeField` **e para popovers montados à mão**. **Não passe `portal` manualmente**: a prop existe só como escape hatch e sempre vence o default (é assim que se produz o bug).
 
-**Regra dura — campo com popover próprio decide o `portal` pelo CONTEXTO, nunca por um default fixo.** Se você criar uma abstração de campo que abre um `Popover`, o default vem de `useInModal()` (`portal = props.portal ?? !inModal`): portala em página, não portala em modal. Em página o popover é `position: fixed`; sem portal, um ancestral com `transform`/`contain` (um `Card`, o layout) o desancora e ele abre no **canto da tela**. Dentro de modal, portalar abre o popover **atrás** dele e mata a roda do mouse. Nunca chumbe `false` "para consertar o scroll do modal" (quebra todas as páginas) nem `true` "para ancorar" (quebra todos os modais) — e mantenha o mesmo mecanismo em todos os campos: defaults divergentes entre `Select` e `Combobox` são a origem clássica desse bug reaparecer.
+**Regra dura — a decisão do `portal` mora no `PopoverContent`, não em cada campo.** Se você criar uma abstração de campo que abre um `Popover`, **não repita a regra**: só encaminhe a prop (`portal={portal}`, normalmente `undefined`). Foi a duplicação dessa regra campo a campo que deixou `DateField`/`DateTimeField` de fora e trouxe de volta o "calendário abre atrás da modal". Nunca chumbe `false` "para consertar o scroll do modal" (quebra todas as páginas) nem `true` "para ancorar" (quebra a roda do mouse nos modais).
 
-**Empilhamento (z-index) do popover portalado — não regredir.** Como o popover portala no `body`, ele disputa empilhamento no root e cobriria o header/breadcrumb se tivesse z-index maior. A convenção é: **`PopoverContent` = `z-30`** (`ui/popover.tsx`) + `collisionPadding={{ top: 68 }}` (fica abaixo do header quando possível); **header/breadcrumb do layout = `z-40` com `bg-background`** (`layout.tsx` — ACIMA do popover para ele nunca cobrir o breadcrumb/ações, sem vazar pelo bg opaco); **sidebar mobile (Sheet) e modais = `z-50`** (cobrem o header quando abertos). Não suba o header acima de 50 (quebra mobile/modais) nem o popover acima de 30 (voltaria a cobrir o breadcrumb).
+#### Tranca do scroll da página: camada de ESCOLHA tranca, camada AUXILIAR não
+
+Enquanto uma camada de **escolha** está aberta, a página **não rola** — o Radix faz isso com `react-remove-scroll` (`overflow: hidden` no `body`). Metade travando e metade não é bug visível: a lista fica ancorada no campo e "escorrega" junto com a página, e o usuário perde a referência do que estava escolhendo.
+
+| Camada                                                                                             | Tranca? | Como                                                                           |
+| -------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------ |
+| `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                                         | **Sim** | nativo do Radix/vaul                                                           |
+| `Select`, `DropdownMenu`                                                                           | **Sim** | nativo do Radix                                                                |
+| `Popover` — e com ele `Combobox`, `Select` searchable, `MultiSelect`, `DateField`, `DateTimeField` | **Sim** | `modal` LIGADO por padrão em [`ui/popover.tsx`](src/components/ui/popover.tsx) |
+| `Tooltip`, `HoverCard`                                                                             | **Não** | camada auxiliar, aparece no hover                                              |
+
+**O `modal` do nosso `Popover` vem ligado — o do Radix vem desligado.** Isso alinha o popover ao `Select`: tranca o scroll **e** o clique fora só dispensa (não ativa o que está embaixo). É a razão de não ser preciso repetir nada em campo nenhum. **Não** passe `modal` num campo de escolha.
+
+`modal={false}` só numa camada **auxiliar**, onde o usuário precisa continuar interagindo com a tela com ela aberta (um painel de ajuda que fica ao lado do conteúdo, por exemplo). Se o popover serve para **escolher um valor e fechar**, ele é de escolha — mantenha o default.
+
+Verificado por navegador em `npm run test:layers` (campo `locksScroll` de cada caso em [`camadas.spec.ts`](e2e/storybook/camadas.spec.ts)). O `modal` também traz focus trap e `aria-modal`; está testado que o `Select` de mês/ano dentro do calendário, o `input type="time"` do `DateTimeField`, a busca do `Combobox` e a roda do mouse na lista continuam funcionando — em página, dentro de `Modal` e dentro de `Sheet`.
+
+#### Camadas (z-index) e portais — token único, nunca número solto
+
+Todo componente que empilha **globalmente** (portal do Radix, overlay `fixed`, header sticky) usa um token `--z-*` de [`src/index.css`](src/index.css) via `z-(--z-header)`, `z-(--z-overlay)`, `z-(--z-floating)`… **Número solto (`z-50`, `z-[999]`) numa camada global é bug**: os portais renderizam no `body` e disputam empilhamento no root, então um número avulso quebra outro componente em silêncio. Empilhamento **local** (`z-0`/`z-10` dentro de um componente que já tem `isolate`/`relative`, como as células do `Calendar`) continua livre.
+
+Ordem, do fundo para a frente (a lista completa e comentada está em `src/index.css`):
+
+| Token              | Valor | Quem usa                                                             |
+| ------------------ | ----- | -------------------------------------------------------------------- |
+| `--z-sidebar`      | 10    | sidebar fixo (`ui/sidebar.tsx`)                                      |
+| `--z-sidebar-rail` | 20    | alça de redimensionar do sidebar                                     |
+| `--z-header`       | 40    | header/breadcrumb do `Layout`                                        |
+| `--z-overlay`      | 50    | `Dialog`, `AlertDialog`, `Sheet`, `Drawer` (overlay + content)       |
+| `--z-floating`     | 60    | `Popover`, `DropdownMenu`, `Select`, `HoverCard` (e todos os campos) |
+| `--z-tooltip`      | 70    | `Tooltip` (pode nascer dentro de um flutuante)                       |
+| `--z-toast`        | 80    | `Sonner` (o pacote traz `z-index: 999999999`; nós o prendemos aqui)  |
+
+**Invariante que não pode regredir: `floating` > `overlay`.** É o que faz o calendário de um `DateField`, a lista de um `Combobox` ou um `DropdownMenu` abrirem **na frente** de um modal — portalados ou não. O histórico `z-30` do popover (abaixo do header `z-40`, e por tabela abaixo do modal `z-50`) é exatamente o bug do "menu abriu atrás da modal".
+
+**O header NÃO é protegido por z-index** — ele fica de propósito abaixo dos flutuantes. Quem impede um popover de cobrir o breadcrumb é o `collisionPadding` de topo (`FLOATING_COLLISION_PADDING`, em [`lib/constants/layers.ts`](src/lib/constants/layers.ts)), aplicado por padrão em `Popover`, `DropdownMenu`, `Select` e `HoverCard`. Se a altura do header mudar em `layout.tsx` (`h-16`), ajuste `FLOATING_COLLISION_TOP` junto.
+
+A ordem e o uso dos tokens são travados por teste: [`src/tests/globais/layout/layers.test.ts`](src/tests/globais/layout/layers.test.ts). Componente novo que empilhe no root entra na lista `LAYER_OWNERS` de lá.
+
+**Armadilha do `*:w-full` do `Field` — já blindada, não desfaça.** Sem portal, o wrapper que o Floating UI cria fica na árvore como IRMÃO do gatilho; como o `Popover.Root` do Radix não emite DOM, num campo ele caía como filho **direto** do `Field`, e o `*:w-full` dele ([`ui/field.tsx`](src/components/ui/field.tsx)) acertava esse wrapper. Sendo `position: fixed`, o `width: 100%` resolve contra o **bloco de contenção** (a largura inteira do modal; a da viewport dentro de um `Sheet`) e o `shift` do Floating UI prendia o conteúdo no canto da tela. Dentro de um `Modal` isso ficava **mascarado por coincidência** quando o campo era o da coluna esquerda; num `Sheet` a lista ia para `x=0`. O [`PopoverContent`](src/components/ui/popover.tsx) resolve isso envolvendo o conteúdo não portalado num `<div className="contents">` — o div absorve o seletor `> *` e, sem gerar caixa, ignora a largura. Não remova esse wrapper e **não** "conserte" o sintoma com `w-auto!` no campo.
+
+**Bancada de verificação:** a story `Padrões/Camadas (z-index)` ([`Camadas.stories.tsx`](src/stories/padroes/camadas/Camadas.stories.tsx)) repete a MESMA bancada de flutuantes em página, dentro de `Modal` (Dialog e Drawer), dentro de `Sheet` e em empilhamento profundo. Ao tocar em popover/portal/z-index, abra-a (`npm run storybook`) e rode `npm run test:layers` — o spec [`e2e/storybook/camadas.spec.ts`](e2e/storybook/camadas.spec.ts) mede no navegador, por hit-test, se cada flutuante está no topo, se ancorou no campo e se o painel abraça o conteúdo. Campo novo com popover entra na bancada **e** na lista `FLOATING_CASES` do spec.
 
 **Padrão para criar uma nova abstração global:**
 
@@ -1394,18 +1440,19 @@ src/stories/
 
 ## Scripts
 
-| Script               | O que faz                          |
-| -------------------- | ---------------------------------- |
-| `npm run dev`        | Servidor de desenvolvimento (Vite) |
-| `npm run build`      | Typecheck + build de produção      |
-| `npm run preview`    | Pré-visualiza o build              |
-| `npm run lint`       | ESLint                             |
-| `npm run format`     | Prettier (escrita)                 |
-| `npm run typecheck`  | `tsc -b`                           |
-| `npm test`           | Vitest run                         |
-| `npm run test:watch` | Vitest watch                       |
-| `npm run check`      | Lint + typecheck + test            |
-| `npm run clean`      | Remove `dist/` e caches            |
+| Script                | O que faz                                               |
+| --------------------- | ------------------------------------------------------- |
+| `npm run dev`         | Servidor de desenvolvimento (Vite)                      |
+| `npm run build`       | Typecheck + build de produção                           |
+| `npm run preview`     | Pré-visualiza o build                                   |
+| `npm run lint`        | ESLint                                                  |
+| `npm run format`      | Prettier (escrita)                                      |
+| `npm run typecheck`   | `tsc -b`                                                |
+| `npm test`            | Vitest run                                              |
+| `npm run test:watch`  | Vitest watch                                            |
+| `npm run check`       | Lint + typecheck + test                                 |
+| `npm run test:layers` | Empilhamento (z-index) no navegador, contra o Storybook |
+| `npm run clean`       | Remove `dist/` e caches                                 |
 
 ---
 

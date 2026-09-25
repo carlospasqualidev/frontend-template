@@ -101,7 +101,7 @@ export function UsersPage() {
           </div>
         );
       },
-      meta: { className: 'min-w-[260px]' },
+      meta: { label: 'Usuário', className: 'min-w-[260px]' },
     },
     {
       accessorKey: 'role',
@@ -132,6 +132,7 @@ export function UsersPage() {
       header: ({ column }) => (
         <SortableHeader column={column}>Cadastrado em</SortableHeader>
       ),
+      meta: { label: 'Cadastrado em' },
       cell: ({ row }) =>
         dateFormatter({ date: row.original.createdAt, hasTimeStamp: false }),
     },
@@ -140,6 +141,7 @@ export function UsersPage() {
       header: ({ column }) => (
         <SortableHeader column={column}>Último acesso</SortableHeader>
       ),
+      meta: { label: 'Último acesso' },
       cell: ({ row }) => {
         const value = row.original.lastLoginAt;
         if (!value) {
@@ -203,6 +205,7 @@ export function UsersPage() {
         data={data}
         filters={filters}
         emptyMessage="Nenhum usuário encontrado."
+        columnVisibilityKey="users"
         onRowClick={(user) =>
           navigate({
             to: '/users/$userId',

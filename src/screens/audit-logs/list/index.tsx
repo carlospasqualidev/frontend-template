@@ -108,22 +108,25 @@ export function AuditLogsPage() {
     {
       accessorKey: 'createdAt',
       header: ({ column }) => <SortableHeader column={column}>Data/hora</SortableHeader>,
-      meta: { className: 'min-w-[150px]' },
+      meta: { label: 'Data/hora', className: 'min-w-[150px]' },
       cell: ({ row }) => dateFormatter({ date: row.original.createdAt, hasTimeStamp: true, showHours: true }),
     },
     {
       accessorKey: 'module',
       header: ({ column }) => <SortableHeader column={column}>Módulo</SortableHeader>,
+      meta: { label: 'Módulo' },
       cell: ({ row }) => moduleLabel(row.original.module),
     },
     {
       accessorKey: 'entity',
       header: ({ column }) => <SortableHeader column={column}>Entidade</SortableHeader>,
+      meta: { label: 'Entidade' },
       cell: ({ row }) => entityLabel(row.original.entity),
     },
     {
       accessorKey: 'action',
       header: ({ column }) => <SortableHeader column={column}>Ação</SortableHeader>,
+      meta: { label: 'Ação' },
       cell: ({ row }) => (
         <Badge variant={ACTION_VARIANT.get(row.original.action) ?? 'secondary'}>
           {actionLabel(row.original.action)}
@@ -139,7 +142,7 @@ export function AuditLogsPage() {
     {
       accessorKey: 'description',
       header: ({ column }) => <SortableHeader column={column}>Resumo</SortableHeader>,
-      meta: { className: 'max-w-[420px]' },
+      meta: { label: 'Resumo', className: 'max-w-[420px]' },
       cell: ({ row }) => row.original.description ?? <EmptyValue />,
     },
   ];
@@ -152,6 +155,7 @@ export function AuditLogsPage() {
         filters={filters}
         isLoading={isPending}
         emptyMessage="Nenhum registro de auditoria encontrado."
+        columnVisibilityKey="audit-logs"
         onRowClick={(log) => setDetailId(log.id)}
         {...tableProps}
       />

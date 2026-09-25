@@ -12,6 +12,8 @@ import {
 import { Eraser, Search } from 'lucide-react';
 
 import { expandColumn } from './columnHelpers';
+import { withColumnVisibilityMenu } from './columnVisibilityMenu';
+import { useColumnVisibility } from './useColumnVisibility';
 import {
   DataTableFilters,
   type DataTableFilter,
@@ -46,8 +48,7 @@ declare module '@tanstack/react-table' {
   // útil para alinhamento, largura mínima e estilo. Não use para esconder
   // colunas em breakpoints estreitos: a regra do projeto é rolagem horizontal
   // do container (`overflow-x-auto`), não ocultar informação em mobile.
-  // Os generics replicam a assinatura original do `ColumnMeta` no tanstack;
-  // a augmentation deste projeto só usa `className`.
+  // Os generics replicam a assinatura original do `ColumnMeta` no tanstack.
   //
   // Truncamento: por padrão cada célula do corpo é truncada com reticências
   // (`truncate` sobre uma largura máxima) — texto longo, com ou sem espaços,
@@ -58,6 +59,12 @@ declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     className?: string;
+    /**
+     * Nome da coluna no menu "Colunas" (`columnVisibilityKey`). Obrigatório
+     * quando o `header` não é texto (ex.: `SortableHeader`) — sem ele a coluna
+     * não pode ser ocultada pelo usuário.
+     */
+    label?: string;
   }
 }
 
@@ -171,6 +178,13 @@ interface DataTableProps<TData, TValue> {
    * em estado inconsistente.
    */
   isLoading?: boolean;
+  /**
+   * Liga o menu "Colunas", onde o usuário escolhe quais colunas ver. A escolha
+   * fica salva **neste navegador** (`localStorage`) sob esta chave — use um
+   * identificador único e estável por tabela (ex.: `'users'`). Colunas com
+   * `enableHiding: false` (seleção, ações, expansão) não entram no menu.
+   */
+  columnVisibilityKey?: string;
 }
 
 /**
@@ -211,20 +225,28 @@ export function DataTable<TData, TValue>({
   renderSubRow,
   rowClassName,
   isLoading = false,
+  columnVisibilityKey,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
+  const [columnVisibility, setColumnVisibility] =
+    useColumnVisibility(columnVisibilityKey);
 
   const hasActiveFilters =
     !!defaultFilterValues && Object.keys(defaultFilterValues).length > 0;
 
-  // Com `renderSubRow`, injeta a coluna do chevron no início — assim o
-  // consumidor declara só as colunas de dado e a expansão fica padronizada.
-  const tableColumns = React.useMemo(
-    () => (renderSubRow ? [expandColumn<TData>(), ...columns] : columns),
-    [columns, renderSubRow]
-  );
+  // Com `renderSubRow`, injeta a coluna do chevron no início; com
+  // `columnVisibilityKey`, o menu de colunas no canto direito do cabeçalho —
+  // assim o consumidor declara só as colunas de dado.
+  const tableColumns = React.useMemo(() => {
+    const withExpand = renderSubRow
+      ? [expandColumn<TData>() as ColumnDef<TData, TValue>, ...columns]
+      : columns;
+    return columnVisibilityKey
+      ? withColumnVisibilityMenu(withExpand)
+      : withExpand;
+  }, [columns, renderSubRow, columnVisibilityKey]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -243,14 +265,16 @@ export function DataTable<TData, TValue>({
     },
     onRowSelectionChange: setRowSelection,
     onExpandedChange: setExpanded,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       rowSelection,
       expanded,
+      columnVisibility,
     },
   });
 
-  const columnCount = tableColumns.length;
+  const columnCount = table.getVisibleLeafColumns().length;
 
   return (
     <div>

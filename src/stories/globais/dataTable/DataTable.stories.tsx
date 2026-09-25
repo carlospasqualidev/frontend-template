@@ -18,6 +18,8 @@ import {
   type DateRangeValue,
 } from '@/components/global/dataTable/filters';
 import { useDataTableQuery } from '@/components/global/dataTable/useDataTableQuery';
+import { columnVisibilityStorageKey } from '@/components/global/dataTable/useColumnVisibility';
+import { Card } from '@/components/global/card/card';
 
 type Payment = {
   id: string;
@@ -39,6 +41,7 @@ const columns: ColumnDef<Payment>[] = [
     header: ({ column }) => (
       <SortableHeader column={column}>E-mail</SortableHeader>
     ),
+    meta: { label: 'E-mail' },
   },
   {
     accessorKey: 'amount',
@@ -58,6 +61,7 @@ const columns: ColumnDef<Payment>[] = [
     header: ({ column }) => (
       <SortableHeader column={column}>Criado em</SortableHeader>
     ),
+    meta: { label: 'Criado em' },
     cell: ({ row }) => {
       const [year, month, day] = (row.getValue('createdAt') as string).split(
         '-'
@@ -249,7 +253,7 @@ function queryDatabase(
   );
 }
 
-function DataTableDemo() {
+function PaymentsTable() {
   const { query, tableProps } = useDataTableQuery({
     pageSize: PAGE_SIZE,
     defaultFilters: {
@@ -262,17 +266,24 @@ function DataTableDemo() {
   const pageData = queryDatabase(query.filters, query.sort, query.page);
 
   return (
+    <DataTable
+      columns={columns}
+      data={pageData}
+      filters={filters}
+      onRowClick={(payment) =>
+        toast(`Abrir detalhes de ${payment.email} (R$ ${payment.amount})`)
+      }
+      getRowHref={(payment) => `/payments/${payment.id}`}
+      columnVisibilityKey="storybook-payments"
+      {...tableProps}
+    />
+  );
+}
+
+function DataTableDemo() {
+  return (
     <div className="rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:rounded-3xl sm:p-5 dark:shadow-none">
-      <DataTable
-        columns={columns}
-        data={pageData}
-        filters={filters}
-        onRowClick={(payment) =>
-          toast(`Abrir detalhes de ${payment.email} (R$ ${payment.amount})`)
-        }
-        getRowHref={(payment) => `/payments/${payment.id}`}
-        {...tableProps}
-      />
+      <PaymentsTable />
     </div>
   );
 }
@@ -285,7 +296,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Tabela 100% server-side: filtros, ordenação e paginação são delegados ao backend. Os filtros vão ao servidor ao clicar em **Buscar**, clicar num cabeçalho reordena no servidor, e **Próxima** é desabilitado quando a página vem incompleta. Cada linha é clicável: o clique normal dispara `onRowClick` (aqui, um toast); com `getRowHref`, o clique do meio (scroll) ou Ctrl/Cmd/Shift+clique abrem o destino em nova aba, como um link nativo. Esta story usa `useDataTableQuery` (estado local) em vez de `useDataTableUrlQuery` para não depender do TanStack Router.',
+          'Tabela 100% server-side: filtros, ordenação e paginação são delegados ao backend. Os filtros vão ao servidor ao clicar em **Buscar**, clicar num cabeçalho reordena no servidor, e **Próxima** é desabilitado quando a página vem incompleta. Cada linha é clicável: o clique normal dispara `onRowClick` (aqui, um toast); com `getRowHref`, o clique do meio (scroll) ou Ctrl/Cmd/Shift+clique abrem o destino em nova aba, como um link nativo. O ícone de colunas, no canto direito do cabeçalho, oculta/exibe colunas, e a escolha fica salva neste navegador (`columnVisibilityKey`). Esta story usa `useDataTableQuery` (estado local) em vez de `useDataTableUrlQuery` para não depender do TanStack Router.',
       },
     },
   },
@@ -426,6 +437,92 @@ export const LongText: Story = {
       description: {
         story:
           'Descrições longas (com ou sem espaços) são truncadas com reticências por padrão, respeitando a largura máxima da célula — o texto não estoura nem invade a coluna vizinha. Uma coluna que precise de mais espaço sobrescreve via `meta.className` (`max-w-[600px]`, `max-w-none`).',
+      },
+    },
+  },
+};
+
+/**
+ * Grava uma escolha de colunas de exemplo ANTES da tabela montar (o
+ * inicializador do `useState` roda antes dos filhos), para a vitrine abrir já
+ * no estado demonstrado. Recarregar a story volta ao exemplo.
+ */
+function useSeededHiddenColumns(tableKey: string, hidden: string[]) {
+  React.useState(() => {
+    try {
+      localStorage.setItem(
+        columnVisibilityStorageKey(tableKey),
+        JSON.stringify(hidden)
+      );
+    } catch {
+      // Armazenamento bloqueado: a tabela abre com todas as colunas.
+    }
+    return null;
+  });
+}
+
+function RolesTable({ tableKey }: { tableKey: string }) {
+  return (
+    <DataTable
+      columns={roleColumns}
+      data={ROLES}
+      pageIndex={0}
+      onPageChange={() => undefined}
+      pageSize={ROLES.length}
+      columnVisibilityKey={tableKey}
+    />
+  );
+}
+
+const SAVED_KEY = 'storybook-roles-saved';
+const LAST_COLUMN_KEY = 'storybook-roles-last-column';
+
+function ColumnVisibilityShowcase() {
+  useSeededHiddenColumns(SAVED_KEY, ['description', 'permissions']);
+  useSeededHiddenColumns(LAST_COLUMN_KEY, [
+    'description',
+    'permissions',
+    'users',
+  ]);
+
+  return (
+    <div className="space-y-4">
+      <Card
+        title="Sem coluna de ações"
+        description="Quando a última coluna é de dado, a tabela ganha uma coluna estreita no fim só para o ícone de colunas, no canto direito do cabeçalho. A escolha é salva neste navegador."
+      >
+        <RolesTable tableKey="storybook-roles" />
+      </Card>
+      <Card
+        title="Com coluna de ações"
+        description="Quando a última coluna é de sistema (⋯ ou Ações), o ícone entra no cabeçalho dela, sem coluna extra. Age na hora, sem esperar o Buscar. Colunas com SortableHeader precisam de meta.label para aparecer no menu; seleção e ações nunca aparecem."
+      >
+        <PaymentsTable />
+      </Card>
+      <Card
+        title="Escolha já salva"
+        description="A tabela abre com Descrição e Permissões ocultas, lidas do localStorage. Use Mostrar todas para voltar ao padrão."
+      >
+        <RolesTable tableKey={SAVED_KEY} />
+      </Card>
+      <Card
+        title="Última coluna travada"
+        description="Só Nome está visível: o item fica desabilitado no menu para a tabela nunca ficar sem colunas."
+      >
+        <RolesTable tableKey={LAST_COLUMN_KEY} />
+      </Card>
+    </div>
+  );
+}
+
+export const ColumnVisibility: Story = {
+  name: 'Colunas',
+  render: () => <ColumnVisibilityShowcase />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Com `columnVisibilityKey`, a tabela ganha o ícone **Configurar colunas** no canto direito do cabeçalho: o usuário escolhe quais colunas ver e a escolha fica salva só neste navegador (`localStorage`), sem ir para a URL. Só as colunas ocultas são gravadas, então uma coluna nova aparece visível para todos.',
       },
     },
   },

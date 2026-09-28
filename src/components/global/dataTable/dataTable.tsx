@@ -1,18 +1,17 @@
 import * as React from 'react';
 import {
-  type ColumnDef,
   type ExpandedState,
   type RowData,
+  type RowSelectionState,
   type SortingState,
   flexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
+  useTable,
 } from '@tanstack/react-table';
 import { Eraser, Search } from 'lucide-react';
 
 import { expandColumn } from './columnHelpers';
 import { withColumnVisibilityMenu } from './columnVisibilityMenu';
+import { dataTableFeatures, type DataTableColumnDef } from './tableFeatures';
 import { useColumnVisibility } from './useColumnVisibility';
 import {
   DataTableFilters,
@@ -43,31 +42,6 @@ const SKELETON_WIDTHS = ['w-20', 'w-32', 'w-24', 'w-28', 'w-16'];
  */
 export const SKELETON_ROW_COUNT = 8;
 
-declare module '@tanstack/react-table' {
-  // Permite que cada coluna passe classes Tailwind para o `<th>`/`<td>` —
-  // útil para alinhamento, largura mínima e estilo. Não use para esconder
-  // colunas em breakpoints estreitos: a regra do projeto é rolagem horizontal
-  // do container (`overflow-x-auto`), não ocultar informação em mobile.
-  // Os generics replicam a assinatura original do `ColumnMeta` no tanstack.
-  //
-  // Truncamento: por padrão cada célula do corpo é truncada com reticências
-  // (`truncate` sobre uma largura máxima) — texto longo, com ou sem espaços,
-  // não estoura nem invade a coluna vizinha. Para dar mais largura a uma
-  // coluna, passe `max-w-*` aqui (o tailwind-merge substitui o default); para
-  // permitir quebra em múltiplas linhas, passe `whitespace-normal`; para largura
-  // livre, `max-w-none`.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnMeta<TData extends RowData, TValue> {
-    className?: string;
-    /**
-     * Nome da coluna no menu "Colunas" (`columnVisibilityKey`). Obrigatório
-     * quando o `header` não é texto (ex.: `SortableHeader`) — sem ele a coluna
-     * não pode ser ocultada pelo usuário.
-     */
-    label?: string;
-  }
-}
-
 /**
  * Largura máxima padrão de uma célula do corpo. Acima disso o conteúdo é
  * truncado com reticências em vez de empurrar a coluna (o que estoura o layout
@@ -92,8 +66,8 @@ function hasActiveTextSelection(): boolean {
   );
 }
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface DataTableProps<TData extends RowData> {
+  columns: DataTableColumnDef<TData>[];
   /** Linhas da página atual, já paginadas/filtradas/ordenadas pelo backend. */
   data: TData[];
   /** Página atual (0-based), controlada pelo consumidor. */
@@ -207,7 +181,7 @@ interface DataTableProps<TData, TValue> {
  * <DataTable columns={columns} data={data ?? []} filters={filters} {...tableProps} />
  * ```
  */
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   pageIndex,
@@ -226,9 +200,9 @@ export function DataTable<TData, TValue>({
   rowClassName,
   isLoading = false,
   columnVisibilityKey,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] =
     useColumnVisibility(columnVisibilityKey);
@@ -241,19 +215,17 @@ export function DataTable<TData, TValue>({
   // assim o consumidor declara só as colunas de dado.
   const tableColumns = React.useMemo(() => {
     const withExpand = renderSubRow
-      ? [expandColumn<TData>() as ColumnDef<TData, TValue>, ...columns]
+      ? [expandColumn<TData>(), ...columns]
       : columns;
     return columnVisibilityKey
       ? withColumnVisibilityMenu(withExpand)
       : withExpand;
   }, [columns, renderSubRow, columnVisibilityKey]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
     columns: tableColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: renderSubRow ? () => true : undefined,
     // Ordenação no servidor: a tabela só guarda o estado (para o indicador no
     // cabeçalho) e avisa o consumidor; não reordena as linhas localmente.
@@ -297,9 +269,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as
-                    | { className?: string }
-                    | undefined;
+                  const meta = header.column.columnDef.meta;
                   return (
                     <TableHead key={header.id} className={meta?.className}>
                       {header.isPlaceholder
@@ -322,9 +292,7 @@ export function DataTable<TData, TValue>({
                   className="hover:bg-transparent"
                 >
                   {table.getVisibleLeafColumns().map((column, colIndex) => {
-                    const meta = column.columnDef.meta as
-                      | { className?: string }
-                      | undefined;
+                    const meta = column.columnDef.meta;
                     const width =
                       SKELETON_WIDTHS[
                         (rowIndex + colIndex) % SKELETON_WIDTHS.length
@@ -415,9 +383,7 @@ export function DataTable<TData, TValue>({
                       )}
                     >
                       {row.getVisibleCells().map((cell) => {
-                        const meta = cell.column.columnDef.meta as
-                          | { className?: string }
-                          | undefined;
+                        const meta = cell.column.columnDef.meta;
                         return (
                           <TableCell
                             key={cell.id}

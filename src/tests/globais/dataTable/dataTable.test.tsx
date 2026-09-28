@@ -1,4 +1,3 @@
-import type { ColumnDef } from '@tanstack/react-table';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,6 +6,7 @@ import {
   actionsColumn,
   selectColumn,
 } from '@/components/global/dataTable/columnHelpers';
+import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   textFilter,
@@ -18,7 +18,9 @@ interface Row {
   email: string;
 }
 
-const columns: ColumnDef<Row>[] = [{ accessorKey: 'email', header: 'E-mail' }];
+const columns: DataTableColumnDef<Row>[] = [
+  { accessorKey: 'email', header: 'E-mail' },
+];
 
 const filters: DataTableFilter[] = [
   textFilter({
@@ -202,7 +204,7 @@ describe('DataTable', () => {
   });
 
   it('actionsColumn: só renderiza o menu ⋯ nas linhas que têm ações', () => {
-    const cols: ColumnDef<Row>[] = [
+    const cols: DataTableColumnDef<Row>[] = [
       ...columns,
       actionsColumn<Row>({
         actions: (row) =>

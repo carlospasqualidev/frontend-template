@@ -1390,6 +1390,7 @@ Exceção: filtro puramente **client-side de refino instantâneo** dentro de um 
 ### DataTable
 
 - Padrão de tabela com paginação/filtro server-side em [`src/components/global/dataTable/`](src/components/global/dataTable). Use [`useDataTableQuery`](src/components/global/dataTable/useDataTableQuery.ts) (estado da URL via [`useDataTableUrlQuery`](src/components/global/dataTable/useDataTableUrlQuery.ts)).
+- **Tipe as colunas com `DataTableColumnDef<T>`** de [`tableFeatures.ts`](src/components/global/dataTable/tableFeatures.ts) — nunca `ColumnDef` direto do `@tanstack/react-table`. No TanStack Table v9 todo tipo recebe as _features_ da tabela como primeiro genérico; o `tableFeatures.ts` declara as da `DataTable` (ordenação, seleção, expansão, visibilidade) e o shape do `meta` (`className`, `label`) num lugar só. Precisa de outra feature? Adicione-a lá.
 - Empty state automático: quando não há resultados e há filtros ativos, exibe um `Empty` com botão "Limpar filtros" que dispara `onSearch({})`. Sem filtros, mostra "Ainda não há registros para exibir.".
 - **Linha clicável (`onRowClick` + `getRowHref`)** dá à linha comportamento de link nativo: clique do meio e Ctrl/Cmd/Shift+clique abrem em nova aba. Arrastar para **selecionar texto** numa linha clicável **não** navega (a tabela detecta a seleção ativa) — não recrie esse guard na tela.
 - **`rowCount`** (opt-in) habilita a "Próxima" por total exato, para quando o número de **linhas exibidas** não corresponde ao tamanho da página (um item da página vira várias linhas). Sem ele, vale a heurística `data.length < pageSize`, que dispensa `COUNT` no servidor.
@@ -1462,6 +1463,7 @@ src/stories/
 - Windows (PowerShell). Em comandos shell use sintaxe PS (`$env:VAR`, `$null`, sem `&&` em PS 5.1).
 - Node >= 22 (versão fixa do template; CI roda em Node 22).
 - `npm` (lockfile `package-lock.json`).
+- **Pin do router (`overrides` no `package.json`):** `@tanstack/router-core` fica em `1.171.29` e `@tanstack/react-router` em `1.170.35`. A partir do `router-core` 1.171.30 o `interpolatePath` virou posicional, e o `@storybook/tanstack-react` 10.6 ainda o chama com objeto — toda story quebra com `path.endsWith is not a function`. Remova o override quando o Storybook publicar a correção, e confirme com `npm run test:layers`.
 
 ---
 

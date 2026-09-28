@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), checker({ typescript: true })],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   build: {
@@ -19,7 +19,7 @@ export default defineConfig({
     // logs/reports (VITE_ERROR_LOG_URL) e ferramentas de monitoramento mapeiem
     // o stack trace de volta ao código original sem expor publicamente.
     sourcemap: 'hidden',
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Separa as libs maiores em chunks próprios para melhorar o cache
         // (uma mudança no app não invalida o bundle do React/TanStack).

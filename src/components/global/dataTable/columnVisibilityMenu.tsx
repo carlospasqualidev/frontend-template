@@ -1,10 +1,11 @@
-import {
-  flexRender,
-  type Column,
-  type ColumnDef,
-  type Table as TanstackTable,
-} from '@tanstack/react-table';
+import { flexRender, type RowData } from '@tanstack/react-table';
 import { Columns3Cog, RotateCcw } from 'lucide-react';
+
+import type {
+  DataTableColumn,
+  DataTableColumnDef,
+  DataTableInstance,
+} from './tableFeatures';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,13 +32,15 @@ const TRIGGER_LABEL = 'Configurar colunas';
  * `meta.label` — sem rótulo legível ela não entra no menu, para nunca expor o
  * id técnico da coluna ao usuário.
  */
-function columnLabel<TData>(column: Column<TData>): string | undefined {
+function columnLabel<TData extends RowData>(
+  column: DataTableColumn<TData>
+): string | undefined {
   const { header, meta } = column.columnDef;
   return meta?.label ?? (typeof header === 'string' ? header : undefined);
 }
 
-interface ColumnVisibilityMenuProps<TData> {
-  table: TanstackTable<TData>;
+interface ColumnVisibilityMenuProps<TData extends RowData> {
+  table: DataTableInstance<TData>;
 }
 
 /**
@@ -45,7 +48,7 @@ interface ColumnVisibilityMenuProps<TData> {
  * desmarca quais colunas aparecem. A última coluna visível fica travada (a
  * tabela nunca fica sem colunas de dado).
  */
-export function ColumnVisibilityMenu<TData>({
+export function ColumnVisibilityMenu<TData extends RowData>({
   table,
 }: ColumnVisibilityMenuProps<TData>) {
   const columns = table
@@ -121,14 +124,14 @@ const MENU_COLUMN_ID = 'columnVisibility';
  * ganha uma coluna estreita só para o ícone.
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function withColumnVisibilityMenu<TData, TValue>(
-  columns: ColumnDef<TData, TValue>[]
-): ColumnDef<TData, TValue>[] {
+export function withColumnVisibilityMenu<TData extends RowData>(
+  columns: DataTableColumnDef<TData>[]
+): DataTableColumnDef<TData>[] {
   const last = columns.at(-1);
 
   if (last && last.enableHiding === false) {
     const originalHeader = last.header;
-    const merged: ColumnDef<TData, TValue> = { ...last };
+    const merged: DataTableColumnDef<TData> = { ...last };
     merged.header = (context) => (
       <div className="flex items-center justify-end gap-2">
         {flexRender(originalHeader, context)}

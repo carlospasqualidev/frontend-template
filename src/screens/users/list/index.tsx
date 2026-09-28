@@ -1,5 +1,4 @@
 import { useNavigate } from '@tanstack/react-router';
-import { type ColumnDef } from '@tanstack/react-table';
 import { Copy, Trash2, UserPlus, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -7,6 +6,7 @@ import {
   actionsColumn,
   SortableHeader,
 } from '@/components/global/dataTable/columnHelpers';
+import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateRangeFilter,
@@ -74,7 +74,7 @@ export function UsersPage() {
     pageSize: PAGE_SIZE,
   });
 
-  const columns: ColumnDef<ManagedUser>[] = [
+  const columns: DataTableColumnDef<ManagedUser>[] = [
     {
       id: 'user',
       header: ({ column }) => (

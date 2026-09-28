@@ -43,7 +43,6 @@ describe('Switch (global)', () => {
       const { control, watch } = useForm({
         defaultValues: { admin: false },
       });
-      // eslint-disable-next-line react-hooks/incompatible-library
       const admin = watch('admin');
 
       return (

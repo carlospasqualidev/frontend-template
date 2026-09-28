@@ -1,4 +1,3 @@
-import type { ColumnDef } from '@tanstack/react-table';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +6,7 @@ import {
   actionsColumn,
   SortableHeader,
 } from '@/components/global/dataTable/columnHelpers';
+import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import { columnVisibilityStorageKey } from '@/components/global/dataTable/useColumnVisibility';
 
@@ -21,7 +21,7 @@ const rows: Row[] = [
   { id: '1', name: 'Ana Souza', email: 'ana@example.com', role: 'Admin' },
 ];
 
-const columns: ColumnDef<Row>[] = [
+const columns: DataTableColumnDef<Row>[] = [
   { accessorKey: 'name', header: 'Nome' },
   {
     accessorKey: 'email',

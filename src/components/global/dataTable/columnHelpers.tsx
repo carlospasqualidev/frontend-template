@@ -1,9 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
-import type {
-  Column,
-  ColumnDef,
-  Table as TanstackTable,
-} from '@tanstack/react-table';
+import type { RowData } from '@tanstack/react-table';
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -11,6 +7,12 @@ import {
   ChevronRightIcon,
   MoreHorizontalIcon,
 } from 'lucide-react';
+
+import type {
+  DataTableColumn,
+  DataTableColumnDef,
+  DataTableInstance,
+} from './tableFeatures';
 
 import { cn } from '@/lib/utils';
 import {
@@ -40,14 +42,16 @@ import {
  * rodapé de contagem da `DataTable`.
  *
  * ```tsx
- * export const columns: ColumnDef<Payment>[] = [
+ * export const columns: DataTableColumnDef<Payment>[] = [
  *   selectColumn(),
  *   { accessorKey: 'status', header: 'Status' },
  * ];
  * ```
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function selectColumn<TData>(): ColumnDef<TData> {
+export function selectColumn<
+  TData extends RowData,
+>(): DataTableColumnDef<TData> {
   return {
     id: 'select',
     header: ({ table }) => (
@@ -90,7 +94,9 @@ export function selectColumn<TData>(): ColumnDef<TData> {
  * não podem expandir reservam o mesmo espaço do botão (altura uniforme).
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function expandColumn<TData>(id = 'expander'): ColumnDef<TData> {
+export function expandColumn<TData extends RowData>(
+  id = 'expander'
+): DataTableColumnDef<TData> {
   return {
     id,
     enableSorting: false,
@@ -134,8 +140,8 @@ export function expandColumn<TData>(id = 'expander'): ColumnDef<TData> {
   };
 }
 
-interface SortableHeaderProps<TData, TValue> {
-  column: Column<TData, TValue>;
+interface SortableHeaderProps<TData extends RowData, TValue> {
+  column: DataTableColumn<TData, TValue>;
   children: React.ReactNode;
 }
 
@@ -150,7 +156,7 @@ interface SortableHeaderProps<TData, TValue> {
  * }
  * ```
  */
-export function SortableHeader<TData, TValue>({
+export function SortableHeader<TData extends RowData, TValue>({
   column,
   children,
 }: SortableHeaderProps<TData, TValue>) {
@@ -175,8 +181,8 @@ export interface SortMenuOption {
   label: string;
 }
 
-interface SortMenuHeaderProps<TData> {
-  table: TanstackTable<TData>;
+interface SortMenuHeaderProps<TData extends RowData> {
+  table: DataTableInstance<TData>;
   label: string;
   options: SortMenuOption[];
 }
@@ -190,12 +196,14 @@ interface SortMenuHeaderProps<TData> {
  * do serviço. Como a `DataTable` usa `manualSorting`, a ordenação é feita pelo
  * backend — o menu só ajusta o estado de `sorting`.
  */
-export function SortMenuHeader<TData>({
+export function SortMenuHeader<TData extends RowData>({
   table,
   label,
   options,
 }: SortMenuHeaderProps<TData>) {
-  const active = table.getState().sorting[0];
+  // Snapshot sem assinatura: a DataTable já re-renderiza a cada mudança de
+  // estado da tabela, e com ela este cabeçalho.
+  const active = table.atoms.sorting.get()[0];
   const isActive = options.some((option) => option.id === active?.id);
 
   return (
@@ -273,11 +281,11 @@ interface RowActionsColumnOptions<TData> {
  * `CLAUDE.md` → "Ações de item".
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function rowActionsColumn<TData>({
+export function rowActionsColumn<TData extends RowData>({
   actions,
   id = 'actions',
   header = 'Ações',
-}: RowActionsColumnOptions<TData>): ColumnDef<TData> {
+}: RowActionsColumnOptions<TData>): DataTableColumnDef<TData> {
   return {
     id,
     enableHiding: false,
@@ -315,8 +323,7 @@ export interface DataTableRowAction<TData> {
 interface ActionsColumnOptions<TData> {
   /** Itens do menu — lista fixa ou função que recebe a linha. */
   actions:
-    | DataTableRowAction<TData>[]
-    | ((row: TData) => DataTableRowAction<TData>[]);
+    DataTableRowAction<TData>[] | ((row: TData) => DataTableRowAction<TData>[]);
   /** Rótulo opcional exibido no topo do menu (ex.: "Ações"). */
   label?: string;
   /** id da coluna. Padrão: `'actions'`. */
@@ -345,12 +352,12 @@ interface ActionsColumnOptions<TData> {
  * `actions` também aceita uma função da linha, para variar os itens por linha.
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function actionsColumn<TData>({
+export function actionsColumn<TData extends RowData>({
   actions,
   label,
   id = 'actions',
   triggerLabel = 'Abrir menu',
-}: ActionsColumnOptions<TData>): ColumnDef<TData> {
+}: ActionsColumnOptions<TData>): DataTableColumnDef<TData> {
   return {
     id,
     enableHiding: false,

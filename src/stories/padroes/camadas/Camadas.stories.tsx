@@ -251,19 +251,15 @@ function FloatingBench({ context }: { context: string }) {
 function EscalaTabela() {
   // Lê o valor REAL do token no navegador — não uma cópia escrita à mão aqui.
   // `Map` (e não objeto indexado por variável) por causa do object-injection.
-  const [values, setValues] = React.useState(new Map<string, string>());
-
-  React.useEffect(() => {
+  const [values] = React.useState(() => {
     const styles = getComputedStyle(document.documentElement);
-    setValues(
-      new Map(
-        LAYER_TOKENS.map(({ name }) => [
-          name,
-          styles.getPropertyValue(`--z-${name}`).trim(),
-        ])
-      )
+    return new Map(
+      LAYER_TOKENS.map(({ name }) => [
+        name,
+        styles.getPropertyValue(`--z-${name}`).trim(),
+      ])
     );
-  }, []);
+  });
 
   // Ordem crescente sem indexar o array por variável: compara cada valor com o
   // anterior acumulado.

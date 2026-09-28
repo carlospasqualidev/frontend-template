@@ -33,53 +33,61 @@ vi.mock('@tanstack/react-router', () => ({
 
 // Fixture própria: o teste valida o COMPORTAMENTO do NavMain (filtro, ordem,
 // flyout), não o conteúdo real da navegação do projeto.
-vi.mock('@/lib/constants/sidebar', () => ({
-  sidebarData: {
-    header: { name: 'Projeto', description: 'Teste', logo: 'PR' },
-    nav: [
-      {
-        title: 'Administração',
-        icon: <span data-testid="icon-admin" />,
-        items: [
-          {
-            title: 'Usuários',
-            url: '/users',
-            icon: <span />,
-            permission: 'users.read',
-          },
-          {
-            title: 'Auditoria',
-            url: '/audit-logs',
-            icon: <span />,
-            permission: 'audit.read',
-          },
-          { title: 'Configurações', url: '/settings', icon: <span /> },
-        ],
-      },
-      {
-        title: 'Relatórios',
-        icon: <span />,
-        items: [
-          {
-            title: 'Movimentações',
-            url: '/reports/movements',
-            icon: <span />,
-            anyPermission: ['reports.in.read', 'reports.out.read'],
-          },
-        ],
-      },
-    ],
-    links: [
-      { title: 'Início', url: '/', icon: <span /> },
-      {
-        title: 'Admin do sistema',
-        url: '/system',
-        icon: <span />,
-        permission: 'system.read',
-      },
-    ],
-  },
-}));
+// O factory é içado acima dos imports: JSX aqui usaria o `react/jsx-runtime`
+// antes de ele inicializar, por isso o `createElement` vem do próprio factory.
+vi.mock('@/lib/constants/sidebar', async () => {
+  const { createElement } = await import('react');
+  const icon = (testId?: string) =>
+    createElement('span', { 'data-testid': testId });
+
+  return {
+    sidebarData: {
+      header: { name: 'Projeto', description: 'Teste', logo: 'PR' },
+      nav: [
+        {
+          title: 'Administração',
+          icon: icon('icon-admin'),
+          items: [
+            {
+              title: 'Usuários',
+              url: '/users',
+              icon: icon(),
+              permission: 'users.read',
+            },
+            {
+              title: 'Auditoria',
+              url: '/audit-logs',
+              icon: icon(),
+              permission: 'audit.read',
+            },
+            { title: 'Configurações', url: '/settings', icon: icon() },
+          ],
+        },
+        {
+          title: 'Relatórios',
+          icon: icon(),
+          items: [
+            {
+              title: 'Movimentações',
+              url: '/reports/movements',
+              icon: icon(),
+              anyPermission: ['reports.in.read', 'reports.out.read'],
+            },
+          ],
+        },
+      ],
+      links: [
+        { title: 'Início', url: '/', icon: icon() },
+        {
+          title: 'Admin do sistema',
+          url: '/system',
+          icon: icon(),
+          permission: 'system.read',
+        },
+      ],
+    },
+  };
+});
 
 function setUser(permissions?: string[]) {
   const user: IUser = {

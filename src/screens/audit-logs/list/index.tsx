@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { type ColumnDef } from '@tanstack/react-table';
 
 import { SortableHeader } from '@/components/global/dataTable/columnHelpers';
+import type {
+  DataTableColumnDef,
+} from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateRangeFilter,
@@ -104,7 +106,7 @@ export function AuditLogsPage() {
     placeholderData: keepPreviousData,
   });
 
-  const columns: ColumnDef<AuditLogListItem>[] = [
+  const columns: DataTableColumnDef<AuditLogListItem>[] = [
     {
       accessorKey: 'createdAt',
       header: ({ column }) => <SortableHeader column={column}>Data/hora</SortableHeader>,

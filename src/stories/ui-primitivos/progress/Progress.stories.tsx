@@ -25,21 +25,18 @@ type Story = StoryObj<typeof meta>;
 
 function AnimatedProgressDemo() {
   const [value, setValue] = React.useState(0);
-  const [running, setRunning] = React.useState(false);
+  const [started, setStarted] = React.useState(false);
+  const running = started && value < 100;
 
   React.useEffect(() => {
     if (!running) return;
-    if (value >= 100) {
-      setRunning(false);
-      return;
-    }
     const id = setTimeout(() => setValue((prev) => prev + 5), 150);
     return () => clearTimeout(id);
   }, [running, value]);
 
   const start = () => {
     setValue(0);
-    setRunning(true);
+    setStarted(true);
   };
 
   return (

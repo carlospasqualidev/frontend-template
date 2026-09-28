@@ -41,7 +41,6 @@ describe('TextArea (global)', () => {
       const { control, watch } = useForm({
         defaultValues: { notes: '' },
       });
-      // eslint-disable-next-line react-hooks/incompatible-library
       const notes = watch('notes');
 
       return (

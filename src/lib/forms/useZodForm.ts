@@ -33,6 +33,9 @@ export function useZodForm<TSchema extends FormSchema, TContext = unknown>({
     ...props,
     mode,
     reValidateMode,
-    resolver: zodResolver(schema),
+    // Os genéricos explícitos forçam a sobrecarga do Zod 4 (que devolve
+    // `z.input`/`z.output` do schema); sem eles, o `ZodObject` genérico casa
+    // com a sobrecarga do Zod 3 e os tipos degradam para `Record<string, unknown>`.
+    resolver: zodResolver<FieldValues, TContext, unknown, TSchema>(schema),
   });
 }

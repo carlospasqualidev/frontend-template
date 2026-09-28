@@ -34,7 +34,12 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
       // Cabeçalho num tom claro da marca (`bg-primary/35`) com texto escuro em TODA
       // tabela do sistema. O seletor de descendente do hover tem especificidade
       // maior que o `hover:bg-muted/50` do `TableRow`, então não "pisca" no hover.
-      className={cn('[&_tr]:border-b [&_tr]:bg-primary/35 [&_tr]:hover:bg-primary/35', className)}
+      // Idem para o `has-aria-expanded:bg-muted/50`: um menu aberto no cabeçalho
+      // (colunas, ordenação) não pode apagar o tom da marca.
+      className={cn(
+        '[&_tr]:border-b [&_tr]:bg-primary/35 [&_tr]:hover:bg-primary/35 [&_tr]:has-aria-expanded:bg-primary/35',
+        className
+      )}
       {...props}
     />
   );

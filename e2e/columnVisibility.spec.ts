@@ -38,6 +38,20 @@ test.describe('Tabela — mostrar e ocultar colunas', () => {
     await expect(statusHeader).toBeVisible();
   });
 
+  test('abrir o menu de colunas mantém a cor do cabeçalho', async ({
+    page,
+  }) => {
+    const headerRow = page.locator('thead tr');
+    const background = () =>
+      headerRow.evaluate((row) => getComputedStyle(row).backgroundColor);
+    const closedBackground = await background();
+
+    await page.getByRole('button', { name: 'Configurar colunas' }).click();
+    await expect(page.getByRole('menu')).toBeVisible();
+
+    expect(await background()).toBe(closedBackground);
+  });
+
   test('ocultar colunas não altera os filtros da URL', async ({ page }) => {
     await page.getByRole('button', { name: 'Configurar colunas' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Último acesso' }).click();

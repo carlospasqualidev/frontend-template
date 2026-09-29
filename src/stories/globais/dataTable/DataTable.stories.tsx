@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { type ColumnDef, type SortingState } from '@tanstack/react-table';
+import { type SortingState } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
@@ -8,6 +8,7 @@ import {
   selectColumn,
   SortableHeader,
 } from '@/components/global/dataTable/columnHelpers';
+import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateFilter,
@@ -30,7 +31,7 @@ type Payment = {
   createdAt: string;
 };
 
-const columns: ColumnDef<Payment>[] = [
+const columns: DataTableColumnDef<Payment>[] = [
   selectColumn(),
   {
     accessorKey: 'status',
@@ -314,19 +315,20 @@ function useDeferredQueryDatabase(
   sort: SortingState,
   page: number
 ) {
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [data, setData] = React.useState<Payment[]>([]);
+  const requestKey = JSON.stringify({ filters, sort, page });
+  const [result, setResult] = React.useState<{
+    key: string;
+    data: Payment[];
+  }>({ key: '', data: [] });
 
   React.useEffect(() => {
-    setIsLoading(true);
     const timeout = setTimeout(() => {
-      setData(queryDatabase(filters, sort, page));
-      setIsLoading(false);
+      setResult({ key: requestKey, data: queryDatabase(filters, sort, page) });
     }, LOADING_MS);
     return () => clearTimeout(timeout);
-  }, [filters, sort, page]);
+  }, [requestKey, filters, sort, page]);
 
-  return { data, isLoading };
+  return { data: result.data, isLoading: result.key !== requestKey };
 }
 
 function DataTableLoadingDemo() {
@@ -374,7 +376,7 @@ type Role = {
   users: number;
 };
 
-const roleColumns: ColumnDef<Role>[] = [
+const roleColumns: DataTableColumnDef<Role>[] = [
   { accessorKey: 'name', header: 'Nome' },
   { accessorKey: 'description', header: 'Descrição' },
   { accessorKey: 'permissions', header: 'Permissões' },

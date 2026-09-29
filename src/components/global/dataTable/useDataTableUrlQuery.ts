@@ -52,36 +52,31 @@ export function useDataTableUrlQuery({
   const rawPage = params.get(keys.page);
   const rawSort = params.get(keys.sort) as SortingState | undefined;
   const rawFilters = params.get(keys.filters) as
-    | DataTableFilterValues
-    | undefined;
+    DataTableFilterValues | undefined;
 
   // Grava os defaults na URL apenas no primeiro render, e somente para os
   // params ausentes. Depois disso, `seeded` impede que os defaults voltem
   // como fallback ao ler o estado.
-  const [seeded, setSeeded] = React.useState(false);
+  const seedSort =
+    rawSort === undefined && !!defaultSorting && defaultSorting.length > 0;
+  const seedFilters =
+    rawFilters === undefined &&
+    !!defaultFilters &&
+    Object.keys(defaultFilters).length > 0;
+  const [seeded, setSeeded] = React.useState(() => !seedSort && !seedFilters);
+
   React.useEffect(() => {
     if (seeded) return;
 
-    const seedSort =
-      rawSort === undefined && defaultSorting && defaultSorting.length > 0;
-    const seedFilters =
-      rawFilters === undefined &&
-      defaultFilters &&
-      Object.keys(defaultFilters).length > 0;
-
-    if (seedSort || seedFilters) {
-      void navigate({
-        to: '.',
-        replace: true,
-        search: (previous: Record<string, unknown>) => ({
-          ...previous,
-          ...(seedSort ? { [keys.sort]: defaultSorting } : {}),
-          ...(seedFilters ? { [keys.filters]: defaultFilters } : {}),
-        }),
-      });
-    }
-
-    setSeeded(true);
+    void navigate({
+      to: '.',
+      replace: true,
+      search: (previous: Record<string, unknown>) => ({
+        ...previous,
+        ...(seedSort ? { [keys.sort]: defaultSorting } : {}),
+        ...(seedFilters ? { [keys.filters]: defaultFilters } : {}),
+      }),
+    }).then(() => setSeeded(true));
     // Roda apenas no mount: os defaults só entram na URL se ela já estiver
     // vazia. Depois disso, a URL é a fonte da verdade e não queremos que
     // mudanças em `defaultSorting`/`defaultFilters` ressuscitem os defaults.

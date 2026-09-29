@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Updater, VisibilityState } from '@tanstack/react-table';
+import type { ColumnVisibilityState, Updater } from '@tanstack/react-table';
 import { z } from 'zod';
 
 const STORAGE_PREFIX = 'dataTable:hiddenColumns:';
@@ -40,11 +40,11 @@ function writeHiddenColumns(storageKey: string, hidden: string[]): void {
   }
 }
 
-function toVisibilityState(hidden: string[]): VisibilityState {
+function toVisibilityState(hidden: string[]): ColumnVisibilityState {
   return Object.fromEntries(hidden.map((id) => [id, false]));
 }
 
-function toHiddenColumns(state: VisibilityState): string[] {
+function toHiddenColumns(state: ColumnVisibilityState): string[] {
   return Object.entries(state)
     .filter(([, visible]) => !visible)
     .map(([id]) => id);
@@ -61,11 +61,11 @@ function toHiddenColumns(state: VisibilityState): string[] {
  */
 export function useColumnVisibility(
   tableKey?: string
-): [VisibilityState, (updater: Updater<VisibilityState>) => void] {
+): [ColumnVisibilityState, (updater: Updater<ColumnVisibilityState>) => void] {
   const storageKey = tableKey ? columnVisibilityStorageKey(tableKey) : null;
 
-  const [visibility, setVisibility] = React.useState<VisibilityState>(() =>
-    storageKey ? toVisibilityState(readHiddenColumns(storageKey)) : {}
+  const [visibility, setVisibility] = React.useState<ColumnVisibilityState>(
+    () => (storageKey ? toVisibilityState(readHiddenColumns(storageKey)) : {})
   );
 
   // Mantém várias abas do mesmo navegador em sincronia.
@@ -84,7 +84,7 @@ export function useColumnVisibility(
   }, [storageKey]);
 
   const updateVisibility = React.useCallback(
-    (updater: Updater<VisibilityState>) => {
+    (updater: Updater<ColumnVisibilityState>) => {
       setVisibility((previous) => {
         const next =
           typeof updater === 'function' ? updater(previous) : updater;

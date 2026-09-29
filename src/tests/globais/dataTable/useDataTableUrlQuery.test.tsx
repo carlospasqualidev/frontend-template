@@ -17,6 +17,7 @@ const navigate = vi.fn((options: { search?: unknown }) => {
       ) => Record<string, unknown>
     )(search);
   }
+  return Promise.resolve();
 });
 
 vi.mock('@tanstack/react-router', () => ({
@@ -131,10 +132,12 @@ describe('useDataTableUrlQuery', () => {
 
   // Regra dura do hook: depois do seed, a URL é a única fonte de verdade — os
   // defaults NÃO podem ressuscitar, senão "Limpar" nunca fica limpo.
-  it('não ressuscita os defaults depois de o usuário limpar', () => {
+  it('não ressuscita os defaults depois de o usuário limpar', async () => {
     const { result, rerender } = renderHook(() =>
       useDataTableUrlQuery({ defaultFilters: { status: 'active' } })
     );
+    // Aguarda a navegação que semeia os defaults concluir.
+    await act(async () => {});
 
     act(() => result.current.tableProps.onSearch?.({}));
     // O router re-renderiza a tela com o novo search; aqui isso é explícito

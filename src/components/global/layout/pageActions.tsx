@@ -46,12 +46,13 @@ interface PageActionsProps {
  * </PageActions>
  * ```
  */
-export function PageActions({ children }: PageActionsProps) {
-  const [slot, setSlot] = React.useState<HTMLElement | null>(null);
+const subscribeToSlot = () => () => {};
+const getSlot = () => document.getElementById(PAGE_ACTIONS_SLOT_ID);
 
-  React.useEffect(() => {
-    setSlot(document.getElementById(PAGE_ACTIONS_SLOT_ID));
-  }, []);
+export function PageActions({ children }: PageActionsProps) {
+  // O slot só entra no DOM no commit do `Layout`; o `useSyncExternalStore`
+  // revalida o snapshot após o mount e re-renderiza quando ele aparece.
+  const slot = React.useSyncExternalStore(subscribeToSlot, getSlot);
 
   if (!slot) return null;
   return createPortal(children, slot);

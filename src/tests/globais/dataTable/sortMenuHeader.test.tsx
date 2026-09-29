@@ -1,9 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { SortingState, Table } from '@tanstack/react-table';
+import type { SortingState } from '@tanstack/react-table';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SortMenuHeader } from '@/components/global/dataTable/columnHelpers';
+import type { DataTableInstance } from '@/components/global/dataTable/tableFeatures';
 
 const OPTIONS = [
   { id: 'nextExitDate', label: 'Próxima saída' },
@@ -11,13 +12,13 @@ const OPTIONS = [
   { id: 'invoicingDate', label: 'Faturamento' },
 ];
 
-// O SortMenuHeader só usa `getState().sorting` e `setSorting` — mock mínimo tipado.
+// O SortMenuHeader só usa `atoms.sorting` e `setSorting` — mock mínimo tipado.
 function makeTable(sorting: SortingState) {
   const setSorting = vi.fn();
   const table = {
-    getState: () => ({ sorting }),
+    atoms: { sorting: { get: () => sorting } },
     setSorting,
-  } as unknown as Table<unknown>;
+  } as unknown as DataTableInstance<object>;
   return { table, setSorting };
 }
 

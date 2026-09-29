@@ -2,7 +2,7 @@
 
 Guia para o Claude trabalhar neste frontend. Este arquivo é a fonte de verdade para convenções e comportamento esperado — leia o [`README.md`](README.md) para detalhes de stack, scripts e estrutura de pastas.
 
-> O diretório irmão `ultimate-server/` existe apenas como template de backend para fazer o login funcionar. Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito.
+> O diretório irmão `server-template/` é o template de backend que atende este frontend (Fastify + Prisma + Zod; sobe com `npm run db:up && npm run dev` lá dentro, em `http://localhost:8080`). Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito. O contrato HTTP dele está em `../server-template/docs/openapi.json` (ver **Contrato com o backend** na seção HTTP).
 
 ---
 
@@ -10,7 +10,7 @@ Guia para o Claude trabalhar neste frontend. Este arquivo é a fonte de verdade 
 
 React 19 + Vite 7 + TypeScript • TanStack Router (code-based) + TanStack Query • Zustand • React Hook Form + Zod • Tailwind v4 + shadcn/ui (Radix) • Axios • Sonner • Vitest + Testing Library • ESLint + Prettier + Husky + lint-staged.
 
-Sessão por cookie HTTP-only (consumida pelo template de backend em `../ultimate-server`).
+Sessão por cookie HTTP-only (gravado e validado pelo template de backend em `../server-template`).
 
 ---
 
@@ -809,6 +809,19 @@ Numa tela **operacional** — aquela em que a mesma pessoa repete as etapas do f
 - **`services/<módulo>/`**: as chamadas daquele domínio + seus tipos. Modelo de referência: o `services/session/` já existente (`sessionService.ts`, `authMapper.ts`, `types.ts`). Quando o módulo cresce, separe por responsabilidade — ex.: `services/users/` → `userListApi.ts` (listagem + params), `userDetailApi.ts` (detalhe), `userFormApi.ts` (criar/editar/ações + dados auxiliares). Cada arquivo mantém o schema Zod **junto** do fetch que o usa, derivando o tipo com `z.infer<typeof schema>` (fonte de verdade do shape ao lado do parser).
 - Atualize o schema/tipo quando o contrato da API mudar; importe-os em hooks, telas e testes a partir do arquivo do módulo.
 
+#### Contrato com o backend (`../server-template`)
+
+A fonte de verdade do contrato é o OpenAPI gerado dos schemas Zod do server: `../server-template/docs/openapi.json` (ou `http://localhost:8080/docs` com ele no ar). Antes de escrever um schema Zod de resposta aqui, leia a rota lá — não invente shape. O que já está fechado entre os dois lados:
+
+- **Base**: `VITE_API_URL=http://localhost:8080/api`; as rotas deste frontend ficam sob `/client` (`/client/session/login`, `/client/users/me`, `/client/users`…).
+- **Sessão**: `POST /client/session/login` e `/register` → `{ success, user }`; `POST /client/session/logout` → `{ success }`; `GET /client/users/me` → `{ user }`. `user` = `{ id, name, email, image | null }`. `permissions` e `idleTimeoutMinutes` ainda **não** vêm do server-template — continuam opcionais no `IUser`.
+- **Erro**: sempre `{ message }` no topo, em pt-BR, pronto para o toast. Erro de validação traz também `issues: [{ path, message }]` (use para marcar campo no formulário quando fizer sentido).
+- **Sucesso de mutation**: `{ message, <entidade> }` — o `message` vira toast automático pelo interceptor. Listagens não trazem `message`.
+- **Listagem**: query `page` (**0-based**), `pageSize` (padrão 50, máx. 100), `orderBy` (allowlist do server), `order` (`asc`|`desc`), `search`, filtros múltiplos como `a,b,c`; resposta `{ <entidades>: [...], count }`.
+- **Detalhe**: `{ <entidade> }` (ex.: `{ user }`); registro de outra empresa responde 404.
+- **Upload**: `POST /client/upload/file`, campo `file`, resposta com `Location` (URL pública) — já é o que `services/api/upload.ts` espera.
+- **Datas**: ISO 8601 UTC nas duas direções; data civil como `AAAA-MM-DD` (ver seção Datas).
+
 ❌ `screens/users/userListApi.ts` (chamada de API dentro de `screens/`)
 ❌ `services/api/users/userListApi.ts` (chamada de domínio dentro de `services/api/`)
 ✓ `services/users/userListApi.ts` (chamada no módulo, importada pela tela)
@@ -961,8 +974,8 @@ Veja o padrão demonstrado na story `Padrões/OptimisticUpdate` no Storybook (`n
 
 - Sessão por cookie HTTP-only. `SessionValidation` ([`src/components/global/layout/sessionValidation.tsx`](src/components/global/layout/sessionValidation.tsx)) valida antes de renderizar rotas protegidas.
 - Usuário fica em `useSessionStore` ([`src/hooks/useSessionStore.ts`](src/hooks/useSessionStore.ts)) — Zustand.
-- **Logout por inatividade é global**, montado uma vez no `Layout` via [`IdleTimeout`](src/components/global/layout/idleTimeout.tsx) (lógica em [`useIdleLogout`](src/hooks/useIdleLogout.ts)): passado o tempo de inatividade, abre um modal com contagem regressiva (~60s) e encerra a sessão se o usuário não continuar. O tempo efetivo vem do backend em `user.idleTimeoutMinutes` (usuário → config de sistema → default); o valor no client é só rede de segurança. Nenhuma tela implementa timeout próprio.
-- **Permissões** chegam achatadas em `user.permissions` e são consultadas com [`hasPermission`](src/lib/permissions.ts) **apenas para ajustar a UI** (esconder item de menu, botão ou coluna de ação). O backend continua sendo a autoridade — nunca trate o gate de UI como segurança.
+- **Logout por inatividade é global**, montado uma vez no `Layout` via [`IdleTimeout`](src/components/global/layout/idleTimeout.tsx) (lógica em [`useIdleLogout`](src/hooks/useIdleLogout.ts)): passado o tempo de inatividade, abre um modal com contagem regressiva (~60s) e encerra a sessão se o usuário não continuar. O tempo efetivo vem do backend em `user.idleTimeoutMinutes` (usuário → config de sistema → default); o valor no client é só rede de segurança. Nenhuma tela implementa timeout próprio. O `server-template` ainda não envia esse campo — enquanto isso vale o default do client.
+- **Permissões** chegam achatadas em `user.permissions` e são consultadas com [`hasPermission`](src/lib/permissions.ts) **apenas para ajustar a UI** (esconder item de menu, botão ou coluna de ação). O backend continua sendo a autoridade — nunca trate o gate de UI como segurança. O `server-template` ainda não envia `permissions`; sem o campo, `hasPermission` devolve `false` e **todo controle gateado fica escondido** — ao integrar um backend real, ele precisa enviar a lista achatada (ou o gate precisa ser removido das telas que não usam permissão).
 
 ### Estado global
 

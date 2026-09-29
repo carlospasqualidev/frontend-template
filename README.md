@@ -17,7 +17,7 @@ fetching, testes, lint e hooks de commit).
 | Formulários   | React Hook Form + [Zod](https://zod.dev)                     |
 | HTTP          | Axios (instância em `services/api`)                          |
 | Notificações  | [Sonner](https://sonner.emilkowal.ski)                       |
-| Testes        | Vitest + Testing Library                                     |
+| Testes        | Vitest + Testing Library; Playwright (E2E)                   |
 | Qualidade     | ESLint + Prettier + Husky + lint-staged                      |
 
 ## Requisitos
@@ -49,6 +49,8 @@ Com o `.env` padrão (`VITE_SESSION_MODE=api`), o login precisa do backend
 | `npm test`                | Executa a suíte de testes uma vez                               |
 | `npm run test:watch`      | Testes em modo watch                                            |
 | `npm run check`           | Roda `lint + typecheck + test` em sequência                     |
+| `npm run test:e2e`        | E2E (Playwright) em modo fake, sem backend                      |
+| `npm run test:e2e:api`    | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
 | `npm run storybook`       | Storybook em modo dev (porta 6006)                              |
 | `npm run build-storybook` | Build estático do Storybook em `storybook-static/`              |
 | `npm run clean`           | Limpa `dist/` e caches (`node_modules/.tmp`, `.vite`, `.cache`) |
@@ -86,7 +88,8 @@ Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example
   o tempo de inatividade até o logout.
 - `fake`: sem backend. Qualquer e-mail válido e senha não vazia entram, com as
   permissões do menu e 20 minutos de inatividade. Serve para demonstração; a
-  suíte (`npm test`) e os E2E (`npm run test:e2e`) rodam sempre nesse modo.
+  suíte (`npm test`) e os E2E padrão (`npm run test:e2e`) rodam nesse modo. Só
+  o `npm run test:e2e:api` usa o `api`, contra o server real (ver [E2E](#e2e)).
 
 As telas de demonstração (usuários, auditoria, configurações) usam dados mock
 nos dois modos, já no formato do contrato do backend.
@@ -243,8 +246,9 @@ A implementação (backend real ou fictícia) vem de `VITE_SESSION_MODE` — ver
 
 ## Testes
 
-Vitest + Testing Library, ambiente `jsdom`. Arquivos `*.test.ts(x)` ao lado do
-código. Setup global em [`src/test/setup.ts`](src/test/setup.ts).
+Vitest + Testing Library, ambiente `jsdom`. Arquivos `*.test.ts(x)` em
+[`src/tests/`](src/tests), uma pasta por módulo. Setup global em
+[`src/tests/setup.ts`](src/tests/setup.ts).
 
 As abstrações globais (`Button`, `Card`, `Empty`, `ConfirmDialog`, `Modal`,
 `Switch`, `TextArea`, `InputField`), o `useDataTableQuery`, o
@@ -256,3 +260,52 @@ comportamento esperado — use-os como ponto de partida ao estender.
 npm test           # roda uma vez
 npm run test:watch # modo watch
 ```
+
+### E2E
+
+Playwright, com os specs em [`e2e/`](e2e). Há duas suítes:
+
+- `npm run test:e2e`: sobe o Vite sozinho (porta 5174) em modo `fake` de
+  sessão, com as telas em mock. Não precisa de backend; é a que roda ao fim de
+  toda tarefa e no dia a dia.
+- `npm run test:e2e:api`: prova ponta a ponta contra o `../server-template`
+  real (specs em [`e2e/api/`](e2e/api)): login do admin com o menu completo,
+  sessão mantida ao recarregar (cookie HTTP-only), logout, senha errada, conta
+  bloqueada, usuário sem cargo sem os itens de menu gateados, e o tempo de
+  inatividade vindo da configuração da empresa. Opcional e fora do CI.
+
+Para a `test:e2e:api`, suba o server antes, na pasta dele:
+
+```bash
+cd ../server-template
+npm run db:up      # Postgres do docker compose
+npm run db:deploy  # migrations
+npm run db:seed    # admin@admin.com e blocked@admin.com, senha 123123123
+npm run dev        # http://localhost:8080
+```
+
+Depois, na raiz deste frontend:
+
+```bash
+npm run test:e2e:api
+```
+
+- O Vite sobe sozinho em modo `api` na porta **4173**, que já está no
+  `CORS_ORIGINS` padrão do server, e aponta para `VITE_API_URL` do ambiente
+  (padrão `http://localhost:8080/api`). A porta precisa estar livre. Para usar
+  outra, `E2E_API_PORT=<porta>` aqui e `CORS_ORIGINS` com
+  `http://localhost:<porta>` ao subir o server.
+- Antes dos specs, o `globalSetup` confere `GET /health/ready` e o login do
+  admin do seed; se faltar algo, para com a instrução.
+- Os specs criam o que precisam (usuário com e-mail de sufixo único,
+  configuração de inatividade da empresa) e desfazem no fim: rodam quantas vezes
+  for preciso contra o mesmo banco de desenvolvimento.
+- O server aceita 10 logins por minuto por IP, e a suíte usa 7: o do admin no
+  `globalSetup` e 6 pelo navegador (os dois chegam ao server por `127.0.0.1` e
+  dividem o contador). O `globalSetup` lê o limite na resposta do login do
+  admin; se sobrarem menos de 6, ou se o login vier recusado (429), ele espera a
+  janela reiniciar (até 1 minuto, com o tempo no log) e segue. Se o 429
+  continuar depois da espera, ele para com a mensagem de que outro cliente no
+  mesmo IP está gastando o limite (a tela de login aberta, outra suíte): pare
+  esse cliente e rode de novo. Rodar de novo logo em seguida funciona, só
+  demora mais.

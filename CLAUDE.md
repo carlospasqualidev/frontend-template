@@ -249,6 +249,7 @@ Produto pt-BR opera sob a LGPD. Considere PII e **proibido logar** em qualquer c
 Regras práticas:
 
 - **Erros de API**: o interceptor do `api` exibe mensagem amigável — não relogue o objeto de erro cru no `console.error` de produção. Em dev, OK, desde que o `.env.local` não vá pro repo.
+- **Reporte de erro** (`sendErrorMessage` em [`services/api/errorHandlers.ts`](src/services/api/errorHandlers.ts), para `VITE_ERROR_LOG_URL`): do usuário da sessão vai só o `userId` (id opaco, o mesmo campo que o `server-template` manda ao log dele), nunca nome, e-mail ou o objeto `user` inteiro. Contexto novo no reporte segue a mesma regra.
 - **Query string nunca leva PII** (`?email=foo@bar.com` aparece em log de servidor, histórico do navegador, referer). Use POST body.
 - **URL de tela pode conter ID opaco** (`/users/abc123`), nunca CPF na URL.
 - **Toast/erro ao usuário não ecoa o input**: `"Falha ao salvar."` em vez de `"Falha ao salvar o usuário ${nome} (CPF ${cpf})."`.
@@ -284,7 +285,7 @@ src/tests/
 │   ├── card/card.test.tsx
 │   ├── dataTable/{dataTable,dataTableSearch,useDataTableQuery}.test.tsx
 │   └── form/<field>/<field>.test.tsx
-├── helpers/axiosAdapter.ts                  # `respondWith(status, data)`: resposta do `axiosApi` sem rede, pelos interceptors reais
+├── helpers/axiosAdapter.ts                  # `respondWith(status, data)` e `failWithNetworkError()`: resposta (ou rede fora) do `axiosApi` sem rede, pelos interceptors reais
 ├── hooks/<hook>/<hook>.test.tsx
 ├── lib/<grupo>/<arquivo>.test.ts
 └── services/<servico>/<arquivo>.test.ts
@@ -344,7 +345,13 @@ Use `waitFor` apenas para asserções que não são "elemento apareceu" (ex.: `e
 - **Camadas (não confundir):** correção isolada de componente global (`components/global/`) continua coberta por **Vitest + story** (contrato do componente) — não escreva e2e para um primitivo isolado; ele é exercitado transitivamente pelo e2e da tela que o usa. O Playwright cobre o que o **usuário faz na aplicação rodando** (navegação, formulários, ações, filtros).
 - **Onde:** specs em `e2e/<feature>.spec.ts` (na raiz do frontend). Config em [`playwright.config.ts`](playwright.config.ts): baseURL `http://localhost:5174` (sobrescrevível por `E2E_BASE_URL`), chromium, `webServer` que **sobe o Vite automaticamente** em modo fake (`VITE_SESSION_MODE=fake`; `reuseExistingServer` no dev só reaproveita um servidor na própria `5174`), `workers: 1` só no CI. O Vitest ignora `e2e/**` ([`vitest.config.ts`](vitest.config.ts)) — `npm test` (unit) e `npm run test:e2e` (Playwright) são separados.
 - **Como rodar:** só `npm run test:e2e` na raiz. Nenhum DB/server para subir (modo fake de sessão + dados mock).
-- **Login:** modo fake — **qualquer e-mail válido + senha não-vazia** autentica (grava um cookie de sessão fictício, com as permissões do menu). Use o helper `login(page)` de [`e2e/helpers/session.ts`](e2e/helpers/session.ts) — ponto único de autenticação dos specs; para rodar contra o backend real, só ele muda. Referências: [`e2e/auditLogs.spec.ts`](e2e/auditLogs.spec.ts) e [`e2e/settings.spec.ts`](e2e/settings.spec.ts) (telas protegidas via `login` + `goto`); [`e2e/session.spec.ts`](e2e/session.spec.ts) (menu por permissão e logout); [`e2e/login.spec.ts`](e2e/login.spec.ts) (tela pública de login).
+- **Login:** modo fake — **qualquer e-mail válido + senha não-vazia** autentica (grava um cookie de sessão fictício, com as permissões do menu). Use o helper `login(page)` de [`e2e/helpers/session.ts`](e2e/helpers/session.ts) — ponto único de autenticação dos specs; contra o server real, `login(page, credenciais)` (e `submitLogin` quando o login deve ser recusado). Referências: [`e2e/auditLogs.spec.ts`](e2e/auditLogs.spec.ts) e [`e2e/settings.spec.ts`](e2e/settings.spec.ts) (telas protegidas via `login` + `goto`); [`e2e/session.spec.ts`](e2e/session.spec.ts) (menu por permissão e logout); [`e2e/login.spec.ts`](e2e/login.spec.ts) (tela pública de login).
+- **Contra o server real (opcional, fora do CI): `npm run test:e2e:api`.** Prova ponta a ponta com o `../server-template`: login e erros de login, sessão ao recarregar, logout, menu por permissão (admin e usuário sem cargo) e tempo de inatividade vindo da configuração da empresa. Config própria, [`playwright.api.config.ts`](playwright.api.config.ts): specs em `e2e/api/` (o `playwright.config.ts` os ignora, então o `npm run test:e2e` segue sem backend), Vite em modo `api` na porta **4173** (está no `CORS_ORIGINS` padrão do server e não disputa a 5173 do `npm run dev`; outra porta: `E2E_API_PORT`, com a origem acrescentada ao `CORS_ORIGINS` do server), `VITE_API_URL` do ambiente ou `http://localhost:8080/api`, sem `reuseExistingServer`, um worker (os specs dividem o banco). Antes, suba o server (`npm run db:up`, `db:deploy`, `db:seed` e `npm run dev` lá dentro); o [`globalSetup`](e2e/api/globalSetup.ts) confere `/health/ready` e o login do admin do seed, e para com a instrução se faltar algo.
+  - **Preparo por API, o resto como uma pessoa:** o spec só chama a API direto para preparar e limpar dado, pelos helpers de [`e2e/helpers/serverApi.ts`](e2e/helpers/serverApi.ts), com a sessão do admin aberta uma vez no `globalSetup`. Tudo o que cria tem sufixo único e é desfeito no `afterAll` (usuário excluído, configuração devolvida ao valor anterior): o spec roda várias vezes contra o mesmo banco de desenvolvimento. Resposta do server pode ser conferida com `page.waitForResponse` (`isLoginResponse`, `isValidateResponse`).
+  - **Limite de login do server: 10 por minuto por IP** (login e register, cada um com o seu contador). A suíte gasta 7 (o do `globalSetup` e 6 dos specs, contando os 2 recusados de propósito), e o Node do `globalSetup` e o Chromium dividem o contador (os dois chegam por `127.0.0.1`). O `globalSetup` lê `x-ratelimit-remaining` e `x-ratelimit-reset` da resposta do login do admin: com menos de `SPEC_LOGIN_COUNT` sobrando, ou com 429, espera a janela reiniciar e escreve o tempo no log; se o 429 continuar depois disso, para apontando outro cliente no mesmo IP. Spec novo que faz login soma em `SPEC_LOGIN_COUNT`; prefira preparar pela sessão do admin.
+  - **Configuração da empresa mudada no preparo:** no `afterAll`, restaure a configuração primeiro, em `try/finally`, e só depois exclua o que o spec criou. Se o valor lido no preparo já é o do teste, uma execução anterior parou antes de restaurar: devolva o padrão do catálogo do server, não esse valor. Referência: [`e2e/api/idleTimeout.spec.ts`](e2e/api/idleTimeout.spec.ts).
+  - **Ausência de toast:** conte uma vez (`expect(await locator.count()).toBe(0)`), depois do ponto em que o toast já teria saído. `toHaveCount(0)` espera e passa quando o toast some sozinho (4 s), então não prova nada.
+  - **Tempo:** inatividade e outros cronômetros se provam com o relógio do Playwright (`page.clock.install()` antes da navegação e `page.clock.fastForward(...)`), sem esperar de verdade. Referência: [`e2e/api/idleTimeout.spec.ts`](e2e/api/idleTimeout.spec.ts).
 - **Seletores (aprendizados deste projeto):**
   - Prefira `getByRole`/`getByLabel`. Os campos de formulário têm `id` → `getByLabel('Rótulo')` funciona, inclusive nos `Select`/`MultiSelect` globais.
   - **Escope o contexto** para evitar ambiguidade: o e-mail do usuário logado aparece no menu do sidebar **e** na linha da tabela — busque linhas dentro do `tbody` (`page.locator('tbody tr', { hasText })`).
@@ -800,7 +807,7 @@ Numa tela **operacional** — aquela em que a mesma pessoa repete as etapas do f
 ### HTTP
 
 - Use a instância `api` de [`src/services/api`](src/services/api) — ela já trata `baseURL`, `withCredentials: true` (cookie) e toasts via interceptors. **Não crie axios direto.** Métodos: `get`, `post`, `put`, `patch`, `delete`, todos devolvendo só o `data` da resposta.
-- **Silenciar o toast de erro de uma chamada: `silentError: true` no config** (`api.get(url, { silentError: true })`; declarado no `AxiosRequestConfig` em [`services/api/types.ts`](src/services/api/types.ts) e lido pelo `catchHandler`). Só o toast some: a rejeição continua chegando a quem chamou, que passa a decidir o que o usuário vê. Use só quando a falha é esperada e não é erro para o usuário — hoje, o `validate` da sessão (`GET /client/users/me`): abrir o app sem sessão responde 401 e manda ao login, sem toast "Sessão não informada.". Não use para esconder erro de mutation: aí o toast é a resposta ao usuário.
+- **Silenciar o toast de erro de uma chamada: `silentError` no config** (declarado no `AxiosRequestConfig` em [`services/api/types.ts`](src/services/api/types.ts) e lido pelo `catchHandler`). Com uma **lista de status** (`api.get(url, { silentError: [401] })`), só as respostas com esses status ficam sem toast; outro status e falha de rede (sem resposta) continuam com o toast. `true` silencia qualquer falha, inclusive servidor fora: prefira a lista, com só o status esperado. Só o toast some: a rejeição continua chegando a quem chamou, que passa a decidir o que o usuário vê. Use só quando a falha é esperada e não é erro para o usuário — hoje, o `validate` da sessão (`GET /client/users/me`, com `[401]`): abrir o app sem sessão, ou com ela expirada, responde 401 e manda ao login sem o toast "Sessão não informada."; 5xx e rede fora mostram o toast (o usuário fica sabendo que o servidor está fora) e também mandam ao login. Não use para esconder erro de mutation: aí o toast é a resposta ao usuário.
 - **Formulário que chama o serviço direto, fora de `useMutation`** (login, cadastro): `try/catch` dentro do `handleSubmit`, senão a rejeição sobe como unhandled rejection. No `catch`, erro HTTP (`isAxiosError`) já teve o toast do interceptor e não ganha outro; qualquer outra falha (resposta fora do contrato recusada pelo `.parse`, que é um `ZodError`, ou bug) é inesperada: mensagem genérica ao usuário, `console.error` e `sendErrorMessage`. Modelo: [`screens/session/handleSessionSubmitError.ts`](src/screens/session/handleSessionSubmitError.ts).
 - Para server state: TanStack Query (`useQuery` / `useMutation`) com o `queryClient` de [`src/lib/queryClient.ts`](src/lib/queryClient.ts). Não use `useEffect` + `fetch`.
 
@@ -818,6 +825,7 @@ A fonte de verdade do contrato é o OpenAPI gerado dos schemas Zod do server: `.
 
 - **Base**: `VITE_API_URL=http://localhost:8080/api`; as rotas deste frontend ficam sob `/client` (`/client/session/login`, `/client/users/me`, `/client/users`…).
 - **Sessão**: `POST /client/session/login` e `/register` → `{ success, user }`; `POST /client/session/logout` → `{ success }`; `GET /client/users/me` → `{ user }`. `user` = `{ id, name, email, image | null, permissions, idleTimeoutMinutes }`, validado por `sessionUserSchema` ([`services/session/types.ts`](src/services/session/types.ts)). `permissions` são as efetivas, achatadas e em ordem alfabética, no formato `modulo.entidade.acao` (ex.: `backoffice.users.read`; usuário sem cargo = `[]`). `idleTimeoutMinutes` é o tempo **resolvido** (usuário → `security.idleTimeoutMinutes` da empresa → 20). **Atenção:** o `user` do CRUD de usuários (`/client/users`, `/client/users/:userId`) traz o `idleTimeoutMinutes` **próprio** (`number | null`, `null` = herda) e não traz `permissions` — nunca grave esse `user` no store da sessão (o `IUser` exige os dois campos justamente para o tipo barrar a cópia).
+- **Sessão, recusas**: `GET /client/users/me` sem sessão válida (sem cookie, token inválido ou expirado, usuário excluído) responde **401**: o app vai ao login sem toast (ver `silentError` em **HTTP**). Usuário bloqueado com a sessão aberta recebe **403** `"Conta bloqueada."`: vai ao login com o toast. Login recusado: **401** `"Credenciais inválidas."` (e-mail ou senha) e **403** `"Sua conta está bloqueada."`; o `message` vira o toast. Login e register aceitam **10 tentativas por minuto por IP**; acima disso, **429** `"Muitas tentativas. Aguarde um instante e tente novamente."`.
 - **Erro**: sempre `{ message }` no topo, em pt-BR, pronto para o toast. Erro de validação traz também `issues: [{ path, message }]` (use para marcar campo no formulário quando fizer sentido).
 - **Sucesso de mutation**: `{ message, <entidade> }` — o `message` vira toast automático pelo interceptor. Listagens não trazem `message`.
 - **Listagem**: query `page` (**0-based**), `pageSize` (padrão 50, máx. 100), `orderBy` (allowlist do server), `order` (`asc`|`desc`), `search`, filtros múltiplos como `a,b,c`; resposta `{ <entidades>: [...], count }`.
@@ -982,7 +990,7 @@ Veja o padrão demonstrado na story `Padrões/OptimisticUpdate` no Storybook (`n
 
 - Sessão por cookie HTTP-only. `SessionValidation` ([`src/components/global/layout/sessionValidation.tsx`](src/components/global/layout/sessionValidation.tsx)) valida antes de renderizar rotas protegidas.
 - **Modo da sessão por variável: `VITE_SESSION_MODE`** (`api` | `fake`, padrão `api`). O app importa sempre `sessionService` de [`services/session/sessionService.ts`](src/services/session/sessionService.ts), que exporta a implementação escolhida:
-  - `api` → [`apiSessionService`](src/services/session/apiSessionService.ts): `POST /client/session/login`, `/register`, `/logout` e `GET /client/users/me` no `../server-template` (suba-o com `npm run db:up && npm run dev` lá dentro; `VITE_API_URL` aponta para ele). A resposta passa por `sessionUserSchema` antes do store. O `GET /client/users/me` vai com `silentError: true` (ver **HTTP**): sem sessão, o 401 manda ao login sem toast.
+  - `api` → [`apiSessionService`](src/services/session/apiSessionService.ts): `POST /client/session/login`, `/register`, `/logout` e `GET /client/users/me` no `../server-template` (suba-o com `npm run db:up && npm run dev` lá dentro; `VITE_API_URL` aponta para ele). A resposta passa por `sessionUserSchema` antes do store. O `GET /client/users/me` vai com `silentError: [401]` (ver **HTTP**): sem sessão, o 401 manda ao login sem toast; 5xx e rede fora mandam ao login com o toast.
   - `fake` → [`fakeSessionService`](src/services/session/fakeSessionService.ts): sem backend; qualquer e-mail válido + senha não vazia entra, num cookie comum (não HTTP-only — só para demonstração e testes). O usuário fictício tem o mesmo shape do backend: **todas as permissões usadas no menu** (`sidebarData`) e `idleTimeoutMinutes: 20`. É o modo da suíte (`test.env` do `vitest.config.ts`) e dos E2E (`webServer` do `playwright.config.ts`).
   - As duas cumprem `ISessionService` ([`services/session/types.ts`](src/services/session/types.ts)). Não importe `apiSessionService`/`fakeSessionService` direto numa tela.
 - Usuário fica em `useSessionStore` ([`src/hooks/useSessionStore.ts`](src/hooks/useSessionStore.ts)) — Zustand. Só entra ali o `user` da sessão (`IUser`), nunca o do CRUD de usuários (ver **Contrato com o backend**).
@@ -1468,19 +1476,21 @@ src/stories/
 
 ## Scripts
 
-| Script                | O que faz                                               |
-| --------------------- | ------------------------------------------------------- |
-| `npm run dev`         | Servidor de desenvolvimento (Vite)                      |
-| `npm run build`       | Typecheck + build de produção                           |
-| `npm run preview`     | Pré-visualiza o build                                   |
-| `npm run lint`        | ESLint                                                  |
-| `npm run format`      | Prettier (escrita)                                      |
-| `npm run typecheck`   | `tsc -b`                                                |
-| `npm test`            | Vitest run                                              |
-| `npm run test:watch`  | Vitest watch                                            |
-| `npm run check`       | Lint + typecheck + test                                 |
-| `npm run test:layers` | Empilhamento (z-index) no navegador, contra o Storybook |
-| `npm run clean`       | Remove `dist/` e caches                                 |
+| Script                 | O que faz                                               |
+| ---------------------- | ------------------------------------------------------- |
+| `npm run dev`          | Servidor de desenvolvimento (Vite)                      |
+| `npm run build`        | Typecheck + build de produção                           |
+| `npm run preview`      | Pré-visualiza o build                                   |
+| `npm run lint`         | ESLint                                                  |
+| `npm run format`       | Prettier (escrita)                                      |
+| `npm run typecheck`    | `tsc -b`                                                |
+| `npm test`             | Vitest run                                              |
+| `npm run test:watch`   | Vitest watch                                            |
+| `npm run check`        | Lint + typecheck + test                                 |
+| `npm run test:e2e`     | E2E (Playwright) em modo fake, sem backend              |
+| `npm run test:e2e:api` | E2E contra o `../server-template` no ar (modo `api`)    |
+| `npm run test:layers`  | Empilhamento (z-index) no navegador, contra o Storybook |
+| `npm run clean`        | Remove `dist/` e caches                                 |
 
 ---
 

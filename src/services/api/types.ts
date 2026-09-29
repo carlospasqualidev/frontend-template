@@ -1,15 +1,20 @@
 declare module 'axios' {
   interface AxiosRequestConfig {
     /**
-     * Não exibe o toast de erro do interceptor nesta chamada. A rejeição
-     * continua chegando a quem chamou, que passa a ser o responsável por
-     * decidir o que o usuário vê. Uso: a chamada cuja falha é esperada e não é
-     * erro para o usuário (ex.: `GET /client/users/me` sem sessão, na abertura
-     * do app).
+     * Não exibe o toast de erro do interceptor nesta chamada. `true` silencia
+     * qualquer falha; uma lista de status HTTP (`[401]`) silencia só as
+     * respostas com esses status, e as demais falhas (outro status, rede fora,
+     * sem resposta) continuam com o toast. A rejeição sempre chega a quem
+     * chamou, que passa a ser o responsável por decidir o que o usuário vê.
+     * Uso: a falha esperada, que não é erro para o usuário (ex.: o 401 de
+     * `GET /client/users/me` sem sessão, na abertura do app).
      */
-    silentError?: boolean;
+    silentError?: SilentError;
   }
 }
+
+/** `true` silencia toda falha; a lista, só as respostas com esses status. */
+export type SilentError = boolean | readonly number[];
 
 /**
  * Shape parcial das respostas/erros do axios consumidos pelos interceptors.
@@ -18,7 +23,7 @@ declare module 'axios' {
  */
 export interface ICatchHandler {
   config?: {
-    silentError?: boolean;
+    silentError?: SilentError;
   };
   response?: {
     data?: unknown;

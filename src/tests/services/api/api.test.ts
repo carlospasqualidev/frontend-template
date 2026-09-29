@@ -3,7 +3,10 @@ import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '@/services/api';
-import { respondWith } from '@/tests/helpers/axiosAdapter';
+import {
+  failWithNetworkError,
+  respondWith,
+} from '@/tests/helpers/axiosAdapter';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -38,6 +41,47 @@ describe('interceptor de erro do api', () => {
     ).rejects.toMatchObject({ response: { status: 401 } });
 
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  // Lista de status: só essas respostas ficam sem toast.
+  it('com `silentError: [401]`, o 401 não exibe toast e a rejeição chega a quem chamou', async () => {
+    await expect(
+      api.get('/client/users/me', {
+        silentError: [401],
+        adapter: respondWith(401, { message: 'Sessão não informada.' }),
+      })
+    ).rejects.toMatchObject({ response: { status: 401 } });
+
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('com `silentError: [401]`, outro status exibe o toast do servidor', async () => {
+    await expect(
+      api.get('/client/users/me', {
+        silentError: [401],
+        adapter: respondWith(500, { message: 'Erro interno do servidor.' }),
+      })
+    ).rejects.toMatchObject({ response: { status: 500 } });
+
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith('Erro interno do servidor.', {
+      id: 'errorToastId',
+    });
+  });
+
+  // Rede fora não tem status: não casa com a lista, o usuário vê o toast.
+  it('com `silentError: [401]`, a falha de rede exibe "Erro de comunicação"', async () => {
+    await expect(
+      api.get('/client/users/me', {
+        silentError: [401],
+        adapter: failWithNetworkError(),
+      })
+    ).rejects.toMatchObject({ code: 'ERR_NETWORK' });
+
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith('Erro de comunicação', {
+      id: 'errorToastId',
+    });
   });
 
   it('`silentError` vale só para a chamada que o recebe', async () => {

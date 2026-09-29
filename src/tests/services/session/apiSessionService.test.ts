@@ -109,15 +109,16 @@ describe('apiSessionService.signOut', () => {
 });
 
 describe('apiSessionService.validate', () => {
-  // `silentError`: abrir o app sem sessão (401) não mostra toast de erro.
-  it('lê o usuário da sessão em GET /client/users/me, sem toast de erro', async () => {
+  // `silentError: [401]`: abrir o app sem sessão não mostra toast de erro; o
+  // toast do 5xx e da rede fora continua (ver `validateErrorToast.test.ts`).
+  it('lê o usuário da sessão em GET /client/users/me, silenciando só o 401', async () => {
     get.mockResolvedValue({ user: makeServerUser() });
 
     await expect(apiSessionService.validate()).resolves.toEqual({
       user: makeServerUser(),
     });
     expect(get).toHaveBeenCalledWith('/client/users/me', {
-      silentError: true,
+      silentError: [401],
     });
   });
 

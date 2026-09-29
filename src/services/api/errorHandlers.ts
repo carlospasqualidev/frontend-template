@@ -15,6 +15,9 @@ import {
  * Envia o erro para um serviço de log externo, se `VITE_ERROR_LOG_URL`
  * estiver configurado. Só dispara em produção. Nunca lança — falhas no
  * reporte não devem derrubar a aplicação.
+ *
+ * Do usuário da sessão vai só o `userId` (id opaco, o mesmo campo que o
+ * `server-template` manda ao log): nome e e-mail são dado pessoal (LGPD).
  */
 export const sendErrorMessage = async ({ error }: { error: unknown }) => {
   if (!import.meta.env.PROD || !env.VITE_ERROR_LOG_URL) {
@@ -32,18 +35,31 @@ export const sendErrorMessage = async ({ error }: { error: unknown }) => {
       errorStack,
       extraInfo: {
         url: window.location.href,
-        user: user ? JSON.stringify(user) : '',
+        userId: user?.id,
       },
     })
     .catch(() => undefined);
 };
 
+function isSilentError(err: ICatchHandler): boolean {
+  const silentError = err.config?.silentError;
+
+  if (silentError === undefined || typeof silentError === 'boolean') {
+    return silentError === true;
+  }
+
+  const status = err.response?.status;
+  return status !== undefined && silentError.includes(status);
+}
+
 /**
  * Interceptor de erro: exibe a mensagem do servidor (ou uma genérica) num
- * toast. A chamada feita com `silentError: true` no config não exibe nada.
+ * toast. A chamada feita com `silentError: true` no config não exibe nada; com
+ * uma lista de status (`silentError: [401]`), só essas respostas ficam sem
+ * toast.
  */
 export const catchHandler = (err: ICatchHandler) => {
-  if (err.config?.silentError) {
+  if (isSilentError(err)) {
     return;
   }
 

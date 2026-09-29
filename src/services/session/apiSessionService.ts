@@ -34,11 +34,13 @@ async function signOut(): Promise<ISignOutServiceResponse> {
   return signOutResponseSchema.parse(response);
 }
 
-// Sem toast de erro: abrir o app sem sessão responde 401, e isso não é erro
-// para o usuário. `SessionValidation` trata a rejeição mandando ao login.
+// Sem toast só no 401: abrir o app sem sessão (ou com ela expirada) não é erro
+// para o usuário. 5xx e falha de rede mantêm o toast, para o usuário saber que
+// o servidor está fora. Em todos os casos `SessionValidation` trata a rejeição
+// mandando ao login.
 async function validate(): Promise<IValidateResponse> {
   const response = await api.get<unknown>('/client/users/me', {
-    silentError: true,
+    silentError: [401],
   });
   return validateResponseSchema.parse(response);
 }

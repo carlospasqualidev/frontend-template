@@ -15,8 +15,9 @@ export default defineConfig({
   testDir: './e2e',
   // Os specs de EMPILHAMENTO rodam contra o Storybook, com config própria
   // (`playwright.storybook.config.ts` / `npm run test:layers`) — sem isso este
-  // config tentaria abri-los no Vite do app.
-  testIgnore: '**/storybook/**',
+  // config tentaria abri-los no Vite do app. Os de `e2e/api/` exigem o server
+  // real e rodam só pelo `playwright.api.config.ts` (`npm run test:e2e:api`).
+  testIgnore: ['**/storybook/**', '**/e2e/api/**'],
   // Falha se um `test.only` for commitado por engano.
   forbidOnly: !!process.env.CI,
   // Sem retry local; no CI, uma tentativa extra absorve flutuação de rede.

@@ -37,3 +37,13 @@ export function respondWith(status: number, data: unknown): AxiosAdapter {
     );
   };
 }
+
+/**
+ * Adapter do axios que falha como a rede fora (servidor parado, sem conexão):
+ * rejeita com o `AxiosError` `ERR_NETWORK`, sem `response`.
+ */
+export function failWithNetworkError(): AxiosAdapter {
+  return async (config: InternalAxiosRequestConfig) => {
+    throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
+  };
+}

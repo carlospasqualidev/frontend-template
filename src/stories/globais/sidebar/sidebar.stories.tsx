@@ -36,7 +36,12 @@ function withFakeSession() {
       name: 'Maria Silva',
       email: 'maria@example.com',
       image: null,
-      permissions: ['users.read', 'audit.read', 'settings.read'],
+      permissions: [
+        'backoffice.audit.read',
+        'backoffice.systemConfigs.read',
+        'backoffice.users.read',
+      ],
+      idleTimeoutMinutes: 20,
     },
   });
 }

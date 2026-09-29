@@ -38,7 +38,15 @@ export const sendErrorMessage = async ({ error }: { error: unknown }) => {
     .catch(() => undefined);
 };
 
+/**
+ * Interceptor de erro: exibe a mensagem do servidor (ou uma genérica) num
+ * toast. A chamada feita com `silentError: true` no config não exibe nada.
+ */
 export const catchHandler = (err: ICatchHandler) => {
+  if (err.config?.silentError) {
+    return;
+  }
+
   const message = extractResponseMessage(err.response?.data);
 
   if (message) {

@@ -546,59 +546,74 @@ export function getUserActivity(user: ManagedUser): UserActivityEvent[] {
   return events.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
+// Ids no formato do catálogo do backend (`modulo.entidade.acao`), os mesmos
+// nomes que chegam em `user.permissions` da sessão.
 const BASE_PERMISSIONS: Omit<UserPermission, 'granted'>[] = [
   {
-    id: 'users:read',
+    id: 'backoffice.users.read',
     label: 'Visualizar usuários',
     description: 'Acessa a lista e os detalhes dos usuários do sistema.',
   },
   {
-    id: 'users:write',
-    label: 'Gerenciar usuários',
-    description: 'Cria, edita e desativa contas de outros usuários.',
+    id: 'backoffice.users.update',
+    label: 'Editar usuário',
+    description:
+      'Edita os dados e bloqueia ou desbloqueia contas de outros usuários.',
   },
   {
-    id: 'billing:read',
-    label: 'Visualizar faturamento',
-    description: 'Consulta faturas, planos e métodos de pagamento.',
+    id: 'backoffice.roles.read',
+    label: 'Visualizar cargos',
+    description: 'Consulta os cargos da empresa e as permissões de cada um.',
   },
   {
-    id: 'billing:write',
-    label: 'Gerenciar faturamento',
-    description: 'Altera plano, métodos de pagamento e emite reembolsos.',
+    id: 'backoffice.roles.update',
+    label: 'Editar cargo',
+    description: 'Altera o nome, a descrição e as permissões dos cargos.',
   },
   {
-    id: 'audit:read',
-    label: 'Auditoria',
+    id: 'backoffice.audit.read',
+    label: 'Visualizar trilha de auditoria',
     description: 'Acessa o log de auditoria com ações de toda a organização.',
   },
   {
-    id: 'integrations:write',
-    label: 'Configurar integrações',
-    description: 'Conecta e remove integrações de terceiros.',
+    id: 'backoffice.systemConfigs.update',
+    label: 'Editar configurações',
+    description: 'Altera os parâmetros de sistema da empresa.',
   },
 ];
 
 /**
  * Mapeia papéis para permissões padrão. Em backend real, esse cruzamento
- * acontece no servidor — aqui é apenas uma referência visual.
+ * acontece no servidor — aqui é apenas uma referência visual. `Map` (e não
+ * `Record` indexado pelo papel): `.get()` não é sink de object injection.
  */
-const PERMISSIONS_BY_ROLE: Record<ManagedUser['role'], string[]> = {
-  admin: [
-    'users:read',
-    'users:write',
-    'billing:read',
-    'billing:write',
-    'audit:read',
-    'integrations:write',
+const PERMISSIONS_BY_ROLE = new Map<ManagedUser['role'], string[]>([
+  [
+    'admin',
+    [
+      'backoffice.users.read',
+      'backoffice.users.update',
+      'backoffice.roles.read',
+      'backoffice.roles.update',
+      'backoffice.audit.read',
+      'backoffice.systemConfigs.update',
+    ],
   ],
-  manager: ['users:read', 'users:write', 'billing:read', 'audit:read'],
-  member: ['users:read', 'billing:read'],
-  viewer: ['users:read'],
-};
+  [
+    'manager',
+    [
+      'backoffice.users.read',
+      'backoffice.users.update',
+      'backoffice.roles.read',
+      'backoffice.audit.read',
+    ],
+  ],
+  ['member', ['backoffice.users.read', 'backoffice.roles.read']],
+  ['viewer', ['backoffice.users.read']],
+]);
 
 export function getUserPermissions(user: ManagedUser): UserPermission[] {
-  const granted = new Set(PERMISSIONS_BY_ROLE[user.role]);
+  const granted = new Set(PERMISSIONS_BY_ROLE.get(user.role));
   return BASE_PERMISSIONS.map((permission) => ({
     ...permission,
     granted: granted.has(permission.id),

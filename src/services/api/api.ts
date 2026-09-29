@@ -49,6 +49,15 @@ export const api = {
     return response.data;
   },
 
+  patch: async <T>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    const response = await axiosApi.patch<T>(url, data, config);
+    return response.data;
+  },
+
   delete: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     const response = await axiosApi.delete<T>(url, config);
     return response.data;

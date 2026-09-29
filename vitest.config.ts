@@ -30,6 +30,8 @@ export default defineConfig({
       // Vazio de propósito: o schema normaliza '' para `undefined`, então o
       // reporte de erro externo fica desligado nos testes.
       VITE_ERROR_LOG_URL: '',
+      // A suíte não tem backend: a sessão roda na implementação fictícia.
+      VITE_SESSION_MODE: 'fake',
     },
     // Vitest cobre só unidade/integração em src/tests/ (`.test.ts(x)`).
     // Os specs `.spec.ts` de `e2e/` são do Playwright — sem isso o Vitest os

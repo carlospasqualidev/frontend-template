@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import { handleSessionSubmitError } from './handleSessionSubmitError';
 import { SessionTemplate } from './sessionTemplate';
 
 import { useSessionStore } from '@/hooks/useSessionStore';
@@ -39,9 +40,13 @@ export function LoginScreen() {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    const { user } = await sessionService.signIn(values);
-    setUser(user);
-    navigate({ to: '/', replace: true });
+    try {
+      const { user } = await sessionService.signIn(values);
+      setUser(user);
+      navigate({ to: '/', replace: true });
+    } catch (error) {
+      handleSessionSubmitError(error);
+    }
   });
 
   return (

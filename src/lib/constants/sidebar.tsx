@@ -20,8 +20,9 @@ export interface SidebarNavItem {
   icon: ReactNode;
   /**
    * Esconde o item de quem não tem esta permissão (filtro no `NavMain`, via
-   * `hasPermission`). Sem `permission`, o item aparece para todo usuário logado.
-   * O backend continua sendo a autoridade — isto só ajusta a navegação.
+   * `hasPermission`). Formato do backend: `modulo.entidade.acao` (ex.:
+   * `backoffice.users.read`). Sem `permission`, o item aparece para todo usuário
+   * logado. O backend continua sendo a autoridade — isto só ajusta a navegação.
    */
   permission?: string;
   /** Visível se o usuário tiver AO MENOS UMA destas permissões. */
@@ -65,19 +66,19 @@ export const sidebarData: {
           title: 'Usuários',
           url: '/users',
           icon: <Users />,
-          // permission: 'users.read',
+          permission: 'backoffice.users.read',
         },
         {
           title: 'Auditoria',
           url: '/audit-logs',
           icon: <ScrollText />,
-          // permission: 'audit.read',
+          permission: 'backoffice.audit.read',
         },
         {
           title: 'Configurações',
           url: '/settings',
           icon: <Settings />,
-          // permission: 'settings.read',
+          permission: 'backoffice.systemConfigs.read',
         },
       ],
     },

@@ -2,7 +2,6 @@ import { Controller } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Check, X } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Control, UseFormRegister } from 'react-hook-form';
 
 import { Button } from '@/components/global/button/button';
@@ -19,8 +18,9 @@ import { systemConfigKeys } from '@/screens/settings/utils/queryKeys';
 import {
   fetchSystemConfigs,
   systemConfigModuleLabel,
-  updateSystemConfig,
+  updateSystemConfigs,
   type SystemConfig,
+  type SystemConfigsResponse,
 } from '@/services/systemConfigs/systemConfigsApi';
 
 const FORM_ID = 'settings-form';
@@ -93,7 +93,7 @@ export function SettingsPage() {
     return <SettingsSkeleton />;
   }
 
-  if (!data || data.length === 0) {
+  if (!data || data.systemConfigs.length === 0) {
     return (
       <Empty
         title="Nenhuma configuração disponível"
@@ -102,7 +102,7 @@ export function SettingsPage() {
     );
   }
 
-  return <SettingsForm configs={data} />;
+  return <SettingsForm configs={data.systemConfigs} />;
 }
 
 function SettingsForm({ configs }: { configs: SystemConfig[] }) {
@@ -113,25 +113,27 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
     register,
     handleSubmit,
     reset,
-    getValues,
     formState: { isDirty },
   } = useZodForm({
     schema: settingsFormSchema,
     defaultValues: { values: configs.map((config) => config.value) },
   });
 
+  // Uma gravação só, com todas as configurações alteradas (lote atômico no
+  // backend). O toast de sucesso vem do `message` da resposta — sem toast aqui.
   const mutation = useMutation({
-    mutationFn: async (formValues: SettingsFormValues) => {
-      // Persiste apenas as configurações que mudaram (uma chamada por id).
+    mutationFn: (formValues: SettingsFormValues) => {
       const changed = configs
         .map((config, index) => ({ config, value: formValues.values.at(index) ?? config.value }))
-        .filter(({ config, value }) => value !== config.value);
-      await Promise.all(changed.map(({ config, value }) => updateSystemConfig(config.id, value)));
+        .filter(({ config, value }) => value !== config.value)
+        .map(({ config, value }) => ({ key: config.key, value }));
+      return updateSystemConfigs(changed);
     },
-    onSuccess: () => {
-      toast.success('Configurações atualizadas com sucesso.');
-      queryClient.invalidateQueries({ queryKey: systemConfigKeys.all });
-      reset(getValues());
+    onSuccess: ({ systemConfigs }) => {
+      // A resposta já traz a lista completa (com o valor normalizado pelo
+      // backend): popula o cache e volta o form a pristine com esses valores.
+      queryClient.setQueryData<SystemConfigsResponse>(systemConfigKeys.list, { systemConfigs });
+      reset({ values: systemConfigs.map((config) => config.value) });
     },
   });
 
@@ -164,7 +166,7 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
             <div>
               {items.map(({ config, index }) => (
                 <ConfigField
-                  key={config.id}
+                  key={config.key}
                   config={config}
                   index={index}
                   control={control}
@@ -190,7 +192,7 @@ function ConfigField({
   control: Control<SettingsFormValues>;
   register: UseFormRegister<SettingsFormValues>;
 }) {
-  const fieldId = `system-config-${config.id}`;
+  const fieldId = `system-config-${config.key}`;
   const fieldName = `values.${index}` as const;
 
   if (config.valueType === 'boolean') {
@@ -223,7 +225,7 @@ function ConfigField({
         <TextArea
           id={fieldId}
           label={config.label}
-          description={config.description ?? undefined}
+          description={config.description}
           rows={4}
           {...register(fieldName)}
         />
@@ -231,7 +233,7 @@ function ConfigField({
         <InputField
           id={fieldId}
           label={config.label}
-          description={config.description ?? undefined}
+          description={config.description}
           type={config.valueType === 'int' || config.valueType === 'float' ? 'number' : 'text'}
           {...register(fieldName)}
         />

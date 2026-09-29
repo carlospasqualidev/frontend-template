@@ -3,7 +3,13 @@ import { defineConfig, devices } from '@playwright/test';
 // Testes end-to-end (E2E) com Playwright. Rodam a aplicação real no navegador,
 // diferente dos testes de unidade/integração em `src/tests/` (Vitest + jsdom).
 // Os specs vivem em `e2e/`.
-const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
+//
+// Porta própria (5174, não a 5173 do `npm run dev`): o servidor dos E2E sobe em
+// modo FAKE de sessão (`VITE_SESSION_MODE=fake`, sem backend). Na mesma porta, o
+// `reuseExistingServer` reaproveitaria um `npm run dev` em modo `api` (o padrão)
+// e os specs dependeriam do backend no ar.
+const E2E_PORT = 5174;
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${E2E_PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -31,9 +37,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  // Sobe o dev server automaticamente e reaproveita um já rodando no dev.
+  // Sobe o dev server automaticamente (modo fake de sessão) e reaproveita um já
+  // rodando na porta dos E2E no dev.
   webServer: {
-    command: 'npm run dev',
+    command: `npm run dev -- --port ${E2E_PORT} --strictPort`,
+    env: { VITE_SESSION_MODE: 'fake' },
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -4,7 +4,8 @@ import { login } from './helpers/session';
 
 // Configurações do sistema (`/settings`) — formulário agrupado por módulo no
 // padrão "salvar aparece quando há mudança". Cobre: navegar → ver os grupos →
-// editar um campo → salvar → confirmar sucesso e volta a pristine.
+// editar campos → salvar o lote numa gravação → confirmar sucesso (o `message`
+// da resposta, um toast só) e volta a pristine.
 test.describe('Configurações', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
@@ -27,15 +28,21 @@ test.describe('Configurações', () => {
 
     // Editar torna o form dirty → aparece Descartar + Salvar alterações.
     await nome.fill('Produto Renomeado');
+    const inatividade = page.getByLabel('Tempo de inatividade até o logout (min)');
+    await expect(inatividade).toHaveValue('20');
+    await inatividade.fill('30');
     const salvar = page.getByRole('button', { name: 'Salvar alterações' });
     await expect(salvar).toBeVisible();
     await expect(page.getByRole('button', { name: 'Descartar' })).toBeVisible();
 
     await salvar.click();
 
-    // Sucesso e retorno ao estado pristine (as ações somem).
-    await expect(page.getByText('Configurações atualizadas com sucesso.')).toBeVisible();
+    // Sucesso (um toast só, com o `message` da gravação) e retorno ao estado
+    // pristine (as ações somem), com os dois valores gravados.
+    await expect(page.getByText('Configurações atualizadas.')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Salvar alterações' })).toHaveCount(0);
+    await expect(nome).toHaveValue('Produto Renomeado');
+    await expect(inatividade).toHaveValue('30');
   });
 
   test('descartar reverte a alteração', async ({ page }) => {

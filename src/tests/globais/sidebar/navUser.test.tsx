@@ -23,6 +23,8 @@ function setUser() {
       name: 'Maria Silva',
       email: 'maria@example.com',
       image: null,
+      permissions: [],
+      idleTimeoutMinutes: 20,
     },
     signOut,
   });

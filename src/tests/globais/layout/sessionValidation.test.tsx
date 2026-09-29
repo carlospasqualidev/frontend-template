@@ -26,6 +26,8 @@ const user: IUser = {
   name: 'Maria Silva',
   email: 'maria@example.com',
   image: null,
+  permissions: ['backoffice.users.read'],
+  idleTimeoutMinutes: 20,
 };
 
 function renderGate() {

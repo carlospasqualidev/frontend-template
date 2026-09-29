@@ -52,13 +52,13 @@ vi.mock('@/lib/constants/sidebar', async () => {
               title: 'Usuários',
               url: '/users',
               icon: icon(),
-              permission: 'users.read',
+              permission: 'backoffice.users.read',
             },
             {
               title: 'Auditoria',
               url: '/audit-logs',
               icon: icon(),
-              permission: 'audit.read',
+              permission: 'backoffice.audit.read',
             },
             { title: 'Configurações', url: '/settings', icon: icon() },
           ],
@@ -71,7 +71,10 @@ vi.mock('@/lib/constants/sidebar', async () => {
               title: 'Movimentações',
               url: '/reports/movements',
               icon: icon(),
-              anyPermission: ['reports.in.read', 'reports.out.read'],
+              anyPermission: [
+                'backoffice.reportsIn.read',
+                'backoffice.reportsOut.read',
+              ],
             },
           ],
         },
@@ -82,20 +85,22 @@ vi.mock('@/lib/constants/sidebar', async () => {
           title: 'Admin do sistema',
           url: '/system',
           icon: icon(),
-          permission: 'system.read',
+          permission: 'backoffice.system.read',
         },
       ],
     },
   };
 });
 
-function setUser(permissions?: string[]) {
+// Permissões no formato do backend (`modulo.entidade.acao`).
+function setUser(permissions: string[]) {
   const user: IUser = {
     id: '1',
     name: 'Maria',
     email: 'maria@example.com',
     image: null,
-    ...(permissions ? { permissions } : {}),
+    permissions,
+    idleTimeoutMinutes: 20,
   };
   useSessionStore.setState({ user });
 }
@@ -132,7 +137,7 @@ afterEach(() => {
 
 describe('NavMain', () => {
   it('exibe os módulos e os itens permitidos', async () => {
-    setUser(['users.read', 'audit.read']);
+    setUser(['backoffice.users.read', 'backoffice.audit.read']);
     renderNav();
 
     expect(screen.getByText('Administração')).toBeInTheDocument();
@@ -159,7 +164,7 @@ describe('NavMain', () => {
   });
 
   it('esconde o item cuja permissão o usuário não tem', async () => {
-    setUser(['audit.read']);
+    setUser(['backoffice.audit.read']);
     renderNav();
     await openModule('Administração');
 
@@ -171,7 +176,7 @@ describe('NavMain', () => {
 
   // `anyPermission`: basta UMA das permissões da lista.
   it('exibe o item de `anyPermission` com ao menos uma das permissões', async () => {
-    setUser(['reports.out.read']);
+    setUser(['backoffice.reportsOut.read']);
     renderNav();
     await openModule('Relatórios');
 
@@ -181,7 +186,7 @@ describe('NavMain', () => {
   });
 
   it('esconde o item de `anyPermission` quando não tem nenhuma delas', () => {
-    setUser(['users.read']);
+    setUser(['backoffice.users.read']);
     renderNav();
 
     expect(
@@ -191,7 +196,7 @@ describe('NavMain', () => {
 
   // Módulo sem nenhum item visível não deixa um grupo vazio na sidebar.
   it('remove o módulo que fica sem itens visíveis', () => {
-    setUser(['users.read']);
+    setUser(['backoffice.users.read']);
     renderNav();
 
     expect(screen.queryByText('Relatórios')).not.toBeInTheDocument();
@@ -201,7 +206,7 @@ describe('NavMain', () => {
   // A ordem de exibição é alfabética (pt-BR) e NÃO a da lista de origem — a
   // fixture declara Usuários, Auditoria, Configurações nessa ordem.
   it('ordena os itens alfabeticamente (pt-BR), ignorando a ordem da lista', async () => {
-    setUser(['users.read', 'audit.read']);
+    setUser(['backoffice.users.read', 'backoffice.audit.read']);
     renderNav();
     await openModule('Administração');
 
@@ -224,7 +229,7 @@ describe('NavMain', () => {
   });
 
   it('marca o módulo da rota ativa e abre o grupo por padrão', () => {
-    setUser(['users.read']);
+    setUser(['backoffice.users.read']);
     activePath.current = '/users';
     renderNav();
 
@@ -237,7 +242,7 @@ describe('NavMain', () => {
   // Recolhida em ícones, o `SidebarMenuSub` fica escondido: sem o flyout os
   // itens-filho ficariam inalcançáveis.
   it('recolhida em ícones, os filhos vão para um flyout acessível', async () => {
-    setUser(['users.read', 'audit.read']);
+    setUser(['backoffice.users.read', 'backoffice.audit.read']);
     renderNav({ collapsed: true });
 
     // Fora do flyout, os itens do módulo não estão no documento.

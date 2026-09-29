@@ -58,6 +58,7 @@ export type AuditLogDetail = z.infer<typeof auditLogDetailSchema>;
 export type AuditListOrderBy = 'createdAt' | 'module' | 'entity' | 'action' | 'description';
 
 export interface AuditListParams {
+  /** 0-based, como a DataTable e o backend (`GET /client/audit-logs`). */
   page: number;
   pageSize: number;
   module?: string;
@@ -120,7 +121,7 @@ export function buildAuditListParams(query: DataTableQuery): AuditListParams {
   const createdAt = getRange(filters.createdAt);
 
   return {
-    page: query.page + 1,
+    page: query.page,
     pageSize: query.pageSize,
     search: typeof filters.search === 'string' && filters.search ? filters.search : undefined,
     module: joinMulti(filters.module),
@@ -386,7 +387,7 @@ export async function fetchAuditLogs(params: AuditListParams): Promise<z.infer<t
     return direction === 'desc' ? -comparison : comparison;
   });
 
-  const start = (params.page - 1) * params.pageSize;
+  const start = params.page * params.pageSize;
   const pageLogs = sorted.slice(start, start + params.pageSize).map((log) => ({
     id: log.id,
     module: log.module,

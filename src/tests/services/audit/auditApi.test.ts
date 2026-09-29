@@ -19,9 +19,10 @@ function makeQuery(overrides: Partial<DataTableQuery> = {}): DataTableQuery {
 }
 
 describe('buildAuditListParams', () => {
-  it('converte a página 0-based da DataTable para 1-based do endpoint', () => {
-    expect(buildAuditListParams(makeQuery({ page: 0 })).page).toBe(1);
-    expect(buildAuditListParams(makeQuery({ page: 2 })).page).toBe(3);
+  // DataTable e backend são 0-based: a página passa sem conversão.
+  it('repassa a página 0-based da DataTable sem conversão', () => {
+    expect(buildAuditListParams(makeQuery({ page: 0 })).page).toBe(0);
+    expect(buildAuditListParams(makeQuery({ page: 2 })).page).toBe(2);
   });
 
   it('repassa a busca de texto e ignora string vazia', () => {
@@ -82,7 +83,7 @@ describe('buildAuditListParams', () => {
 
 describe('fetchAuditLogs', () => {
   it('retorna a primeira página ordenada por data (mais recente primeiro) por padrão', async () => {
-    const { logs, count } = await fetchAuditLogs({ page: 1, pageSize: 5 });
+    const { logs, count } = await fetchAuditLogs({ page: 0, pageSize: 5 });
     expect(logs).toHaveLength(5);
     expect(count).toBeGreaterThan(5);
     // Sem sort explícito → createdAt desc: os timestamps já vêm decrescentes.
@@ -93,7 +94,7 @@ describe('fetchAuditLogs', () => {
 
   it('filtra por conteúdo com match parcial (contains), não exato', async () => {
     const { logs, count } = await fetchAuditLogs({
-      page: 1,
+      page: 0,
       pageSize: 10,
       search: 'Marina',
     });
@@ -103,7 +104,7 @@ describe('fetchAuditLogs', () => {
 
   it('some com o registro que não casa a busca', async () => {
     const { logs } = await fetchAuditLogs({
-      page: 1,
+      page: 0,
       pageSize: 50,
       search: 'inexistente-xyz',
     });
@@ -112,7 +113,7 @@ describe('fetchAuditLogs', () => {
 
   it('filtra por módulo via CSV', async () => {
     const { logs, count } = await fetchAuditLogs({
-      page: 1,
+      page: 0,
       pageSize: 50,
       module: 'USERS',
     });
@@ -120,16 +121,31 @@ describe('fetchAuditLogs', () => {
     expect(logs.every((log) => log.module === 'USERS')).toBe(true);
   });
 
-  it('pagina: a página 2 traz registros diferentes da página 1', async () => {
-    const first = await fetchAuditLogs({ page: 1, pageSize: 5 });
-    const second = await fetchAuditLogs({ page: 2, pageSize: 5 });
+  it('pagina: a página 1 traz registros diferentes da página 0', async () => {
+    const first = await fetchAuditLogs({ page: 0, pageSize: 5 });
+    const second = await fetchAuditLogs({ page: 1, pageSize: 5 });
     const firstIds = new Set(first.logs.map((log) => log.id));
     expect(second.logs.some((log) => firstIds.has(log.id))).toBe(false);
   });
 
+  // Página 0-based: a página 0 começa no primeiro registro (não pula nenhum) e
+  // a página 1 continua exatamente de onde ela parou.
+  it('pagina a partir do primeiro registro (0-based)', async () => {
+    const all = await fetchAuditLogs({ page: 0, pageSize: 10 });
+    const first = await fetchAuditLogs({ page: 0, pageSize: 5 });
+    const second = await fetchAuditLogs({ page: 1, pageSize: 5 });
+
+    expect(first.logs.map((log) => log.id)).toEqual(
+      all.logs.slice(0, 5).map((log) => log.id)
+    );
+    expect(second.logs.map((log) => log.id)).toEqual(
+      all.logs.slice(5, 10).map((log) => log.id)
+    );
+  });
+
   it('ordena por módulo em ordem crescente quando solicitado', async () => {
     const { logs } = await fetchAuditLogs({
-      page: 1,
+      page: 0,
       pageSize: 50,
       orderBy: 'module',
       order: 'asc',
@@ -143,7 +159,7 @@ describe('fetchAuditLogs', () => {
 describe('fetchAuditLogDetail', () => {
   it('retorna o antes/depois do registro existente', async () => {
     const { logs } = await fetchAuditLogs({
-      page: 1,
+      page: 0,
       pageSize: 1,
       module: 'USERS',
       action: 'update',

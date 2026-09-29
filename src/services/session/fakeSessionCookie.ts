@@ -1,9 +1,10 @@
 /* -----------------------------------------------------------------------------
- * Helper EXCLUSIVO do modo fake de sessão.
- * Leia o cabeçalho de `sessionService.ts` para contexto e instruções de
- * remoção. Quando voltar a usar o backend real, apague este arquivo inteiro.
+ * Helper EXCLUSIVO da sessão fake (`fakeSessionService.ts`, vizinho deste).
+ * Leia o cabeçalho daquele arquivo para contexto. A sessão real (`api`) usa o
+ * cookie HTTP-only do backend e não passa por aqui.
  * -------------------------------------------------------------------------- */
 
+import { sessionUserSchema } from '@/services/session/types';
 import type { IUser } from '@/types/user/types';
 
 const COOKIE_NAME = 'fake_session_user';
@@ -13,18 +14,13 @@ function encodeUser(user: IUser): string {
   return btoa(unescape(encodeURIComponent(JSON.stringify(user))));
 }
 
+// Cookie de outra versão do shape (ex.: sem `permissions`) é descartado: a
+// sessão fake volta para o login em vez de carregar um usuário incompleto.
 function decodeUser(value: string): IUser | null {
   try {
-    const parsed = JSON.parse(decodeURIComponent(escape(atob(value))));
-    if (
-      parsed &&
-      typeof parsed.id === 'string' &&
-      typeof parsed.name === 'string' &&
-      typeof parsed.email === 'string'
-    ) {
-      return parsed as IUser;
-    }
-    return null;
+    const parsed: unknown = JSON.parse(decodeURIComponent(escape(atob(value))));
+    const result = sessionUserSchema.safeParse(parsed);
+    return result.success ? result.data : null;
   } catch {
     return null;
   }

@@ -33,6 +33,9 @@ cp .env.example .env   # ajuste as variáveis
 npm run dev
 ```
 
+Com o `.env` padrão (`VITE_SESSION_MODE=api`), o login precisa do backend
+`../server-template` no ar. Para navegar sem ele, use `VITE_SESSION_MODE=fake`.
+
 ## Scripts
 
 | Script                    | Descrição                                                       |
@@ -73,6 +76,20 @@ Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example
 | `VITE_PROJECT_ENVIRONMENT` | não         | Ambiente lógico (ex.: Sandbox/Production) |
 | `VITE_PROJECT_SIDE`        | não         | Lado da app (ex.: Client/Backoffice)      |
 | `VITE_ERROR_LOG_URL`       | não         | Endpoint de reporte de erros (só em PROD) |
+| `VITE_SESSION_MODE`        | não         | Sessão: `api` (padrão) ou `fake`          |
+
+`VITE_SESSION_MODE` escolhe como a sessão funciona:
+
+- `api` (padrão): login, cadastro, logout e validação no backend
+  `../server-template` (suba-o com `npm run db:up && npm run dev` lá dentro;
+  `VITE_API_URL` aponta para ele). O usuário chega com as permissões efetivas e
+  o tempo de inatividade até o logout.
+- `fake`: sem backend. Qualquer e-mail válido e senha não vazia entram, com as
+  permissões do menu e 20 minutos de inatividade. Serve para demonstração; a
+  suíte (`npm test`) e os E2E (`npm run test:e2e`) rodam sempre nesse modo.
+
+As telas de demonstração (usuários, auditoria, configurações) usam dados mock
+nos dois modos, já no formato do contrato do backend.
 
 ## Estrutura de pastas
 
@@ -221,6 +238,8 @@ Para dados de servidor, prefira TanStack Query (`useQuery`/`useMutation`) com o
 
 A sessão é baseada em cookie. `SessionValidation` valida a sessão antes de
 renderizar as rotas protegidas; o usuário fica em `useSessionStore` (Zustand).
+A implementação (backend real ou fictícia) vem de `VITE_SESSION_MODE` — ver
+[Variáveis de ambiente](#variáveis-de-ambiente).
 
 ## Testes
 

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import { handleSessionSubmitError } from './handleSessionSubmitError';
 import { SessionTemplate } from './sessionTemplate';
 
 import { useSessionStore } from '@/hooks/useSessionStore';
@@ -17,11 +18,21 @@ import {
 } from '@/components/ui/field';
 import { Typography } from '@/components/ui/typography';
 
+// Limites do `POST /client/session/register` (`../server-template/docs/openapi.json`):
+// nome de 2 a 120 caracteres, senha de 8 a 72.
 const signupSchema = z
   .object({
-    name: z.string().trim().min(1, 'Informe seu nome.'),
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Informe seu nome.')
+      .min(2, 'O nome deve ter pelo menos 2 caracteres.')
+      .max(120, 'O nome deve ter no máximo 120 caracteres.'),
     email: z.email('Informe um e-mail válido.').trim(),
-    password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres.'),
+    password: z
+      .string()
+      .min(8, 'A senha deve ter pelo menos 8 caracteres.')
+      .max(72, 'A senha deve ter no máximo 72 caracteres.'),
     confirmPassword: z.string().min(1, 'Confirme sua senha.'),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -48,9 +59,13 @@ export function SignupScreen() {
   });
 
   const onSubmit = handleSubmit(async ({ name, email, password }) => {
-    const { user } = await sessionService.signUp({ name, email, password });
-    setUser(user);
-    navigate({ to: '/', replace: true });
+    try {
+      const { user } = await sessionService.signUp({ name, email, password });
+      setUser(user);
+      navigate({ to: '/', replace: true });
+    } catch (error) {
+      handleSessionSubmitError(error);
+    }
   });
 
   return (
@@ -121,7 +136,7 @@ export function SignupScreen() {
                 </div>
 
                 <FieldDescription>
-                  A senha deve ter pelo menos 8 caracteres.
+                  A senha deve ter de 8 a 72 caracteres.
                 </FieldDescription>
 
                 <Field>

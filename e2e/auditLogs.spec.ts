@@ -47,6 +47,23 @@ test.describe('Auditoria', () => {
     ).toHaveCount(0);
   });
 
+  // Paginação 0-based (DataTable e backend): a primeira página traz os 10
+  // registros mais recentes e a seguinte, o restante — nenhum é pulado.
+  test('pagina a partir do primeiro registro', async ({ page }) => {
+    const rows = page.locator('tbody tr');
+    await expect(
+      page.locator('tbody tr', { hasText: 'Cadastrou o usuário Marina Alves' })
+    ).toBeVisible();
+    await expect(rows).toHaveCount(10);
+
+    await page.getByRole('button', { name: 'Próxima' }).click();
+
+    await expect(rows).toHaveCount(8);
+    await expect(
+      page.locator('tbody tr', { hasText: 'Cadastrou o usuário Marina Alves' })
+    ).toHaveCount(0);
+  });
+
   test('abre o detalhe da auditoria em modal com antes/depois', async ({ page }) => {
     await page.locator('tbody tr', { hasText: 'Alterou o perfil de acesso de Bruno' }).click();
 

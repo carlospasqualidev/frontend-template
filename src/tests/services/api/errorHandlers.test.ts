@@ -42,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   sessionUserRef.set(null);
   vi.unstubAllEnvs();
+  window.history.replaceState(null, '', '/');
 });
 
 describe('sendErrorMessage', () => {
@@ -59,10 +60,10 @@ describe('sendErrorMessage', () => {
       projectName: 'Frontend',
       environment: 'Test',
       side: 'Client',
-      extraInfo: { url: window.location.href, userId: user.id },
+      extraInfo: { url: window.location.pathname, userId: user.id },
     });
     expect(body.extraInfo).toEqual({
-      url: window.location.href,
+      url: window.location.pathname,
       userId: user.id,
     });
 
@@ -77,8 +78,29 @@ describe('sendErrorMessage', () => {
     expect(post).toHaveBeenCalledTimes(1);
     const [, body] = post.mock.calls[0] as [string, Record<string, unknown>];
     expect(JSON.parse(JSON.stringify(body.extraInfo))).toEqual({
-      url: window.location.href,
+      url: window.location.pathname,
     });
+  });
+
+  // LGPD: a busca das listagens fica na URL (`filters`) e pode ser um nome ou
+  // um e-mail. Do endereço sai só o caminho, sem a query nem o hash.
+  it('do endereço, envia só o caminho: sem a query (a busca) nem o hash', async () => {
+    const filters = JSON.stringify({ search: 'maria@example.com' });
+    window.history.replaceState(
+      null,
+      '',
+      `/users?filters=${encodeURIComponent(filters)}&page=2#Maria`
+    );
+
+    await sendErrorMessage({ error: new Error('falha inesperada') });
+
+    expect(post).toHaveBeenCalledTimes(1);
+    const [, body] = post.mock.calls[0] as [string, Record<string, unknown>];
+    expect(body.extraInfo).toMatchObject({ url: '/users' });
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain('maria');
+    expect(serialized).not.toContain('Maria');
+    expect(serialized).not.toContain('filters');
   });
 
   it('fora de produção, não envia nada', async () => {

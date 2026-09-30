@@ -39,7 +39,8 @@ interface IDirtyGuard {
 
 // Os guards com edição não salva, na ordem em que a edição começou. O
 // primeiro pergunta por todos: uma pergunta só por saída, mesmo com mais de
-// um formulário alterado na tela (o perfil e o modal de senha).
+// um formulário alterado na tela (o formulário principal e um modal de edição
+// aberto sobre ele).
 const dirtyGuards = new Set<IDirtyGuard>();
 
 function firstDirtyGuard(): IDirtyGuard | undefined {

@@ -7,6 +7,8 @@ import {
 
 import { NotFound } from './components/global/layout/notFound';
 
+import { RouteErrorBoundary } from '@/components/global/errorFallback/routeErrorBoundary';
+import { RouteErrorFallback } from '@/components/global/errorFallback/routeErrorFallback';
 import { Layout } from '@/components/global/layout/layout';
 import { SessionValidation } from '@/components/global/layout/sessionValidation';
 import { accountRoute } from '@/screens/account/routes';
@@ -37,9 +39,15 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// Erro de render ou de carregamento: nas telas do layout protegido, o
+// `RouteErrorBoundary` em volta do `Outlet` troca só o conteúdo (o menu fica);
+// nas rotas públicas (login, cadastro) e no próprio layout, o `errorComponent`
+// da raiz mostra a tela cheia. O `ErrorBoundary` do `App.tsx` fica para o que
+// acontece fora do roteador.
 export const rootRoute = createRootRoute({
   component: () => <Outlet />,
   notFoundComponent: NotFound,
+  errorComponent: RouteErrorFallback,
 });
 
 export const protectedLayoutRoute = createRoute({
@@ -48,7 +56,9 @@ export const protectedLayoutRoute = createRoute({
   component: () => (
     <SessionValidation>
       <Layout>
-        <Outlet />
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
       </Layout>
     </SessionValidation>
   ),

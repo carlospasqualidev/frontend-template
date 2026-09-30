@@ -11,7 +11,8 @@ import { sendErrorMessage } from '@/services/api/errorHandlers';
 export function App() {
   return (
     <ErrorBoundary
-      FallbackComponent={ErrorFallback}
+      // O `onError` reporta: a tela pode dizer que a equipe foi notificada.
+      fallbackRender={(props) => <ErrorFallback {...props} reported />}
       onError={(error) => {
         sendErrorMessage({ error });
       }}

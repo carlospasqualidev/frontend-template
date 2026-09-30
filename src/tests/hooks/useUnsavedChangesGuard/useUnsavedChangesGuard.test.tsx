@@ -25,7 +25,8 @@ interface ISecondForm {
   searchKey?: string;
 }
 
-// Outro formulário alterado na mesma tela (o modal de senha sobre o perfil).
+// Outro formulário alterado na mesma tela (um modal de edição aberto sobre o
+// formulário principal).
 function SecondForm({ searchKey }: ISecondForm) {
   useUnsavedChangesGuard(true, { searchKey });
   return <input aria-label="Observação" />;
@@ -330,6 +331,20 @@ describe('confirmLeaveIfDirty', () => {
     const leaving = confirmNow();
     await answer('Descartar alterações');
     await expect(leaving).resolves.toBe(true);
+  });
+
+  // A tela sai ainda alterada, sem passar pela pergunta (a navegação que a
+  // própria tela pede, com `ignoreBlocker`): o guard dela sai do registro.
+  it('depois de a tela alterada desmontar, resolve sair sem perguntar', async () => {
+    const router = setup();
+    await screen.findByLabelText('Nome');
+
+    await go(router, { to: '/other', ignoreBlocker: true });
+    await screen.findByText('Outra tela');
+    expect(screen.queryByLabelText('Nome')).not.toBeInTheDocument();
+
+    await expect(confirmNow()).resolves.toBe(true);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('depois de salvar, resolve sair sem perguntar', async () => {

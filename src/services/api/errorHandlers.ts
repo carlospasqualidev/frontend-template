@@ -17,7 +17,9 @@ import {
  * reporte não devem derrubar a aplicação.
  *
  * Do usuário da sessão vai só o `userId` (id opaco, o mesmo campo que o
- * `server-template` manda ao log): nome e e-mail são dado pessoal (LGPD).
+ * `server-template` manda ao log): nome e e-mail são dado pessoal (LGPD). Do
+ * endereço vai só o `pathname`, sem a query nem o hash: a busca das listagens
+ * fica na URL (`filters`) e pode ser um nome ou um e-mail.
  */
 export const sendErrorMessage = async ({ error }: { error: unknown }) => {
   if (!import.meta.env.PROD || !env.VITE_ERROR_LOG_URL) {
@@ -34,7 +36,7 @@ export const sendErrorMessage = async ({ error }: { error: unknown }) => {
       side: env.VITE_PROJECT_SIDE,
       errorStack,
       extraInfo: {
-        url: window.location.href,
+        url: window.location.pathname,
         userId: user?.id,
       },
     })

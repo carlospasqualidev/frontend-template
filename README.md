@@ -147,7 +147,7 @@ Wrappers sobre primitivos do shadcn que padronizam API, defaults visuais (inclui
 | `ConfirmDialog`    | [`global/confirmDialog/confirmDialog.tsx`](src/components/global/confirmDialog/confirmDialog.tsx)     | Confirmação para ações destrutivas/reversíveis. Uncontrolled (`trigger`) ou controlled (`open`/`setOpen`). Loading interno + auto-close.                                |
 | `PageHeader`       | [`global/pageHeader/pageHeader.tsx`](src/components/global/pageHeader/pageHeader.tsx)                 | Cabeçalho padrão de tela: título, descrição e área opcional de ações. Usado em `home/`.                                                                                 |
 | `DemoNotice`       | [`global/demoNotice/demoNotice.tsx`](src/components/global/demoNotice/demoNotice.tsx)                 | Aviso "Dados de demonstração" em toda parte que o backend não atende: `badge` no cabeçalho do card, `banner` no topo de uma aba inteira.                                |
-| `ErrorFallback`    | [`global/errorFallback/index.tsx`](src/components/global/errorFallback/index.tsx)                     | Fallback do `react-error-boundary` no topo do app. CTA para tentar restabelecer a sessão.                                                                               |
+| `ErrorFallback`    | [`global/errorFallback/`](src/components/global/errorFallback)                                        | Tela de erro: cheia no app e nas rotas públicas, no lugar do conteúdo (com o menu) nas telas protegidas. `RouteErrorFallback` a liga ao roteador.                       |
 | `Layout` + sidebar | [`global/layout/`](src/components/global/layout) + [`global/sidebar/`](src/components/global/sidebar) | Shell autenticado: `SidebarProvider` + `AppSidebar` + header com `SidebarTrigger`, breadcrumb e `Outlet`.                                                               |
 | Form fields        | [`global/form/`](src/components/global/form)                                                          | `InputField`, `Select`, `MultiSelect`, `Checkbox`, `Switch`, `TextArea`, `DateField`, `DateTimeField`, `FieldGroup`. Uncontrolled ou controlled via `control` + `name`. |
 | `DataTable`        | [`global/dataTable/`](src/components/global/dataTable)                                                | Tabela server-side com filtros declarativos, ordenação, paginação. Estado em memória (`useDataTableQuery`) ou na URL (`useDataTableUrlQuery`).                          |
@@ -293,7 +293,9 @@ a tela seguindo as permissões novas sem recarregar), Minha conta (editar o
 próprio perfil, o tempo acima do limite da empresa recusado no campo, a
 confirmação ao trocar de aba com o perfil alterado, trocar a senha e voltar à
 original), a home (números e atividade reais, blocos que
-somem sem a permissão) e a edição não salva (sair pelo menu e pelo voltar do
+somem sem a permissão), a tela de erro por rota (no lugar do conteúdo, com o
+menu, e cheia no login; "Tentar novamente" e a troca de tela limpam o erro) e a
+edição não salva (sair pelo menu e pelo voltar do
 navegador pede confirmação, uma só com dois voltar seguidos, "Sair" pergunta
 antes de encerrar a sessão, a nova guia não pede, fechar a aba pede o aviso
 nativo, e depois de salvar nada pergunta); em todas, o aviso de demonstração

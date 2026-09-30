@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { axiosApi } from '@/services/api/api';
-import { apiSessionService } from '@/services/session/apiSessionService';
+import { sessionService } from '@/services/session/sessionService';
 import {
   failWithNetworkError,
   respondWith,
@@ -21,13 +21,13 @@ afterEach(() => {
 
 // `validate` pelo cliente `api` real (interceptors e `.parse`), sem rede: o
 // toast de erro some só quando não há sessão.
-describe('apiSessionService.validate: toast de erro', () => {
+describe('sessionService.validate: toast de erro', () => {
   it('sem sessão (401), rejeita sem toast', async () => {
     axiosApi.defaults.adapter = respondWith(401, {
       message: 'Sessão não informada.',
     });
 
-    await expect(apiSessionService.validate()).rejects.toMatchObject({
+    await expect(sessionService.validate()).rejects.toMatchObject({
       response: { status: 401 },
     });
     expect(toast.error).not.toHaveBeenCalled();
@@ -38,7 +38,7 @@ describe('apiSessionService.validate: toast de erro', () => {
       message: 'Serviço indisponível.',
     });
 
-    await expect(apiSessionService.validate()).rejects.toMatchObject({
+    await expect(sessionService.validate()).rejects.toMatchObject({
       response: { status: 503 },
     });
     expect(toast.error).toHaveBeenCalledTimes(1);
@@ -50,7 +50,7 @@ describe('apiSessionService.validate: toast de erro', () => {
   it('servidor fora (rede), rejeita e mostra "Erro de comunicação"', async () => {
     axiosApi.defaults.adapter = failWithNetworkError();
 
-    await expect(apiSessionService.validate()).rejects.toMatchObject({
+    await expect(sessionService.validate()).rejects.toMatchObject({
       code: 'ERR_NETWORK',
     });
     expect(toast.error).toHaveBeenCalledTimes(1);

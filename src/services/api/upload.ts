@@ -7,11 +7,12 @@ const uploadResponseSchema = z.object({
 });
 
 /**
- * Rota de upload do backend. Ajuste AQUI ao iniciar o projeto (ex.: quando as
- * rotas são prefixadas por módulo, `/backoffice/upload/file`) — assim nenhuma
- * tela precisa conhecer o caminho. O `api` já aponta para a base da API.
+ * Rota de upload do backend (`POST /client/upload/file` no
+ * `../server-template`, campo multipart `file`). Ajuste AQUI se o projeto
+ * prefixar as rotas de outro jeito — assim nenhuma tela precisa conhecer o
+ * caminho. O `api` já aponta para a base da API (`VITE_API_URL`, com o `/api`).
  */
-const UPLOAD_PATH = '/upload/file';
+const UPLOAD_PATH = '/client/upload/file';
 
 /**
  * Sobe um arquivo para o storage e devolve a URL pública (`Location`). Usado

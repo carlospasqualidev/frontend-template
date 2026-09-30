@@ -15,8 +15,7 @@ export interface ISignUpService {
 
 /**
  * Shape do usuário da sessão no contrato do backend (`../server-template/docs/openapi.json`,
- * `user` de `/client/session/login`, `/register` e `/client/users/me`). As duas
- * implementações (`api` e `fake`) devolvem exatamente este shape.
+ * `user` de `/client/session/login`, `/register` e `/client/users/me`).
  */
 export const sessionUserSchema = z.object({
   id: z.string(),
@@ -47,7 +46,7 @@ export type ISignInServiceResponse = z.infer<typeof signInResponseSchema>;
 export type IValidateResponse = z.infer<typeof validateResponseSchema>;
 export type ISignOutServiceResponse = z.infer<typeof signOutResponseSchema>;
 
-/** Contrato comum das implementações da sessão (`api` e `fake`). */
+/** Contrato do serviço de sessão (`sessionService`). */
 export interface ISessionService {
   signIn: (data: ISignInService) => Promise<ISignInServiceResponse>;
   signUp: (data: ISignUpService) => Promise<ISignInServiceResponse>;

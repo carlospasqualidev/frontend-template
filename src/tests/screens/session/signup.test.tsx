@@ -24,13 +24,6 @@ vi.mock('@tanstack/react-router', async () => {
   };
 });
 
-// Modo `api` sem rede: o adapter do `axiosApi` responde (ver `login.test.tsx`).
-vi.mock('@/services/session/sessionService', async () => {
-  const { apiSessionService } =
-    await import('@/services/session/apiSessionService');
-  return { sessionService: apiSessionService };
-});
-
 vi.mock('@/services/api/errorHandlers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/api/errorHandlers')>()),
   sendErrorMessage: vi.fn(),

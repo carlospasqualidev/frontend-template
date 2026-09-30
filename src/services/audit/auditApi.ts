@@ -3,20 +3,14 @@ import { z } from 'zod';
 import { type DateRangeValue } from '@/components/global/dataTable/filters';
 import { type DataTableQuery } from '@/components/global/dataTable/useDataTableQuery';
 import { transformIntoDatabaseQueryDate } from '@/lib/dateTime/transformIntoDatabaseQueryDate';
-import {
-  MOCK_AUDIT_AUTHORS,
-  MOCK_AUDIT_LOGS,
-  MOCK_AUDIT_OPTIONS,
-} from '@/services/audit/auditMock';
+import { api } from '@/services/api';
 
 /*
- * Trilha de auditoria — versão TEMPLATE com dados MOCK (`auditMock.ts`), já no
- * contrato do backend (`GET /client/audit-logs`, `/options`, `/:auditLogId` e
- * `/entities/:entity/:entityId`, ver `../server-template/docs/openapi.json`).
- * Para trocar pelo backend, reimplemente o corpo das funções `fetch*` com o
- * `api` e o `.parse` do schema, sem mudar a assinatura, e apague o `auditMock.ts`
- * e o `sleep`. O filtro, a ordenação e a paginação — que no serviço real ficam
- * no backend — aqui são resolvidos em memória para a tela ficar funcional.
+ * Trilha de auditoria no backend (`GET /client/audit-logs`, `/options`,
+ * `/:auditLogId` e `/entities/:entity/:entityId`, ver
+ * `../server-template/docs/openapi.json`). Filtro, busca, ordenação,
+ * paginação, rótulos, frases e de→para são do servidor: a tela só monta os
+ * parâmetros (`buildAuditListParams`) e exibe o que volta.
  */
 
 // As opções (com rótulos pt-BR) vêm do backend, para que uma entidade nova
@@ -191,114 +185,30 @@ export function buildAuditListParams(query: DataTableQuery): AuditListParams {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Resolução em memória do MOCK (sai inteira ao trocar pelo `api`)
-// ---------------------------------------------------------------------------
-
-const MOCK_DELAY_MS = 300;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function csvIncludes(csv: string | undefined, value: string): boolean {
-  if (!csv) return true;
-  return csv.split(',').includes(value);
-}
-
-function matchesSearch(log: AuditLogDetail, search: string | undefined): boolean {
-  if (!search) return true;
-  const needle = search.toLowerCase();
-  const haystack = [log.description ?? '', log.entity, log.module, log.entityId ?? '', log.user?.name ?? '']
-    .join(' ')
-    .toLowerCase();
-  return haystack.includes(needle);
-}
-
-function withinRange(createdAt: string, from: string | undefined, to: string | undefined): boolean {
-  const time = new Date(createdAt).getTime();
-  if (from && time < new Date(from).getTime()) return false;
-  if (to && time > new Date(to).getTime()) return false;
-  return true;
-}
-
-function sortValue(log: AuditLogDetail, orderBy: AuditListOrderBy): string {
-  switch (orderBy) {
-    case 'module':
-      return log.module;
-    case 'entity':
-      return log.entity;
-    case 'action':
-      return log.action;
-    case 'description':
-      return log.description ?? '';
-    case 'createdAt':
-    default:
-      return log.createdAt;
-  }
-}
-
-function toListItem(log: AuditLogDetail): AuditLogListItem {
-  return {
-    id: log.id,
-    module: log.module,
-    entity: log.entity,
-    entityId: log.entityId,
-    action: log.action,
-    description: log.description,
-    changedFields: log.changedFields,
-    userId: log.userId,
-    userName: log.user?.name ?? null,
-    createdAt: log.createdAt,
-  };
-}
+const AUDIT_LOGS_PATH = '/client/audit-logs';
 
 /** `GET /client/audit-logs/options` → `{ modules, actions, entities }`. */
 export async function fetchAuditFilterOptions(): Promise<AuditFilterOptions> {
-  await sleep(MOCK_DELAY_MS);
-  return auditFilterOptionsSchema.parse(MOCK_AUDIT_OPTIONS);
+  const response = await api.get<unknown>(`${AUDIT_LOGS_PATH}/options`);
+  return auditFilterOptionsSchema.parse(response);
 }
 
 /** `GET /client/audit-logs` → `{ logs, count }` (sem `fieldChanges`, que vêm no detalhe). */
 export async function fetchAuditLogs(params: AuditListParams): Promise<AuditListResponse> {
-  await sleep(MOCK_DELAY_MS);
-
-  const filtered = MOCK_AUDIT_LOGS.filter(
-    (log) =>
-      matchesSearch(log, params.search) &&
-      csvIncludes(params.module, log.module) &&
-      csvIncludes(params.action, log.action) &&
-      csvIncludes(params.entity, log.entity) &&
-      csvIncludes(params.userId, log.userId ?? '') &&
-      withinRange(log.createdAt, params.createdFrom, params.createdTo)
-  );
-
-  const orderBy = params.orderBy ?? 'createdAt';
-  const direction = params.order ?? 'desc';
-  const sorted = [...filtered].sort((a, b) => {
-    const comparison = sortValue(a, orderBy).localeCompare(sortValue(b, orderBy), 'pt-BR');
-    return direction === 'desc' ? -comparison : comparison;
-  });
-
-  const start = params.page * params.pageSize;
-  const pageLogs = sorted.slice(start, start + params.pageSize).map(toListItem);
-
-  return auditListResponseSchema.parse({ logs: pageLogs, count: filtered.length });
+  const response = await api.get<unknown>(AUDIT_LOGS_PATH, { params });
+  return auditListResponseSchema.parse(response);
 }
 
 /** `GET /client/audit-logs/:auditLogId` → `{ auditLog }`, com `before`/`after` crus e `fieldChanges`. */
 export async function fetchAuditLogDetail(id: string): Promise<AuditLogDetailResponse> {
-  await sleep(MOCK_DELAY_MS);
-  const log = MOCK_AUDIT_LOGS.find((item) => item.id === id);
-  if (!log) throw new Error('Registro de auditoria não encontrado.');
-  return auditLogDetailResponseSchema.parse({ auditLog: log });
+  const response = await api.get<unknown>(`${AUDIT_LOGS_PATH}/${encodeURIComponent(id)}`);
+  return auditLogDetailResponseSchema.parse(response);
 }
 
 /**
  * `GET /client/audit-logs/entities/:entity/:entityId` → `{ logs, count }`: a
- * linha do tempo de um registro, mais recente primeiro (desempate pelo id), cada
- * evento com o de→para. Registro sem eventos (ou de outra empresa) → lista vazia,
- * nunca 404.
+ * linha do tempo de um registro, mais recente primeiro, cada evento com o
+ * de→para. Registro sem eventos (ou de outra empresa) → lista vazia, nunca 404.
  */
 export async function fetchEntityAuditLogs({
   entity,
@@ -306,24 +216,36 @@ export async function fetchEntityAuditLogs({
   page,
   pageSize,
 }: EntityAuditLogsParams): Promise<EntityAuditLogsResponse> {
-  await sleep(MOCK_DELAY_MS);
-
-  const timeline = MOCK_AUDIT_LOGS.filter((log) => log.entity === entity && log.entityId === entityId).sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
+  const response = await api.get<unknown>(
+    `${AUDIT_LOGS_PATH}/entities/${entity}/${encodeURIComponent(entityId)}`,
+    { params: { page, pageSize } }
   );
-
-  const start = page * pageSize;
-  const logs = timeline
-    .slice(start, start + pageSize)
-    .map((log) => ({ ...toListItem(log), fieldChanges: log.fieldChanges }));
-
-  return entityAuditLogsResponseSchema.parse({ logs, count: timeline.length });
+  return entityAuditLogsResponseSchema.parse(response);
 }
 
-/** Opções de usuário para o filtro (num serviço real, reusa a listagem de usuários). */
-export async function fetchAuditUserOptions(): Promise<{ id: string; name: string }[]> {
-  await sleep(MOCK_DELAY_MS);
-  return MOCK_AUDIT_AUTHORS.map((user) => ({ id: user.id, name: user.name }));
+export interface AuditUserOption {
+  id: string;
+  name: string;
+}
+
+// Do usuário da listagem, o filtro só usa o id e o nome.
+const auditUserOptionsResponseSchema = z.object({
+  users: z.array(z.object({ id: z.string(), name: z.string() })),
+});
+
+// Teto de `pageSize` do servidor: as opções são os primeiros 100 usuários por
+// nome.
+const AUDIT_USER_OPTIONS_LIMIT = 100;
+
+/**
+ * Opções do filtro "Usuário": a listagem de usuários (`GET /client/users`),
+ * que exige `backoffice.users.read` — a tela só chama com essa permissão.
+ */
+export async function fetchAuditUserOptions(): Promise<AuditUserOption[]> {
+  const response = await api.get<unknown>('/client/users', {
+    params: { page: 0, pageSize: AUDIT_USER_OPTIONS_LIMIT, orderBy: 'name', order: 'asc' },
+  });
+  return auditUserOptionsResponseSchema.parse(response).users;
 }
 
 export const auditKeys = {

@@ -1,32 +1,54 @@
-/* -----------------------------------------------------------------------------
- * Ponto de entrada da sessão: exporta a implementação escolhida por
- * `VITE_SESSION_MODE` (validada em `lib/env.ts`).
- * -----------------------------------------------------------------------------
- *   - `api` (padrão) → `apiSessionService.ts`: autentica no backend irmão
- *     `../server-template` (`POST /client/session/login`, `/register`,
- *     `/logout` e `GET /client/users/me`), com cookie HTTP-only. Suba-o com
- *     `npm run db:up && npm run dev` lá dentro e aponte `VITE_API_URL` para ele.
- *   - `fake` → `fakeSessionService.ts`: sessão fictícia em cookie comum, sem
- *     backend. É o modo da suíte (`vitest.config.ts`) e dos E2E
- *     (`playwright.config.ts`), e serve para demonstração.
- *
- * As duas cumprem `ISessionService` e devolvem o mesmo shape do contrato do
- * servidor; o resto do app importa só `sessionService` daqui.
- * -------------------------------------------------------------------------- */
+import { api } from '@/services/api';
+import {
+  signInResponseSchema,
+  signOutResponseSchema,
+  validateResponseSchema,
+  type ISessionService,
+  type ISignInService,
+  type ISignInServiceResponse,
+  type ISignOutServiceResponse,
+  type ISignUpService,
+  type IValidateResponse,
+} from '@/services/session/types';
 
-import { apiSessionService } from './apiSessionService';
-import { fakeSessionService } from './fakeSessionService';
+/*
+ * Sessão no backend `../server-template` pelo cliente `api` (cookie HTTP-only
+ * `token`, gravado e limpo pelo servidor): `POST /client/session/login`,
+ * `/register`, `/logout` e `GET /client/users/me`. Erros (401 de credencial,
+ * 400 de validação, 409 de e-mail já cadastrado) já viram toast pelo
+ * interceptor do `api`. A resposta passa pelo schema Zod antes de chegar ao
+ * store.
+ */
 
-import { env, type SessionMode } from '@/lib/env';
-import type { ISessionService } from '@/services/session/types';
-
-export function selectSessionService(mode: SessionMode): ISessionService {
-  switch (mode) {
-    case 'fake':
-      return fakeSessionService;
-    case 'api':
-      return apiSessionService;
-  }
+async function signIn(data: ISignInService): Promise<ISignInServiceResponse> {
+  const response = await api.post<unknown>('/client/session/login', data);
+  return signInResponseSchema.parse(response);
 }
 
-export const sessionService = selectSessionService(env.VITE_SESSION_MODE);
+async function signUp(data: ISignUpService): Promise<ISignInServiceResponse> {
+  const response = await api.post<unknown>('/client/session/register', data);
+  return signInResponseSchema.parse(response);
+}
+
+async function signOut(): Promise<ISignOutServiceResponse> {
+  const response = await api.post<unknown>('/client/session/logout');
+  return signOutResponseSchema.parse(response);
+}
+
+// Sem toast só no 401: abrir o app sem sessão (ou com ela expirada) não é erro
+// para o usuário. 5xx e falha de rede mantêm o toast, para o usuário saber que
+// o servidor está fora. Em todos os casos `SessionValidation` trata a rejeição
+// mandando ao login.
+async function validate(): Promise<IValidateResponse> {
+  const response = await api.get<unknown>('/client/users/me', {
+    silentError: [401],
+  });
+  return validateResponseSchema.parse(response);
+}
+
+export const sessionService: ISessionService = {
+  signIn,
+  signUp,
+  signOut,
+  validate,
+};

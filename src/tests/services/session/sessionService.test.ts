@@ -1,62 +1,132 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiSessionService } from '@/services/session/apiSessionService';
-import { fakeSessionService } from '@/services/session/fakeSessionService';
-import {
-  selectSessionService,
-  sessionService,
-} from '@/services/session/sessionService';
+import { api } from '@/services/api';
+import { sessionService } from '@/services/session/sessionService';
 
-describe('selectSessionService', () => {
-  it('`api` usa a sessão real (backend)', () => {
-    expect(selectSessionService('api')).toBe(apiSessionService);
+vi.mock('@/services/api', () => ({
+  api: { get: vi.fn(), post: vi.fn() },
+}));
+
+const get = vi.mocked(api.get);
+const post = vi.mocked(api.post);
+
+// `user` da sessão como o backend entrega (openapi: login, register, users/me).
+function makeServerUser(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'b6f1c7a2-0000-4000-8000-000000000001',
+    name: 'Maria Silva',
+    email: 'maria@example.com',
+    image: null,
+    permissions: ['backoffice.audit.read', 'backoffice.users.read'],
+    idleTimeoutMinutes: 30,
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  get.mockReset();
+  post.mockReset();
+});
+
+describe('sessionService.signIn', () => {
+  it('autentica em POST /client/session/login e devolve o usuário com permissões e inatividade', async () => {
+    post.mockResolvedValue({ success: true, user: makeServerUser() });
+
+    const response = await sessionService.signIn({
+      email: 'maria@example.com',
+      password: 'segredo-123',
+    });
+
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/client/session/login', {
+      email: 'maria@example.com',
+      password: 'segredo-123',
+    });
+    expect(response).toEqual({ success: true, user: makeServerUser() });
   });
 
-  it('`fake` usa a sessão fictícia (sem backend)', () => {
-    expect(selectSessionService('fake')).toBe(fakeSessionService);
+  // Credencial errada: o 401 chega como rejeição do `api` (o toast é do
+  // interceptor) e não pode virar sessão.
+  it('propaga a falha do backend', async () => {
+    const error = new Error('401');
+    post.mockRejectedValue(error);
+
+    await expect(
+      sessionService.signIn({ email: 'maria@example.com', password: 'x' })
+    ).rejects.toBe(error);
   });
 
-  // A suíte fixa `VITE_SESSION_MODE=fake` no `vitest.config.ts`.
-  it('exporta a implementação escolhida pela variável', () => {
-    expect(sessionService).toBe(fakeSessionService);
+  // Fronteira: resposta fora do contrato não chega ao store.
+  it('rejeita resposta sem `permissions` ou sem `idleTimeoutMinutes`', async () => {
+    const { permissions: _permissions, ...withoutPermissions } =
+      makeServerUser();
+    post.mockResolvedValueOnce({ success: true, user: withoutPermissions });
+    await expect(
+      sessionService.signIn({ email: 'maria@example.com', password: 'x' })
+    ).rejects.toThrow();
+
+    post.mockResolvedValueOnce({
+      success: true,
+      user: makeServerUser({ idleTimeoutMinutes: null }),
+    });
+    await expect(
+      sessionService.signIn({ email: 'maria@example.com', password: 'x' })
+    ).rejects.toThrow();
   });
 });
 
-// `lib/env.ts` valida no import: cada caso recarrega o módulo com a variável
-// ajustada.
-describe('VITE_SESSION_MODE', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.resetModules();
-    vi.restoreAllMocks();
+describe('sessionService.signUp', () => {
+  it('cria a conta em POST /client/session/register', async () => {
+    post.mockResolvedValue({ success: true, user: makeServerUser() });
+
+    const response = await sessionService.signUp({
+      name: 'Maria Silva',
+      email: 'maria@example.com',
+      password: 'segredo-123',
+    });
+
+    expect(post).toHaveBeenCalledWith('/client/session/register', {
+      name: 'Maria Silva',
+      email: 'maria@example.com',
+      password: 'segredo-123',
+    });
+    expect(response.user.permissions).toEqual([
+      'backoffice.audit.read',
+      'backoffice.users.read',
+    ]);
+  });
+});
+
+describe('sessionService.signOut', () => {
+  it('encerra a sessão em POST /client/session/logout', async () => {
+    post.mockResolvedValue({ success: true });
+
+    await expect(sessionService.signOut()).resolves.toEqual({
+      success: true,
+    });
+    expect(post).toHaveBeenCalledWith('/client/session/logout');
+  });
+});
+
+describe('sessionService.validate', () => {
+  // `silentError: [401]`: abrir o app sem sessão não mostra toast de erro; o
+  // toast do 5xx e da rede fora continua (ver `validateErrorToast.test.ts`).
+  it('lê o usuário da sessão em GET /client/users/me, silenciando só o 401', async () => {
+    get.mockResolvedValue({ user: makeServerUser() });
+
+    await expect(sessionService.validate()).resolves.toEqual({
+      user: makeServerUser(),
+    });
+    expect(get).toHaveBeenCalledWith('/client/users/me', {
+      silentError: [401],
+    });
   });
 
-  async function loadSessionMode(): Promise<string> {
-    vi.resetModules();
-    const { env } = await import('@/lib/env');
-    return env.VITE_SESSION_MODE;
-  }
+  // Sem cookie válido o backend responde 401: `SessionValidation` depende da
+  // rejeição para mandar ao login.
+  it('rejeita quando a sessão é inválida', async () => {
+    get.mockRejectedValue(new Error('401'));
 
-  it('sem valor, o padrão é `api`', async () => {
-    vi.stubEnv('VITE_SESSION_MODE', undefined);
-    await expect(loadSessionMode()).resolves.toBe('api');
-  });
-
-  it('vazio também cai no padrão `api`', async () => {
-    vi.stubEnv('VITE_SESSION_MODE', '');
-    await expect(loadSessionMode()).resolves.toBe('api');
-  });
-
-  it('aceita `fake`', async () => {
-    vi.stubEnv('VITE_SESSION_MODE', 'fake');
-    await expect(loadSessionMode()).resolves.toBe('fake');
-  });
-
-  it('recusa valor fora de `api` | `fake`', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    vi.stubEnv('VITE_SESSION_MODE', 'mock');
-    await expect(loadSessionMode()).rejects.toThrow(
-      'Variáveis de ambiente inválidas'
-    );
+    await expect(sessionService.validate()).rejects.toThrow('401');
   });
 });

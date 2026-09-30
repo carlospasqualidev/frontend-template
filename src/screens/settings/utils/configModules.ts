@@ -1,6 +1,26 @@
 // Grupos da tela de configurações, um por módulo do catálogo do servidor. A
 // tela e o skeleton leem daqui a ordem e a descrição de cada grupo.
 
+/** Linha da tela: campo de texto ou número (rótulo em cima) ou interruptor (rótulo ao lado). */
+export type ConfigRowKind = 'field' | 'switch';
+
+export interface ConfigModuleOutline {
+  module: string;
+  rows: readonly ConfigRowKind[];
+}
+
+/**
+ * Formato esperado da tela, para o skeleton reservar o espaço enquanto a
+ * leitura (`GET /client/system-configs`) não volta: os grupos na ordem de
+ * exibição e uma linha por chave do catálogo do servidor, pelo tipo do campo.
+ * Chave ou grupo novo no catálogo entra aqui junto de `moduleDescription`.
+ */
+export const SETTINGS_OUTLINE: readonly ConfigModuleOutline[] = [
+  { module: 'GENERAL', rows: ['field', 'field'] },
+  { module: 'SECURITY', rows: ['field', 'field', 'field'] },
+  { module: 'NOTIFICATIONS', rows: ['switch'] },
+];
+
 // Ordem de exibição dos módulos (Geral primeiro). `switch` — sem indexar
 // objeto por variável.
 function moduleRank(module: string): number {

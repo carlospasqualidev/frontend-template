@@ -1,8 +1,10 @@
+import { isAxiosError } from 'axios';
 import { Controller } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Check, X } from 'lucide-react';
-import type { Control, UseFormRegister } from 'react-hook-form';
+import type { Control } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/global/button/button';
 import { Card } from '@/components/global/card/card';
@@ -20,15 +22,20 @@ import {
   type ModuleGroup,
 } from '@/screens/settings/utils/configModules';
 import { systemConfigKeys } from '@/screens/settings/utils/queryKeys';
+import { catchHandler, sendErrorMessage } from '@/services/api/errorHandlers';
 import {
   fetchSystemConfigs,
+  findSystemConfigIssues,
   systemConfigModuleLabel,
   updateSystemConfigs,
   type SystemConfig,
   type SystemConfigsResponse,
+  type SystemConfigUpdateItem,
 } from '@/services/systemConfigs/systemConfigsApi';
 
 const FORM_ID = 'settings-form';
+
+const UNEXPECTED_SAVE_ERROR_MESSAGE = 'Não foi possível salvar agora. Tente novamente em instantes.';
 
 const settingsFormSchema = z.object({ values: z.array(z.string()) });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -71,14 +78,22 @@ export function SettingsPage() {
   return <SettingsForm configs={data.systemConfigs} />;
 }
 
+// Só os itens alterados, na ordem da tela: é o lote que vai ao servidor.
+function changedItems(configs: SystemConfig[], formValues: SettingsFormValues): SystemConfigUpdateItem[] {
+  return configs
+    .map((config, index) => ({ config, value: formValues.values.at(index) ?? config.value }))
+    .filter(({ config, value }) => value !== config.value)
+    .map(({ config, value }) => ({ key: config.key, value }));
+}
+
 function SettingsForm({ configs }: { configs: SystemConfig[] }) {
   const queryClient = useQueryClient();
 
   const {
     control,
-    register,
     handleSubmit,
     reset,
+    setError,
     formState: { isDirty },
   } = useZodForm({
     schema: settingsFormSchema,
@@ -88,22 +103,43 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
   // Uma gravação só, com todas as configurações alteradas (lote atômico no
   // backend). O toast de sucesso vem do `message` da resposta — sem toast aqui.
   const mutation = useMutation({
-    mutationFn: (formValues: SettingsFormValues) => {
-      const changed = configs
-        .map((config, index) => ({ config, value: formValues.values.at(index) ?? config.value }))
-        .filter(({ config, value }) => value !== config.value)
-        .map(({ config, value }) => ({ key: config.key, value }));
-      return updateSystemConfigs(changed);
-    },
+    mutationFn: (items: SystemConfigUpdateItem[]) => updateSystemConfigs(items),
     onSuccess: ({ systemConfigs }) => {
       // A resposta já traz a lista completa (com o valor normalizado pelo
       // backend): popula o cache e volta o form a pristine com esses valores.
       queryClient.setQueryData<SystemConfigsResponse>(systemConfigKeys.list, { systemConfigs });
       reset({ values: systemConfigs.map((config) => config.value) });
     },
+    // O 400 volta sem toast (`updateSystemConfigs`): a recusa que aponta um
+    // item do lote marca o campo dele; a que não aponta nenhum (a regra entre
+    // os prazos conferida contra o valor gravado) vira o toast do interceptor.
+    // As demais falhas HTTP já tiveram o toast. Falha que não é HTTP (resposta
+    // fora do contrato recusada pelo `.parse`, ou bug) é inesperada: mensagem
+    // genérica ao usuário e reporte.
+    onError: (error, items) => {
+      if (!isAxiosError(error)) {
+        console.error('Falha inesperada na gravação das configurações.', error);
+        void sendErrorMessage({ error });
+        toast.error(UNEXPECTED_SAVE_ERROR_MESSAGE, { id: 'errorToastId' });
+        return;
+      }
+
+      if (error.response?.status !== 400) return;
+
+      const issues = findSystemConfigIssues(error, items);
+      if (issues.length === 0) {
+        catchHandler({ response: error.response });
+        return;
+      }
+
+      issues.forEach(({ key, message }) => {
+        const index = configs.findIndex((config) => config.key === key);
+        if (index !== -1) setError(`values.${index}`, { type: 'server', message });
+      });
+    },
   });
 
-  const onSubmit = handleSubmit((values) => mutation.mutate(values));
+  const onSubmit = handleSubmit((formValues) => mutation.mutate(changedItems(configs, formValues)));
 
   return (
     <>
@@ -131,13 +167,7 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
           <Card key={module} title={systemConfigModuleLabel(module)} description={moduleDescription(module)}>
             <div>
               {items.map(({ config, index }) => (
-                <ConfigField
-                  key={config.key}
-                  config={config}
-                  index={index}
-                  control={control}
-                  register={register}
-                />
+                <ConfigField key={config.key} config={config} index={index} control={control} />
               ))}
             </div>
           </Card>
@@ -147,16 +177,16 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
   );
 }
 
+// Campos controlados: o erro que o servidor apontou (`setError`) aparece sob o
+// campo, e some quando o valor muda.
 function ConfigField({
   config,
   index,
   control,
-  register,
 }: {
   config: SystemConfig;
   index: number;
   control: Control<SettingsFormValues>;
-  register: UseFormRegister<SettingsFormValues>;
 }) {
   const fieldId = `system-config-${config.key}`;
   const fieldName = `values.${index}` as const;
@@ -193,7 +223,8 @@ function ConfigField({
           label={config.label}
           description={config.description}
           rows={4}
-          {...register(fieldName)}
+          control={control}
+          name={fieldName}
         />
       ) : (
         <InputField
@@ -201,7 +232,8 @@ function ConfigField({
           label={config.label}
           description={config.description}
           type={config.valueType === 'int' || config.valueType === 'float' ? 'number' : 'text'}
-          {...register(fieldName)}
+          control={control}
+          name={fieldName}
         />
       )}
     </div>

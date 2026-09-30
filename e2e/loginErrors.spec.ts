@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { SEED_ADMIN, SEED_BLOCKED } from '../helpers/serverApi';
-import { submitLogin } from '../helpers/session';
+import { SEED_ADMIN, SEED_BLOCKED } from './helpers/serverApi';
+import { submitLogin } from './helpers/session';
 
 // Login recusado pelo server real: a mensagem do server vira o toast (pelo
 // interceptor do `api`) e a pessoa continua na tela de login.

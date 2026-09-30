@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 declare module 'axios' {
   interface AxiosRequestConfig {
     /**
@@ -71,4 +73,23 @@ export function extractResponseMessage(value: unknown): string | null {
   }
 
   return null;
+}
+
+const responseIssuesSchema = z.object({
+  issues: z.array(z.object({ path: z.string(), message: z.string() })),
+});
+
+/** Campo recusado num erro de validação da API (`path` como `items.0.value`). */
+export type ResponseIssue = z.infer<
+  typeof responseIssuesSchema
+>['issues'][number];
+
+/**
+ * Extrai os `issues` do corpo de um erro de validação do backend (`{ message,
+ * issues: [{ path, message }] }`), para a tela marcar o campo. Lista vazia
+ * quando o erro não traz `issues` no formato do contrato.
+ */
+export function extractResponseIssues(value: unknown): ResponseIssue[] {
+  const parsed = responseIssuesSchema.safeParse(value);
+  return parsed.success ? parsed.data.issues : [];
 }

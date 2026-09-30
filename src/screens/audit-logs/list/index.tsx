@@ -15,7 +15,9 @@ import {
 import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTableUrlQuery';
 import { Badge } from '@/components/ui/badge';
 import { Typography } from '@/components/ui/typography';
+import { useSessionStore } from '@/hooks/useSessionStore';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
+import { hasPermission } from '@/lib/permissions';
 import { AuditLogDetailModal } from '@/screens/audit-logs/list/auditLogDetail';
 import { useAuditOptions } from '@/screens/audit-logs/utils/useAuditOptions';
 import {
@@ -55,9 +57,14 @@ export function AuditLogsPage() {
 
   const { options, moduleLabel, actionLabel, entityLabel } = useAuditOptions();
 
+  // As opções do filtro "Usuário" vêm da listagem de usuários, que exige
+  // `backoffice.users.read`: sem ela, o filtro não aparece.
+  const canReadUsers = useSessionStore((state) => hasPermission(state.user, 'backoffice.users.read'));
+
   const { data: userOptions } = useQuery({
     queryKey: auditKeys.userOptions,
     queryFn: fetchAuditUserOptions,
+    enabled: canReadUsers,
     staleTime: 5 * 60_000,
   });
 
@@ -85,19 +92,26 @@ export function AuditLogsPage() {
         searchable: true,
         options: options.entities,
       }),
-      multiSelectFilter({
-        key: 'userId',
-        label: 'Usuário',
-        placeholder: 'Selecione',
-        searchable: true,
-        options: (userOptions ?? []).map((user) => ({ value: user.id, label: user.name })),
-      }),
+      ...(canReadUsers
+        ? [
+            multiSelectFilter({
+              key: 'userId',
+              label: 'Usuário',
+              placeholder: 'Selecione',
+              searchable: true,
+              options: (userOptions ?? []).map((user) => ({ value: user.id, label: user.name })),
+            }),
+          ]
+        : []),
       dateRangeFilter({ key: 'createdAt', label: 'Período' }),
     ],
-    [userOptions, options]
+    [canReadUsers, userOptions, options]
   );
 
-  const params = buildAuditListParams(query);
+  // Sem o filtro "Usuário" na tela, um `userId` que ficou na URL não filtra a
+  // lista: a pessoa não teria como ver nem limpar esse filtro.
+  const listParams = buildAuditListParams(query);
+  const params = canReadUsers ? listParams : { ...listParams, userId: undefined };
 
   const { data, isPending } = useQuery({
     queryKey: auditKeys.list(params),
@@ -136,7 +150,7 @@ export function AuditLogsPage() {
       ),
     },
     {
-      // Usuário é resolvido em memória (não é coluna do auditLogs) → não ordenável.
+      // O nome do autor vem do cadastro (não é coluna da trilha) → não ordenável.
       id: 'userName',
       header: 'Usuário',
       cell: ({ row }) => row.original.userName ?? <EmptyValue />,

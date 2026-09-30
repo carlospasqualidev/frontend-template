@@ -24,15 +24,6 @@ vi.mock('@tanstack/react-router', async () => {
   };
 });
 
-// A tela fala com o backend de verdade (modo `api`), sem rede: o adapter do
-// `axiosApi` responde. Assim o toast do interceptor e o `.parse` da resposta
-// rodam como em produção.
-vi.mock('@/services/session/sessionService', async () => {
-  const { apiSessionService } =
-    await import('@/services/session/apiSessionService');
-  return { sessionService: apiSessionService };
-});
-
 vi.mock('@/services/api/errorHandlers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/api/errorHandlers')>()),
   sendErrorMessage: vi.fn(),
@@ -42,6 +33,9 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+// A tela fala com o backend pelo `sessionService`, sem rede: o adapter do
+// `axiosApi` responde. Assim o toast do interceptor e o `.parse` da resposta
+// rodam como em produção.
 const originalAdapter = axiosApi.defaults.adapter;
 const unhandledRejection = vi.fn();
 let consoleError: ReturnType<typeof vi.spyOn>;

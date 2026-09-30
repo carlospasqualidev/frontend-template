@@ -16,7 +16,6 @@ vi.mock('@/lib/env', () => ({
     VITE_PROJECT_ENVIRONMENT: 'Test',
     VITE_PROJECT_SIDE: 'Client',
     VITE_ERROR_LOG_URL: 'https://logs.example.com/errors',
-    VITE_SESSION_MODE: 'fake',
   },
 }));
 

@@ -1,27 +1,24 @@
 import { expect, type Page } from '@playwright/test';
 
+import { readAdminStorageState } from './serverApi';
+
 /*
- * Helper de autenticação para os E2E: o único ponto de login dos specs.
+ * Autenticação dos E2E, contra o `../server-template` no ar: o login é de
+ * verdade e precisa de credenciais existentes, as do seed
+ * (`e2e/helpers/serverApi.ts`) ou as de um usuário criado no preparo do teste.
  *
- * - `npm run test:e2e` (`playwright.config.ts`): MODO FAKE de sessão
- *   (`VITE_SESSION_MODE=fake`, ver `src/services/session/fakeSessionService.ts`).
- *   Não há backend, e o `signIn` aceita QUALQUER e-mail válido + senha não
- *   vazia, gravando um cookie de sessão fictício com as permissões do menu. O
- *   padrão `FAKE_CREDENTIALS` basta.
- * - `npm run test:e2e:api` (`playwright.api.config.ts`, specs em `e2e/api/`):
- *   MODO API, contra o `../server-template` no ar. O login é de verdade e
- *   precisa de credenciais existentes: as do seed (`e2e/helpers/serverApi.ts`)
- *   ou as de um usuário criado no preparo do teste.
+ * - `openAdminSession(page)`: entra como o admin do seed sem passar pela tela,
+ *   com a sessão que o `globalSetup` abriu. É o padrão dos specs que só
+ *   precisam de alguém com todas as permissões, e não gasta o limite de login
+ *   do server (10 por minuto por IP).
+ * - `login(page, credenciais)`: o login pela tela, para o spec que prova o
+ *   próprio login ou precisa de outro usuário. Cada chamada soma em
+ *   `SPEC_LOGIN_COUNT` (`e2e/globalSetup.ts`).
  */
 export interface LoginCredentials {
   email: string;
   password: string;
 }
-
-export const FAKE_CREDENTIALS: LoginCredentials = {
-  email: 'tester@example.com',
-  password: 'senha-de-teste',
-};
 
 /** Preenche e envia o formulário de login, sem esperar o resultado. */
 export async function submitLogin(
@@ -36,10 +33,18 @@ export async function submitLogin(
 
 export async function login(
   page: Page,
-  credentials: LoginCredentials = FAKE_CREDENTIALS
+  credentials: LoginCredentials
 ): Promise<void> {
   await submitLogin(page, credentials);
 
   // O login redireciona para a home; espere sair da tela de login.
   await expect(page).not.toHaveURL(/\/login$/);
+}
+
+/**
+ * Põe no navegador o cookie HTTP-only da sessão do admin aberta pelo
+ * `globalSetup`: a próxima navegação já entra autenticada.
+ */
+export async function openAdminSession(page: Page): Promise<void> {
+  await page.context().addCookies(readAdminStorageState().cookies);
 }

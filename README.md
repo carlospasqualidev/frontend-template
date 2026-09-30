@@ -33,8 +33,9 @@ cp .env.example .env   # ajuste as variáveis
 npm run dev
 ```
 
-Com o `.env` padrão (`VITE_SESSION_MODE=api`), o login precisa do backend
-`../server-template` no ar. Para navegar sem ele, use `VITE_SESSION_MODE=fake`.
+O app fala com o backend `../server-template` (suba-o com
+`npm run db:up && npm run dev` lá dentro; `VITE_API_URL` aponta para ele): sem
+ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 
 ## Scripts
 
@@ -49,8 +50,8 @@ Com o `.env` padrão (`VITE_SESSION_MODE=api`), o login precisa do backend
 | `npm test`                | Executa a suíte de testes uma vez                               |
 | `npm run test:watch`      | Testes em modo watch                                            |
 | `npm run check`           | Roda `lint + typecheck + test` em sequência                     |
-| `npm run test:e2e`        | E2E (Playwright) em modo fake, sem backend                      |
-| `npm run test:e2e:api`    | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
+| `npm run test:e2e`        | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
+| `npm run test:layers`     | Empilhamento (z-index) contra o Storybook, sem backend          |
 | `npm run storybook`       | Storybook em modo dev (porta 6006)                              |
 | `npm run build-storybook` | Build estático do Storybook em `storybook-static/`              |
 | `npm run clean`           | Limpa `dist/` e caches (`node_modules/.tmp`, `.vite`, `.cache`) |
@@ -78,21 +79,22 @@ Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example
 | `VITE_PROJECT_ENVIRONMENT` | não         | Ambiente lógico (ex.: Sandbox/Production) |
 | `VITE_PROJECT_SIDE`        | não         | Lado da app (ex.: Client/Backoffice)      |
 | `VITE_ERROR_LOG_URL`       | não         | Endpoint de reporte de erros (só em PROD) |
-| `VITE_SESSION_MODE`        | não         | Sessão: `api` (padrão) ou `fake`          |
 
-`VITE_SESSION_MODE` escolhe como a sessão funciona:
+## Modo híbrido
 
-- `api` (padrão): login, cadastro, logout e validação no backend
-  `../server-template` (suba-o com `npm run db:up && npm run dev` lá dentro;
-  `VITE_API_URL` aponta para ele). O usuário chega com as permissões efetivas e
-  o tempo de inatividade até o logout.
-- `fake`: sem backend. Qualquer e-mail válido e senha não vazia entram, com as
-  permissões do menu e 20 minutos de inatividade. Serve para demonstração; a
-  suíte (`npm test`) e os E2E padrão (`npm run test:e2e`) rodam nesse modo. Só
-  o `npm run test:e2e:api` usa o `api`, contra o server real (ver [E2E](#e2e)).
+Tela com rota no backend fala só com ele, sem modo fictício: a sessão (login,
+cadastro, logout e validação, com as permissões efetivas e o tempo de
+inatividade), as configurações do sistema, a trilha de auditoria e o upload. Os
+E2E dessas telas rodam contra o server real (ver [E2E](#e2e)).
 
-As telas de demonstração (usuários, auditoria, configurações) usam dados mock
-nos dois modos, já no formato do contrato do backend.
+Continuam com dados de demonstração as telas ainda não ligadas: lista e
+detalhe de usuários, Minha conta e a home. Parte delas não tem rota no backend
+(sessões ativas, notificações por usuário, cobrança, métricas do painel). A aba
+"Atividade" do usuário já lê a trilha do backend, mas os usuários de
+demonstração não existem lá, então a linha do tempo aparece vazia até a lista
+de usuários ser ligada.
+
+A suíte de unidade (`npm test`) e o Storybook não precisam do backend.
 
 ## Estrutura de pastas
 
@@ -241,8 +243,8 @@ Para dados de servidor, prefira TanStack Query (`useQuery`/`useMutation`) com o
 
 A sessão é baseada em cookie. `SessionValidation` valida a sessão antes de
 renderizar as rotas protegidas; o usuário fica em `useSessionStore` (Zustand).
-A implementação (backend real ou fictícia) vem de `VITE_SESSION_MODE` — ver
-[Variáveis de ambiente](#variáveis-de-ambiente).
+O login, o cadastro e a validação são do backend `../server-template`, com
+cookie HTTP-only — ver [Modo híbrido](#modo-híbrido).
 
 ## Testes
 
@@ -263,18 +265,17 @@ npm run test:watch # modo watch
 
 ### E2E
 
-Playwright, com os specs em [`e2e/`](e2e). Há duas suítes:
+Playwright, com os specs em [`e2e/`](e2e), numa suíte só: `npm run test:e2e`,
+contra o `../server-template` real. Cobre login e login recusado, sessão ao
+recarregar (cookie HTTP-only) e logout, menu por permissão, tempo de
+inatividade vindo da configuração da empresa, configurações (gravação em lote,
+campo marcado quando o server recusa o valor, recusa da regra entre os prazos) e
+a trilha de auditoria (lista, busca, filtros por módulo e por usuário,
+paginação, detalhe). As telas que ainda usam dados de demonstração (usuários,
+Minha conta, home) rodam com a sessão real do admin. O empilhamento
+(`npm run test:layers`) roda contra o Storybook, sem backend.
 
-- `npm run test:e2e`: sobe o Vite sozinho (porta 5174) em modo `fake` de
-  sessão, com as telas em mock. Não precisa de backend; é a que roda ao fim de
-  toda tarefa e no dia a dia.
-- `npm run test:e2e:api`: prova ponta a ponta contra o `../server-template`
-  real (specs em [`e2e/api/`](e2e/api)): login do admin com o menu completo,
-  sessão mantida ao recarregar (cookie HTTP-only), logout, senha errada, conta
-  bloqueada, usuário sem cargo sem os itens de menu gateados, e o tempo de
-  inatividade vindo da configuração da empresa. Opcional e fora do CI.
-
-Para a `test:e2e:api`, suba o server antes, na pasta dele:
+Suba o server antes, na pasta dele:
 
 ```bash
 cd ../server-template
@@ -287,25 +288,30 @@ npm run dev        # http://localhost:8080
 Depois, na raiz deste frontend:
 
 ```bash
-npm run test:e2e:api
+npm run test:e2e
 ```
 
-- O Vite sobe sozinho em modo `api` na porta **4173**, que já está no
-  `CORS_ORIGINS` padrão do server, e aponta para `VITE_API_URL` do ambiente
-  (padrão `http://localhost:8080/api`). A porta precisa estar livre. Para usar
-  outra, `E2E_API_PORT=<porta>` aqui e `CORS_ORIGINS` com
+- O Vite sobe sozinho na porta **4173**, que já está no `CORS_ORIGINS` padrão
+  do server, e aponta para `VITE_API_URL` do ambiente (padrão
+  `http://localhost:8080/api`). Server em outra porta:
+  `VITE_API_URL=http://localhost:<porta>/api npm run test:e2e`. Vite em outra
+  porta: `E2E_PORT=<porta>` aqui e `CORS_ORIGINS` com
   `http://localhost:<porta>` ao subir o server.
-- Antes dos specs, o `globalSetup` confere `GET /health/ready` e o login do
-  admin do seed; se faltar algo, para com a instrução.
-- Os specs criam o que precisam (usuário com e-mail de sufixo único,
-  configuração de inatividade da empresa) e desfazem no fim: rodam quantas vezes
-  for preciso contra o mesmo banco de desenvolvimento.
-- O server aceita 10 logins por minuto por IP, e a suíte usa 7: o do admin no
-  `globalSetup` e 6 pelo navegador (os dois chegam ao server por `127.0.0.1` e
-  dividem o contador). O `globalSetup` lê o limite na resposta do login do
-  admin; se sobrarem menos de 6, ou se o login vier recusado (429), ele espera a
-  janela reiniciar (até 1 minuto, com o tempo no log) e segue. Se o 429
-  continuar depois da espera, ele para com a mensagem de que outro cliente no
-  mesmo IP está gastando o limite (a tela de login aberta, outra suíte): pare
-  esse cliente e rode de novo. Rodar de novo logo em seguida funciona, só
-  demora mais.
+- Se a porta já tiver um servidor, ele é reaproveitado só se for o Vite deste
+  frontend apontando para a mesma `VITE_API_URL`; outro app na porta (mesmo com
+  o mesmo título) ou o `vite preview` deste frontend (que usa a mesma 4173)
+  para a suíte antes dos specs, com a mensagem.
+- Antes dos specs, o `globalSetup` confere a porta, `GET /health/ready` e o
+  login do admin do seed; se faltar algo, para com a instrução.
+- Os specs criam o que precisam pela API (usuários e cargo com nome de sufixo
+  único, configurações da empresa) e desfazem no fim: rodam quantas vezes for
+  preciso contra o mesmo banco de desenvolvimento.
+- O server aceita 10 logins por minuto por IP, e a suíte usa 8: o do admin no
+  `globalSetup` e 7 pela tela (os dois chegam ao server por `127.0.0.1` e
+  dividem o contador); os demais specs entram com a sessão do admin, sem login.
+  O `globalSetup` lê o limite na resposta do login do admin; se sobrarem menos
+  de 7, ou se o login vier recusado (429), ele espera a janela reiniciar (até 1
+  minuto, com o tempo no log) e segue. Se o 429 continuar depois da espera, ele
+  para com a mensagem de que outro cliente no mesmo IP está gastando o limite (a
+  tela de login aberta, outra suíte): pare esse cliente e rode de novo. Rodar de
+  novo logo em seguida funciona, só demora mais.

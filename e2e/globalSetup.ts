@@ -1,20 +1,25 @@
-import { request, type APIResponse } from '@playwright/test';
+import path from 'node:path';
 
+import { request, type APIResponse, type FullConfig } from '@playwright/test';
+
+import { assertServesThisFrontend } from './helpers/frontend';
 import {
   SEED_ADMIN,
   SERVER_API_URL,
   serverApiUrl,
   storeAdminStorageState,
-} from '../helpers/serverApi';
+} from './helpers/serverApi';
 
 const SERVER_SETUP_HINT =
   'Suba o ../server-template antes: `npm run db:up`, `npm run db:deploy`, `npm run db:seed` e `npm run dev` lá dentro.';
 
 /**
- * Logins que os specs fazem depois deste, pelo navegador (os 2 recusados de
- * propósito contam). Spec novo que faz login soma aqui.
+ * Logins que os specs fazem depois deste, pela tela (os 2 recusados de
+ * propósito contam): sessão 2, login recusado 2, inatividade 1, usuário sem
+ * cargo 1 e auditoria 1. Spec novo que faz login soma aqui; os que só precisam
+ * do admin entram com `openAdminSession`, sem login.
  */
-const SPEC_LOGIN_COUNT = 6;
+const SPEC_LOGIN_COUNT = 7;
 
 /** A janela do limite de login do server é de 1 minuto: esperar mais que isso é outra regra. */
 const MAX_RATE_LIMIT_WAIT_SECONDS = 70;
@@ -46,19 +51,25 @@ async function waitForRateLimitReset(
   }
 
   console.info(
-    `[test:e2e:api] Limite de login do server: ${reason}. Aguardando ${resetSeconds} s até a janela reiniciar...`
+    `[test:e2e] Limite de login do server: ${reason}. Aguardando ${resetSeconds} s até a janela reiniciar...`
   );
   await new Promise((resolve) => setTimeout(resolve, resetSeconds * 1000));
 }
 
 /*
- * Pré-condições dos E2E contra o server real, conferidas uma vez antes dos
- * specs: o server responde em `VITE_API_URL` com o banco no ar, o admin do seed
- * entra e sobram logins para os specs no limite do server; se não sobrarem, o
- * setup espera a janela reiniciar. A sessão do admin fica em `process.env` para
- * o preparo de dado (`newAdminApiContext`), sem um login por spec.
+ * Pré-condições dos E2E, conferidas uma vez antes dos specs (o `webServer` já
+ * subiu, ou reaproveitou, o Vite na porta dos E2E): a porta serve este
+ * frontend apontando para `VITE_API_URL`; o server responde ali com o banco no
+ * ar; o admin do seed entra e sobram logins para os specs no limite do server
+ * (se não sobrarem, o setup espera a janela reiniciar). A sessão do admin fica
+ * em `process.env` para o preparo de dado (`newAdminApiContext`) e para os
+ * specs que entram sem a tela de login (`openAdminSession`).
  */
-export default async function globalSetup(): Promise<void> {
+export default async function globalSetup(config: FullConfig): Promise<void> {
+  await assertServesThisFrontend(
+    config.configFile ? path.dirname(config.configFile) : process.cwd()
+  );
+
   const readinessUrl = new URL('/health/ready', SERVER_API_URL).toString();
   const context = await request.newContext();
   const signInAdmin = (): Promise<APIResponse> =>

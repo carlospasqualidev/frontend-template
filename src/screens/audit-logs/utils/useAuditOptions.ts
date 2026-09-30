@@ -9,10 +9,10 @@ import {
 const EMPTY: AuditFilterOptions = { modules: [], actions: [], entities: [] };
 
 /**
- * Opções + rótulos pt-BR dos filtros de auditoria. Num serviço real a fonte de
- * verdade é o BACKEND (GET .../audit-logs/options) — entidade nova auditada
- * aparece aqui automaticamente, sem o frontend precisar conhecê-la. Cacheado
- * (muda raramente).
+ * Opções + rótulos pt-BR dos filtros de auditoria. A fonte de verdade é o
+ * backend (`GET /client/audit-logs/options`) — entidade nova auditada aparece
+ * aqui automaticamente, sem o frontend precisar conhecê-la. Cacheado (muda
+ * raramente).
  */
 export function useAuditOptions() {
   const { data } = useQuery({

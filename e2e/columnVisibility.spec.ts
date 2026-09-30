@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-import { login } from './helpers/session';
+import { openAdminSession } from './helpers/session';
 
 // Menu "Colunas" da DataTable, exercitado na listagem de Usuários: o usuário
 // oculta uma coluna, a escolha sobrevive ao recarregar (fica neste navegador)
 // e "Mostrar todas" volta ao padrão.
 test.describe('Tabela — mostrar e ocultar colunas', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page);
+    await openAdminSession(page);
     await page.goto('/users');
   });
 

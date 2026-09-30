@@ -8,8 +8,8 @@ import {
   readSystemConfigValue,
   writeSystemConfigValue,
   type PreparedUser,
-} from '../helpers/serverApi';
-import { login } from '../helpers/session';
+} from './helpers/serverApi';
+import { login } from './helpers/session';
 
 const IDLE_TIMEOUT_KEY = 'security.idleTimeoutMinutes';
 // O aviso abre 60 s antes do fim: com 2 minutos, aos 60 s de inatividade (com

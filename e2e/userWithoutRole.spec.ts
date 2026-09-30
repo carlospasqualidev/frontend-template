@@ -6,8 +6,8 @@ import {
   isLoginResponse,
   newAdminApiContext,
   type PreparedUser,
-} from '../helpers/serverApi';
-import { login } from '../helpers/session';
+} from './helpers/serverApi';
+import { login } from './helpers/session';
 
 // Usuário sem cargo, criado pelo admin (`POST /client/users`) no preparo e
 // excluído no fim: o server devolve `permissions: []` e o menu esconde tudo o

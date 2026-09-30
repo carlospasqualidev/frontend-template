@@ -35,18 +35,7 @@ const envSchema = z.object({
     (value) => (value === '' ? undefined : value),
     z.url().optional()
   ),
-  /**
-   * Implementação da sessão (`services/session/sessionService.ts`):
-   * - `api` (padrão): autentica no backend (`../server-template`).
-   * - `fake`: sessão fictícia em cookie, sem backend (demonstração, testes e E2E).
-   */
-  VITE_SESSION_MODE: z.preprocess(
-    (value) => (value === '' ? undefined : value),
-    z.enum(['api', 'fake']).default('api')
-  ),
 });
-
-export type SessionMode = z.infer<typeof envSchema>['VITE_SESSION_MODE'];
 
 const parsed = envSchema.safeParse(import.meta.env);
 

@@ -1,30 +1,39 @@
 import type { JSX } from 'react';
 
 import { Card } from '@/components/global/card/card';
-import { SkeletonText } from '@/components/global/skeleton/skeleton';
 import {
-  groupByModule,
+  SkeletonBadge,
+  SkeletonText,
+  SkeletonValue,
+} from '@/components/global/skeleton/skeleton';
+import {
   moduleDescription,
+  SETTINGS_OUTLINE,
+  type ConfigRowKind,
 } from '@/screens/settings/utils/configModules';
-import {
-  listMockSystemConfigOutline,
-  systemConfigModuleLabel,
-} from '@/services/systemConfigs/systemConfigsApi';
+import { systemConfigModuleLabel } from '@/services/systemConfigs/systemConfigsApi';
 
-// Um card por grupo e uma linha por chave do catálogo, na ordem da tela.
-const SKELETON_GROUPS = groupByModule(
-  listMockSystemConfigOutline(),
-  (config) => config.module
-);
-
-function ConfigRowSkeleton(): JSX.Element {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
-      <div className="space-y-2">
-        <SkeletonText className="h-4 w-48" />
-        <SkeletonText className="h-3 w-64" />
+// Mesmo formato e espaçamento das linhas da tela: o campo de texto ou número
+// com rótulo, caixa e descrição empilhados; o interruptor com rótulo e
+// descrição à esquerda.
+function ConfigRowSkeleton({ kind }: { kind: ConfigRowKind }): JSX.Element {
+  if (kind === 'switch') {
+    return (
+      <div className="flex items-center justify-between gap-4 border-b py-4 last:border-b-0">
+        <div className="space-y-1">
+          <SkeletonText className="w-48" />
+          <SkeletonText className="w-64" />
+        </div>
+        <SkeletonBadge className="w-8" />
       </div>
-      <SkeletonText className="h-9 w-40" />
+    );
+  }
+
+  return (
+    <div className="space-y-2 border-b py-4 last:border-b-0">
+      <SkeletonText className="w-48" />
+      <SkeletonValue className="w-full" />
+      <SkeletonText className="w-72" />
     </div>
   );
 }
@@ -32,15 +41,15 @@ function ConfigRowSkeleton(): JSX.Element {
 export function SettingsSkeleton(): JSX.Element {
   return (
     <div className="space-y-4">
-      {SKELETON_GROUPS.map(({ module, items }) => (
+      {SETTINGS_OUTLINE.map(({ module, rows }) => (
         <Card
           key={module}
           title={systemConfigModuleLabel(module)}
           description={moduleDescription(module)}
         >
           <div>
-            {items.map(({ key }) => (
-              <ConfigRowSkeleton key={key} />
+            {rows.map((kind, index) => (
+              <ConfigRowSkeleton key={index} kind={kind} />
             ))}
           </div>
         </Card>

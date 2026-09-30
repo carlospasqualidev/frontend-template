@@ -1,13 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { toast } from 'sonner';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { type DataTableQuery } from '@/components/global/dataTable/useDataTableQuery';
+import { axiosApi } from '@/services/api/api';
 import {
   buildAuditListParams,
+  fetchAuditFilterOptions,
   fetchAuditLogDetail,
   fetchAuditLogs,
   fetchAuditUserOptions,
   fetchEntityAuditLogs,
 } from '@/services/audit/auditApi';
+import { respondWith } from '@/tests/helpers/axiosAdapter';
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+const defaultAdapter = axiosApi.defaults.adapter;
+
+afterEach(() => {
+  axiosApi.defaults.adapter = defaultAdapter;
+  vi.clearAllMocks();
+});
 
 function makeQuery(overrides: Partial<DataTableQuery> = {}): DataTableQuery {
   return {
@@ -82,297 +97,197 @@ describe('buildAuditListParams', () => {
   });
 });
 
-describe('fetchAuditLogs', () => {
-  it('retorna a primeira página ordenada por data (mais recente primeiro) por padrão', async () => {
-    const { logs, count } = await fetchAuditLogs({ page: 0, pageSize: 5 });
-    expect(logs).toHaveLength(5);
-    expect(count).toBeGreaterThan(5);
-    // Sem sort explícito → createdAt desc: os timestamps já vêm decrescentes.
-    const times = logs.map((log) => new Date(log.createdAt).getTime());
-    const descending = [...times].sort((a, b) => b - a);
-    expect(times).toEqual(descending);
-  });
+// Transporte sem rede: o adapter do `axiosApi` responde, e os interceptors e o
+// `.parse` rodam como em produção. O adapter guarda o pedido para conferir
+// caminho e parâmetros.
+function answerWith(status: number, data: unknown) {
+  const adapter = vi.fn(respondWith(status, data));
+  axiosApi.defaults.adapter = adapter;
+  return adapter;
+}
 
-  it('filtra por conteúdo com match parcial (contains), não exato', async () => {
-    const { logs, count } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 10,
-      search: 'Priscila',
+function requestOf(adapter: ReturnType<typeof answerWith>) {
+  const config = adapter.mock.lastCall?.[0];
+  if (!config) throw new Error('Nenhuma chamada ao servidor.');
+  return config;
+}
+
+const LIST_ITEM = {
+  id: '01a0f254-6532-70d9-ae6f-8583c9a52cbc',
+  module: 'USERS',
+  entity: 'User',
+  entityId: '01a0f253-fc4e-745c-b069-dff39ba3116e',
+  action: 'statusChange',
+  description: 'Bloqueou o usuário "Maria Alves".',
+  changedFields: ['isActive'],
+  userId: '01a0f253-fc4e-745c-b069-dff39ba31170',
+  userName: 'Admin',
+  createdAt: '2026-09-30T12:40:12.338Z',
+};
+
+const FIELD_CHANGES = [
+  { field: 'isActive', label: 'Ativo', from: 'Sim', to: 'Não' },
+];
+
+describe('fetchAuditFilterOptions', () => {
+  it('lê as opções com rótulo em GET /client/audit-logs/options', async () => {
+    const options = {
+      modules: [{ value: 'USERS', label: 'Usuários' }],
+      actions: [{ value: 'login', label: 'Login' }],
+      entities: [{ value: 'User', label: 'Usuário' }],
+    };
+    const adapter = answerWith(200, options);
+
+    await expect(fetchAuditFilterOptions()).resolves.toEqual(options);
+    expect(requestOf(adapter)).toMatchObject({
+      method: 'get',
+      url: '/client/audit-logs/options',
     });
-    expect(count).toBe(1);
-    expect(logs[0].description).toBe('Criou o usuário "Priscila Camargo".');
-  });
-
-  // A listagem não traz o de→para: ele vem no detalhe e na linha do tempo.
-  it('devolve os itens da lista sem `fieldChanges` nem `before`/`after`', async () => {
-    const { logs } = await fetchAuditLogs({ page: 0, pageSize: 1 });
-    expect(logs[0]).not.toHaveProperty('fieldChanges');
-    expect(logs[0]).not.toHaveProperty('before');
-  });
-
-  it('some com o registro que não casa a busca', async () => {
-    const { logs } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 50,
-      search: 'inexistente-xyz',
-    });
-    expect(logs).toHaveLength(0);
-  });
-
-  it('filtra por módulo via CSV', async () => {
-    const { logs, count } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 50,
-      module: 'USERS',
-    });
-    expect(count).toBe(logs.length);
-    expect(logs.every((log) => log.module === 'USERS')).toBe(true);
-  });
-
-  it('pagina: a página 1 traz registros diferentes da página 0', async () => {
-    const first = await fetchAuditLogs({ page: 0, pageSize: 5 });
-    const second = await fetchAuditLogs({ page: 1, pageSize: 5 });
-    const firstIds = new Set(first.logs.map((log) => log.id));
-    expect(second.logs.some((log) => firstIds.has(log.id))).toBe(false);
-  });
-
-  // Página 0-based: a página 0 começa no primeiro registro (não pula nenhum) e
-  // a página 1 continua exatamente de onde ela parou.
-  it('pagina a partir do primeiro registro (0-based)', async () => {
-    const all = await fetchAuditLogs({ page: 0, pageSize: 10 });
-    const first = await fetchAuditLogs({ page: 0, pageSize: 5 });
-    const second = await fetchAuditLogs({ page: 1, pageSize: 5 });
-
-    expect(first.logs.map((log) => log.id)).toEqual(
-      all.logs.slice(0, 5).map((log) => log.id)
-    );
-    expect(second.logs.map((log) => log.id)).toEqual(
-      all.logs.slice(5, 10).map((log) => log.id)
-    );
-  });
-
-  it('ordena por módulo em ordem crescente quando solicitado', async () => {
-    const { logs } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 50,
-      orderBy: 'module',
-      order: 'asc',
-    });
-    const modules = logs.map((log) => log.module);
-    const sorted = [...modules].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    expect(modules).toEqual(sorted);
   });
 });
 
-/** Detalhe do primeiro evento que casa a busca (o mock resolve a busca na descrição). */
-async function findDetail(search: string) {
-  const { logs } = await fetchAuditLogs({ page: 0, pageSize: 1, search });
-  const { auditLog } = await fetchAuditLogDetail(logs[0].id);
-  return auditLog;
-}
+describe('fetchAuditLogs', () => {
+  // Filtro, busca, ordenação e paginação são do servidor: os parâmetros vão
+  // como a tela os montou, com a página 0-based.
+  it('envia os parâmetros da tela em GET /client/audit-logs e devolve `{ logs, count }`', async () => {
+    const adapter = answerWith(200, { logs: [LIST_ITEM], count: 31 });
+    const params = buildAuditListParams(
+      makeQuery({
+        page: 2,
+        filters: { search: 'maria', module: ['USERS', 'SECURITY'] },
+        sort: [{ id: 'module', desc: false }],
+      })
+    );
+
+    await expect(fetchAuditLogs(params)).resolves.toEqual({
+      logs: [LIST_ITEM],
+      count: 31,
+    });
+    expect(requestOf(adapter)).toMatchObject({
+      method: 'get',
+      url: '/client/audit-logs',
+      params: {
+        page: 2,
+        pageSize: 10,
+        search: 'maria',
+        module: 'USERS,SECURITY',
+        orderBy: 'module',
+        order: 'asc',
+      },
+    });
+  });
+
+  it('recusa a resposta fora do contrato (sem `count`)', async () => {
+    answerWith(200, { logs: [LIST_ITEM] });
+
+    await expect(fetchAuditLogs({ page: 0, pageSize: 10 })).rejects.toThrow();
+  });
+});
 
 describe('fetchAuditLogDetail', () => {
-  it('devolve o envelope `{ auditLog }` com antes/depois crus e o de→para', async () => {
-    const { logs } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 1,
-      module: 'USERS',
-      action: 'update',
+  it('lê `{ auditLog }` com antes/depois crus e o de→para em GET /client/audit-logs/:id', async () => {
+    const { userName: _userName, ...detailFields } = LIST_ITEM;
+    const auditLog = {
+      ...detailFields,
+      before: { name: 'Maria Alves', isActive: true },
+      after: { name: 'Maria Alves', isActive: false },
+      user: { id: LIST_ITEM.userId, name: 'Admin', email: 'admin@admin.com' },
+      fieldChanges: FIELD_CHANGES,
+    };
+    const adapter = answerWith(200, { auditLog });
+
+    await expect(fetchAuditLogDetail(LIST_ITEM.id)).resolves.toEqual({
+      auditLog,
     });
-    const response = await fetchAuditLogDetail(logs[0].id);
-
-    expect(Object.keys(response)).toEqual(['auditLog']);
-    expect(response.auditLog.id).toBe(logs[0].id);
-    expect(response.auditLog).toHaveProperty('before');
-    expect(response.auditLog).toHaveProperty('after');
-    expect(response.auditLog.fieldChanges.length).toBeGreaterThan(0);
+    expect(requestOf(adapter).url).toBe(`/client/audit-logs/${LIST_ITEM.id}`);
   });
 
-  it('lança para um id inexistente', async () => {
-    await expect(fetchAuditLogDetail('log_inexistente')).rejects.toThrow();
-  });
+  it('propaga o 404 com o toast do servidor', async () => {
+    answerWith(404, { message: 'Registro não encontrado.' });
 
-  // Criação: todos os campos gravados, partindo de [Vazio]; os vazios dos dois
-  // lados (foto, tempo de inatividade) não entram.
-  it('na criação, lista os campos gravados sem os vazios', async () => {
-    const auditLog = await findDetail('Priscila');
-
-    expect(auditLog.action).toBe('create');
-    expect(auditLog.fieldChanges).toEqual([
-      { field: 'name', label: 'Nome', from: '[Vazio]', to: 'Priscila Camargo' },
-      {
-        field: 'email',
-        label: 'E-mail',
-        from: '[Vazio]',
-        to: 'priscila.camargo@example.com',
-      },
-      { field: 'phone', label: 'Telefone', from: '[Vazio]', to: '11988887777' },
-      { field: 'isActive', label: 'Ativo', from: '[Vazio]', to: 'Sim' },
-    ]);
-  });
-
-  it('na exclusão, termina em [Vazio] e formata booleano e número', async () => {
-    const auditLog = await findDetail('Rodrigo');
-
-    expect(auditLog.action).toBe('delete');
-    expect(auditLog.after).toBeNull();
-    expect(
-      auditLog.fieldChanges.map(({ label, from, to }) => [label, from, to])
-    ).toEqual([
-      ['Nome', 'Rodrigo Teixeira', '[Vazio]'],
-      ['E-mail', 'rodrigo.teixeira@example.com', '[Vazio]'],
-      ['Ativo', 'Não', '[Vazio]'],
-      ['Tempo de inatividade (minutos)', '15', '[Vazio]'],
-    ]);
-  });
-
-  it('na edição, só os campos alterados, na ordem do catálogo', async () => {
-    const auditLog = await findDetail('Suporte');
-
-    expect(auditLog.changedFields).toEqual(['permissions', 'description']);
-    expect(auditLog.fieldChanges.map((change) => change.field)).toEqual([
-      'description',
-      'permissions',
-    ]);
-  });
-
-  it('formata o valor da configuração pelo tipo da chave', async () => {
-    const notifications = await findDetail('Notificações por e-mail');
-    expect(notifications.fieldChanges).toEqual([
-      { field: 'value', label: 'Valor', from: 'Não', to: 'Sim' },
-    ]);
-
-    const idleTimeout = await findDetail('Tempo de inatividade até o logout');
-    expect(idleTimeout.fieldChanges).toEqual([
-      { field: 'value', label: 'Valor', from: '30', to: '20' },
-    ]);
-  });
-
-  it('não tem de→para no login nem na exportação', async () => {
-    const exportLog = await findDetail('Exportou');
-    expect(exportLog.action).toBe('export');
-    expect(exportLog.fieldChanges).toEqual([]);
-    // Os filtros da exportação ficam no `after` cru.
-    expect(exportLog.after).toEqual({ formato: 'CSV', busca: 'oliveira' });
-
-    const { logs } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 1,
-      action: 'login',
+    await expect(fetchAuditLogDetail(LIST_ITEM.id)).rejects.toMatchObject({
+      response: { status: 404 },
     });
-    const { auditLog } = await fetchAuditLogDetail(logs[0].id);
-    expect(auditLog.fieldChanges).toEqual([]);
-  });
-
-  it('traz a descrição com o nome do registro entre aspas', async () => {
-    const { logs } = await fetchAuditLogs({
-      page: 0,
-      pageSize: 50,
-      action: 'create,update,delete,statusChange',
+    expect(toast.error).toHaveBeenCalledWith('Registro não encontrado.', {
+      id: 'errorToastId',
     });
-    expect(logs.length).toBeGreaterThan(0);
-    expect(logs.every((log) => /".+"\.$/.test(log.description ?? ''))).toBe(
-      true
-    );
   });
 });
 
 describe('fetchEntityAuditLogs', () => {
-  const camila = { entity: 'User', entityId: 'u_003' } as const;
+  it('lê a linha do tempo do registro com a página 0-based', async () => {
+    const logs = [{ ...LIST_ITEM, fieldChanges: FIELD_CHANGES }];
+    const adapter = answerWith(200, { logs, count: 12 });
 
-  it('devolve `{ logs, count }` só do registro, do mais recente para o mais antigo', async () => {
-    const { logs, count } = await fetchEntityAuditLogs({
-      ...camila,
-      page: 0,
-      pageSize: 50,
-    });
-
-    expect(count).toBe(12);
-    expect(logs).toHaveLength(12);
-    expect(
-      logs.every((log) => log.entity === 'User' && log.entityId === 'u_003')
-    ).toBe(true);
-    const times = logs.map((log) => log.createdAt);
-    expect(times).toEqual([...times].sort().reverse());
-    // Cada item é o da lista mais o de→para, sem `before`/`after`.
-    expect(logs[0]).toHaveProperty('fieldChanges');
-    expect(logs[0]).toHaveProperty('userName');
-    expect(logs[0]).not.toHaveProperty('before');
-  });
-
-  it('inclui os logins do usuário e a troca de senha como [omitido]', async () => {
-    const { logs } = await fetchEntityAuditLogs({
-      ...camila,
-      page: 0,
-      pageSize: 50,
-    });
-
-    expect(logs.filter((log) => log.action === 'login')).toHaveLength(5);
-    expect(logs.flatMap((log) => log.fieldChanges)).toContainEqual({
-      field: 'password',
-      label: 'Senha',
-      from: '[omitido]',
-      to: '[omitido]',
-    });
-  });
-
-  it('pagina 0-based: a página 1 continua de onde a 0 parou', async () => {
-    const all = await fetchEntityAuditLogs({
-      ...camila,
-      page: 0,
-      pageSize: 50,
-    });
-    const first = await fetchEntityAuditLogs({
-      ...camila,
-      page: 0,
-      pageSize: 10,
-    });
-    const second = await fetchEntityAuditLogs({
-      ...camila,
-      page: 1,
-      pageSize: 10,
-    });
-
-    expect(first.logs.map((log) => log.id)).toEqual(
-      all.logs.slice(0, 10).map((log) => log.id)
-    );
-    expect(second.logs.map((log) => log.id)).toEqual(
-      all.logs.slice(10).map((log) => log.id)
-    );
-    expect(second.count).toBe(12);
-  });
-
-  it('registro sem eventos devolve lista vazia, não erro', async () => {
     await expect(
       fetchEntityAuditLogs({
         entity: 'User',
-        entityId: 'u_999',
+        entityId: LIST_ITEM.entityId,
+        page: 1,
+        pageSize: 10,
+      })
+    ).resolves.toEqual({ logs, count: 12 });
+    expect(requestOf(adapter)).toMatchObject({
+      method: 'get',
+      url: `/client/audit-logs/entities/User/${LIST_ITEM.entityId}`,
+      params: { page: 1, pageSize: 10 },
+    });
+  });
+
+  // Em configuração o `entityId` é a chave; ela vai codificada no caminho.
+  it('identifica o registro pelo id exato, codificado no caminho', async () => {
+    const adapter = answerWith(200, { logs: [], count: 0 });
+
+    await expect(
+      fetchEntityAuditLogs({
+        entity: 'SystemConfig',
+        entityId: 'app/name',
         page: 0,
         pageSize: 10,
       })
     ).resolves.toEqual({ logs: [], count: 0 });
+    expect(requestOf(adapter).url).toBe(
+      '/client/audit-logs/entities/SystemConfig/app%2Fname'
+    );
   });
 
-  it('configuração é identificada pela chave', async () => {
-    const { logs, count } = await fetchEntityAuditLogs({
-      entity: 'SystemConfig',
-      entityId: 'notifications.email',
-      page: 0,
-      pageSize: 10,
-    });
+  it('recusa item da linha do tempo sem o de→para', async () => {
+    answerWith(200, { logs: [LIST_ITEM], count: 1 });
 
-    expect(count).toBe(1);
-    expect(logs[0].description).toBe(
-      'Alterou a configuração "Notificações por e-mail".'
-    );
+    await expect(
+      fetchEntityAuditLogs({
+        entity: 'User',
+        entityId: LIST_ITEM.entityId,
+        page: 0,
+        pageSize: 10,
+      })
+    ).rejects.toThrow();
   });
 });
 
 describe('fetchAuditUserOptions', () => {
-  it('retorna as opções de usuário para o filtro', async () => {
-    const options = await fetchAuditUserOptions();
-    expect(options.length).toBeGreaterThan(0);
-    expect(options[0]).toHaveProperty('id');
-    expect(options[0]).toHaveProperty('name');
+  // A listagem de usuários traz o cadastro inteiro; o filtro fica com id e nome.
+  it('lê os usuários por nome em GET /client/users e devolve só id e nome', async () => {
+    const adapter = answerWith(200, {
+      users: [
+        {
+          id: 'u-1',
+          name: 'Admin',
+          email: 'admin@admin.com',
+          isActive: true,
+          roles: [],
+        },
+      ],
+      count: 1,
+    });
+
+    await expect(fetchAuditUserOptions()).resolves.toEqual([
+      { id: 'u-1', name: 'Admin' },
+    ]);
+    expect(requestOf(adapter)).toMatchObject({
+      method: 'get',
+      url: '/client/users',
+      params: { page: 0, pageSize: 100, orderBy: 'name', order: 'asc' },
+    });
   });
 });

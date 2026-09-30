@@ -100,6 +100,18 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
     defaultValues: { values: configs.map((config) => config.value) },
   });
 
+  // A gravação pode ter acontecido sem a resposta chegar no contrato (200 com
+  // `message`, recusado pelo `.parse`: o toast de sucesso já saiu). Relê as
+  // configurações e, se a leitura vier, o formulário adota o que o servidor
+  // tem. Se não vier, a alteração continua pendente.
+  const reloadFromServer = async () => {
+    await queryClient.invalidateQueries({ queryKey: systemConfigKeys.list });
+    const state = queryClient.getQueryState<SystemConfigsResponse>(systemConfigKeys.list);
+    if (state?.status === 'success' && state.data) {
+      reset({ values: state.data.systemConfigs.map((config) => config.value) });
+    }
+  };
+
   // Uma gravação só, com todas as configurações alteradas (lote atômico no
   // backend). O toast de sucesso vem do `message` da resposta — sem toast aqui.
   const mutation = useMutation({
@@ -115,12 +127,13 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
     // os prazos conferida contra o valor gravado) vira o toast do interceptor.
     // As demais falhas HTTP já tiveram o toast. Falha que não é HTTP (resposta
     // fora do contrato recusada pelo `.parse`, ou bug) é inesperada: mensagem
-    // genérica ao usuário e reporte.
+    // genérica ao usuário, reporte, e a tela relê o que o servidor gravou.
     onError: (error, items) => {
       if (!isAxiosError(error)) {
         console.error('Falha inesperada na gravação das configurações.', error);
         void sendErrorMessage({ error });
         toast.error(UNEXPECTED_SAVE_ERROR_MESSAGE, { id: 'errorToastId' });
+        void reloadFromServer();
         return;
       }
 

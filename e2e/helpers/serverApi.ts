@@ -132,6 +132,19 @@ export async function deleteUser(
   await expect(response).toBeOK();
 }
 
+/**
+ * Limpeza de quem o próprio teste pode ter excluído pela tela: o 404 (já não
+ * existe) é aceito; qualquer outra recusa falha.
+ */
+export async function deleteUserIfExists(
+  admin: APIRequestContext,
+  userId: string
+): Promise<void> {
+  const response = await admin.delete(serverApiUrl(`/client/users/${userId}`));
+  if (response.status() === 404) return;
+  await expect(response).toBeOK();
+}
+
 interface PermissionCatalog {
   modules: {
     groups: { permissions: { id: string; name: string }[] }[];
@@ -140,11 +153,10 @@ interface PermissionCatalog {
 
 /**
  * Cria um cargo só com as permissões pedidas (pelo nome,
- * `backoffice.audit.read`) e o dá ao usuário. Devolve o id do cargo.
+ * `backoffice.audit.read`). Devolve o id do cargo.
  */
-export async function grantRoleWithPermissions(
+export async function createRoleWithPermissions(
   admin: APIRequestContext,
-  userId: string,
   roleName: string,
   permissionNames: string[]
 ): Promise<string> {
@@ -167,13 +179,60 @@ export async function grantRoleWithPermissions(
   await expect(roleResponse).toBeOK();
   const { role } = (await roleResponse.json()) as { role: { id: string } };
 
-  const assignResponse = await admin.put(
-    serverApiUrl(`/client/users/${userId}/roles`),
-    { data: { roleIds: [role.id] } }
-  );
-  await expect(assignResponse).toBeOK();
-
   return role.id;
+}
+
+/** Define os cargos do usuário (conjunto completo, `PUT /users/:id/roles`). */
+export async function setUserRoles(
+  admin: APIRequestContext,
+  userId: string,
+  roleIds: string[]
+): Promise<void> {
+  const response = await admin.put(
+    serverApiUrl(`/client/users/${userId}/roles`),
+    { data: { roleIds } }
+  );
+  await expect(response).toBeOK();
+}
+
+/**
+ * Cria um cargo só com as permissões pedidas (pelo nome,
+ * `backoffice.audit.read`) e o dá ao usuário. Devolve o id do cargo.
+ */
+export async function grantRoleWithPermissions(
+  admin: APIRequestContext,
+  userId: string,
+  roleName: string,
+  permissionNames: string[]
+): Promise<string> {
+  const roleId = await createRoleWithPermissions(
+    admin,
+    roleName,
+    permissionNames
+  );
+  await setUserRoles(admin, userId, [roleId]);
+  return roleId;
+}
+
+/**
+ * Exclui, se ainda existir, o usuário com este e-mail (o criado pela tela,
+ * cujo id o spec não recebe pela API). Para a limpeza do `afterAll`.
+ */
+export async function deleteUserByEmail(
+  admin: APIRequestContext,
+  email: string
+): Promise<void> {
+  const response = await admin.get(serverApiUrl('/client/users'), {
+    params: { search: email, pageSize: 100 },
+  });
+  await expect(response).toBeOK();
+
+  const { users } = (await response.json()) as {
+    users: { id: string; email: string }[];
+  };
+  for (const user of users.filter((item) => item.email === email)) {
+    await deleteUser(admin, user.id);
+  }
 }
 
 export async function deleteRole(

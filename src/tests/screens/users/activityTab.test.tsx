@@ -12,7 +12,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityTab } from '@/screens/users/details/activityTab';
-import { type ManagedUser } from '@/screens/users/utils/types';
 import {
   fetchEntityAuditLogs,
   type EntityAuditLog,
@@ -25,15 +24,9 @@ vi.mock('@/services/audit/auditApi', async (importOriginal) => {
   return { ...actual, fetchEntityAuditLogs: vi.fn() };
 });
 
-const USER: ManagedUser = {
-  id: 'u_003',
+const USER = {
+  id: '01a0f253-fc4e-745c-b069-dff39ba3116e',
   name: 'Camila Oliveira',
-  email: 'camila.oliveira@example.com',
-  image: null,
-  role: 'member',
-  status: 'active',
-  createdAt: '2024-04-18',
-  lastLoginAt: '2026-05-22',
 };
 
 function makeLog(overrides: Partial<EntityAuditLog> = {}): EntityAuditLog {
@@ -74,7 +67,7 @@ function renderActivity(initialPath = '/') {
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: () => <ActivityTab user={USER} />,
+    component: () => <ActivityTab userId={USER.id} />,
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([indexRoute]),
@@ -138,7 +131,7 @@ describe('ActivityTab', () => {
     expect(screen.getByRole('definition')).toHaveTextContent('de Sim para Não');
     expect(fetchEntityAuditLogs).toHaveBeenCalledWith({
       entity: 'User',
-      entityId: 'u_003',
+      entityId: USER.id,
       page: 0,
       pageSize: 10,
     });

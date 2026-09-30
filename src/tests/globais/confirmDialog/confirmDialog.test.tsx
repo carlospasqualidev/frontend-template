@@ -50,6 +50,40 @@ describe('ConfirmDialog (global) — modo uncontrolled', () => {
     });
   });
 
+  // A rejeição é o sinal de "não deu certo" (quem rejeita já avisou o
+  // usuário): o dialog continua aberto, o botão volta a responder e a
+  // rejeição não escapa do clique (o Vitest falharia com ela solta).
+  it('fica aberto quando onConfirm rejeita, sem rejeição solta', async () => {
+    const handleConfirm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('recusado pelo servidor'))
+      .mockResolvedValueOnce(undefined);
+    render(
+      <ConfirmDialog
+        title="Excluir?"
+        description="..."
+        confirmLabel="Excluir"
+        destructive
+        trigger={<button type="button">Abrir</button>}
+        onConfirm={handleConfirm}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    await waitFor(() => expect(handleConfirm).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('Excluir?')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Excluir' })).toBeEnabled()
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Excluir?')).not.toBeInTheDocument();
+    });
+  });
+
   it('cancela sem disparar onConfirm', async () => {
     const handleConfirm = vi.fn();
     render(

@@ -20,7 +20,6 @@ import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
 import { cn } from '@/lib/utils';
 import { ActivityTimelineSkeleton } from '@/screens/users/details/activityTimelineSkeleton';
-import { type ManagedUser } from '@/screens/users/utils/types';
 import {
   auditKeys,
   fetchEntityAuditLogs,
@@ -28,7 +27,7 @@ import {
 } from '@/services/audit/auditApi';
 
 interface ActivityTabProps {
-  user: ManagedUser;
+  userId: string;
 }
 
 const PAGE_SIZE = 10;
@@ -92,14 +91,14 @@ function TimelineItem({
  * fizeram com ele e os logins dele, paginada, com a página na URL
  * (`activityPage`, 0-based) para recarregar e compartilhar na mesma posição.
  */
-export function ActivityTab({ user }: ActivityTabProps) {
+export function ActivityTab({ userId }: ActivityTabProps) {
   const search = useSearch({ strict: false }) as { activityPage?: number };
   const navigate = useNavigate();
   const page = search.activityPage ?? 0;
 
   const params = {
     entity: 'User' as const,
-    entityId: user.id,
+    entityId: userId,
     page,
     pageSize: PAGE_SIZE,
   };

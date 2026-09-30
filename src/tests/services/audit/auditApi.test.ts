@@ -8,7 +8,6 @@ import {
   fetchAuditFilterOptions,
   fetchAuditLogDetail,
   fetchAuditLogs,
-  fetchAuditUserOptions,
   fetchEntityAuditLogs,
 } from '@/services/audit/auditApi';
 import { respondWith } from '@/tests/helpers/axiosAdapter';
@@ -262,32 +261,5 @@ describe('fetchEntityAuditLogs', () => {
         pageSize: 10,
       })
     ).rejects.toThrow();
-  });
-});
-
-describe('fetchAuditUserOptions', () => {
-  // A listagem de usuários traz o cadastro inteiro; o filtro fica com id e nome.
-  it('lê os usuários por nome em GET /client/users e devolve só id e nome', async () => {
-    const adapter = answerWith(200, {
-      users: [
-        {
-          id: 'u-1',
-          name: 'Admin',
-          email: 'admin@admin.com',
-          isActive: true,
-          roles: [],
-        },
-      ],
-      count: 1,
-    });
-
-    await expect(fetchAuditUserOptions()).resolves.toEqual([
-      { id: 'u-1', name: 'Admin' },
-    ]);
-    expect(requestOf(adapter)).toMatchObject({
-      method: 'get',
-      url: '/client/users',
-      params: { page: 0, pageSize: 100, orderBy: 'name', order: 'asc' },
-    });
   });
 });

@@ -23,12 +23,12 @@ test.describe('Tabela — mostrar e ocultar colunas', () => {
 
     await expect(statusHeader).toHaveCount(0);
     await expect(
-      page.getByRole('columnheader', { name: 'Papel' })
+      page.getByRole('columnheader', { name: 'Cargos' })
     ).toBeVisible();
 
     await page.reload();
     await expect(
-      page.getByRole('columnheader', { name: 'Papel' })
+      page.getByRole('columnheader', { name: 'Cargos' })
     ).toBeVisible();
     await expect(statusHeader).toHaveCount(0);
 

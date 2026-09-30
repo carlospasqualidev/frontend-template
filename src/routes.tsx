@@ -15,6 +15,7 @@ import { homeRoute } from '@/screens/home/routes';
 import { loginRoute, signupRoute } from '@/screens/session/routes';
 import { settingsRoute } from '@/screens/settings/routes';
 import {
+  userCreateRoute,
   userDetailsRoute,
   usersLayoutRoute,
   usersListRoute,
@@ -60,7 +61,11 @@ export const router = createRouter({
       accountRoute,
       auditLogsRoute,
       settingsRoute,
-      usersLayoutRoute.addChildren([usersListRoute, userDetailsRoute]),
+      usersLayoutRoute.addChildren([
+        usersListRoute,
+        userCreateRoute,
+        userDetailsRoute,
+      ]),
     ]),
   ]),
 });

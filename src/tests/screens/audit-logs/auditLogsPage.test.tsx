@@ -7,7 +7,8 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validateDataTableSearch } from '@/components/global/dataTable/dataTableSearch';
@@ -16,8 +17,10 @@ import { AuditLogsPage } from '@/screens/audit-logs/list';
 import {
   fetchAuditFilterOptions,
   fetchAuditLogs,
-  fetchAuditUserOptions,
 } from '@/services/audit/auditApi';
+import { fetchUser } from '@/services/users/userDetailApi';
+import { searchUserOptions } from '@/services/users/userListApi';
+import { makeCompanyUser } from '@/tests/factories/companyUser';
 import type { IUser } from '@/types/user/types';
 
 // Mocka só o transporte; a montagem dos parâmetros é a real.
@@ -28,9 +31,18 @@ vi.mock('@/services/audit/auditApi', async (importOriginal) => {
     ...actual,
     fetchAuditFilterOptions: vi.fn(),
     fetchAuditLogs: vi.fn(),
-    fetchAuditUserOptions: vi.fn(),
   };
 });
+
+vi.mock('@/services/users/userListApi', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/services/users/userListApi')>();
+  return { ...actual, searchUserOptions: vi.fn() };
+});
+
+vi.mock('@/services/users/userDetailApi', () => ({ fetchUser: vi.fn() }));
+
+const CAMILA = makeCompanyUser({ id: 'u_003', name: 'Camila Oliveira' });
 
 function sessionUser(permissions: string[]): IUser {
   return {
@@ -82,9 +94,14 @@ beforeEach(() => {
   vi.mocked(fetchAuditLogs)
     .mockReset()
     .mockResolvedValue({ logs: [], count: 0 });
-  vi.mocked(fetchAuditUserOptions)
+  vi.mocked(searchUserOptions)
     .mockReset()
-    .mockResolvedValue([{ id: 'u_003', name: 'Camila Oliveira' }]);
+    .mockImplementation(async (search) =>
+      search === ''
+        ? [{ id: 'u_001', name: 'Ana Souza' }]
+        : [{ id: 'u_900', name: `Resultado de ${search}` }]
+    );
+  vi.mocked(fetchUser).mockReset().mockResolvedValue({ user: CAMILA });
 });
 
 afterEach(() => {
@@ -103,7 +120,42 @@ describe('AuditLogsPage — filtro "Usuário"', () => {
     expect(fetchAuditLogs).toHaveBeenLastCalledWith(
       expect.objectContaining({ userId: 'u_003', module: 'SECURITY' })
     );
-    expect(fetchAuditUserOptions).toHaveBeenCalledTimes(1);
+  });
+
+  // O usuário da URL pode não estar entre os primeiros da busca: o nome vem
+  // da leitura dele.
+  it('mostra o nome do usuário aplicado pela URL', async () => {
+    useSessionStore.setState({
+      user: sessionUser(['backoffice.users.read']),
+    });
+    renderAuditLogs({ userId: ['u_003'] });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Usuário')).toHaveTextContent(
+        'Camila Oliveira'
+      )
+    );
+    expect(fetchUser).toHaveBeenCalledWith('u_003');
+  });
+
+  // Empresa com mais usuários que uma página: as opções vêm da busca do
+  // servidor, pelo que a pessoa digita, com debounce.
+  it('busca as opções no servidor pelo que é digitado', async () => {
+    const user = userEvent.setup();
+    useSessionStore.setState({
+      user: sessionUser(['backoffice.users.read']),
+    });
+    renderAuditLogs({});
+
+    await waitFor(() => expect(searchUserOptions).toHaveBeenCalledWith(''));
+    await user.click(screen.getByLabelText('Usuário'));
+    await user.type(screen.getByRole('textbox', { name: 'Buscar...' }), 'zé');
+
+    await screen.findByText('Resultado de zé');
+    // Uma busca pelo termo inteiro, não uma por tecla.
+    expect(searchUserOptions).toHaveBeenCalledWith('zé');
+    expect(searchUserOptions).not.toHaveBeenCalledWith('z');
+    expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument();
   });
 
   // Sem a permissão o filtro não aparece: um `userId` que ficou na URL (link
@@ -116,6 +168,7 @@ describe('AuditLogsPage — filtro "Usuário"', () => {
     const params = vi.mocked(fetchAuditLogs).mock.lastCall?.[0];
     expect(params).toMatchObject({ module: 'SECURITY' });
     expect(params?.userId).toBeUndefined();
-    expect(fetchAuditUserOptions).not.toHaveBeenCalled();
+    expect(searchUserOptions).not.toHaveBeenCalled();
+    expect(fetchUser).not.toHaveBeenCalled();
   });
 });

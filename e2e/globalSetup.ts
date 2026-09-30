@@ -16,10 +16,10 @@ const SERVER_SETUP_HINT =
 /**
  * Logins que os specs fazem depois deste, pela tela (os 2 recusados de
  * propósito contam): sessão 2, login recusado 2, inatividade 1, usuário sem
- * cargo 1 e auditoria 1. Spec novo que faz login soma aqui; os que só precisam
- * do admin entram com `openAdminSession`, sem login.
+ * cargo 1, auditoria 1 e usuários 1. Spec novo que faz login soma aqui; os que
+ * só precisam do admin entram com `openAdminSession`, sem login.
  */
-const SPEC_LOGIN_COUNT = 7;
+const SPEC_LOGIN_COUNT = 8;
 
 /** A janela do limite de login do server é de 1 minuto: esperar mais que isso é outra regra. */
 const MAX_RATE_LIMIT_WAIT_SECONDS = 70;

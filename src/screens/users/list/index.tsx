@@ -1,219 +1,204 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Copy, Trash2, UserPlus, UserX } from 'lucide-react';
-import { toast } from 'sonner';
+import { UserPlus } from 'lucide-react';
 
-import {
-  actionsColumn,
-  SortableHeader,
-} from '@/components/global/dataTable/columnHelpers';
-import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
+import { Button } from '@/components/global/button/button';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateRangeFilter,
   multiSelectFilter,
   selectFilter,
   textFilter,
+  type DataTableFilter,
+  type DataTableFilterValues,
 } from '@/components/global/dataTable/filters';
 import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTableUrlQuery';
-import { UserAvatar } from '@/components/global/avatar/userAvatar';
-import { Button } from '@/components/global/button/button';
 import { PageActions } from '@/components/global/layout/pageActions';
-import { Badge } from '@/components/ui/badge';
-import { Typography } from '@/components/ui/typography';
-import { dateFormatter } from '@/lib/dateTime/dateFormatter';
-import { queryUsers } from '@/screens/users/utils/mockUsers';
+import { Link } from '@/components/global/link/link';
+import { useSessionStore } from '@/hooks/useSessionStore';
+import { listParam } from '@/lib/listQueryParams';
+import { hasPermission } from '@/lib/permissions';
 import {
-  roleBadgeVariants,
-  statusBadgeVariants,
-} from '@/screens/users/list/userBadges';
-import {
-  userRoleLabels,
-  USER_ROLE_OPTIONS,
-  userStatusLabels,
-  USER_STATUS_OPTIONS,
-  type ManagedUser,
-} from '@/screens/users/utils/types';
-
-const filters = [
-  textFilter({
-    key: 'q',
-    label: 'Buscar',
-    placeholder: 'Nome ou e-mail...',
-  }),
-  multiSelectFilter({
-    key: 'role',
-    label: 'Papel',
-    placeholder: 'Todos os papéis',
-    options: USER_ROLE_OPTIONS,
-  }),
-  selectFilter({
-    key: 'status',
-    label: 'Status',
-    options: USER_STATUS_OPTIONS,
-  }),
-  dateRangeFilter({
-    key: 'createdAt',
-    label: 'Cadastrado em',
-  }),
-];
+  UserActionDialog,
+  type UserRowAction,
+} from '@/screens/users/list/userActionDialog';
+import { buildUserColumns } from '@/screens/users/list/userColumns';
+import { useRoleOptions } from '@/screens/users/utils/useRoleOptions';
+import { userKeys } from '@/services/users/queryKeys';
+import { buildUserListParams, fetchUsers } from '@/services/users/userListApi';
 
 const PAGE_SIZE = 25;
 
+const STATUS_OPTIONS = [
+  { value: 'true', label: 'Ativo' },
+  { value: 'false', label: 'Bloqueado' },
+];
+
+// Tira do filtro "Cargos" da URL os ids que o servidor não tem mais, mantendo
+// os outros filtros e parâmetros; sem filtro nenhum, sai o `filters`.
+function withoutRoleIds(
+  search: Record<string, unknown>,
+  missingIds: string[]
+): Record<string, unknown> {
+  const { filters, ...rest } = search as {
+    filters?: DataTableFilterValues;
+  };
+  const roleIds = (listParam(filters?.roleId)?.split(',') ?? []).filter(
+    (roleId) => !missingIds.includes(roleId)
+  );
+  const nextFilters = {
+    ...Object.fromEntries(
+      Object.entries(filters ?? {}).filter(([key]) => key !== 'roleId')
+    ),
+    ...(roleIds.length > 0 ? { roleId: roleIds } : {}),
+  };
+  return Object.keys(nextFilters).length > 0
+    ? { ...rest, filters: nextFilters }
+    : rest;
+}
+
 export function UsersPage() {
   const navigate = useNavigate();
+  const sessionUser = useSessionStore((state) => state.user);
+  const canCreate = hasPermission(sessionUser, 'backoffice.users.create');
+  const canUpdate = hasPermission(sessionUser, 'backoffice.users.update');
+  const canDelete = hasPermission(sessionUser, 'backoffice.users.delete');
+  // As opções do filtro "Cargos" vêm de `GET /client/roles`, que exige
+  // `backoffice.roles.read`: sem ela, o filtro não aparece.
+  const canReadRoles = useSessionStore((state) =>
+    hasPermission(state.user, 'backoffice.roles.read')
+  );
 
-  const { query, tableProps } = useDataTableUrlQuery({
-    pageSize: PAGE_SIZE,
-    defaultSorting: [{ id: 'createdAt', desc: true }],
+  const { query, tableProps } = useDataTableUrlQuery({ pageSize: PAGE_SIZE });
+
+  const listParams = buildUserListParams(query);
+  const urlRoleIds = listParams.roleId?.split(',') ?? [];
+  // Busca no servidor; os cargos aplicados pela URL entram pela leitura de
+  // cada um, para o filtro mostrar o nome deles.
+  const {
+    options: roleOptions,
+    onSearchChange: onRoleSearchChange,
+    loading: rolesLoading,
+    missingIds: missingRoleIds,
+  } = useRoleOptions({ enabled: canReadRoles, selectedIds: urlRoleIds });
+
+  // O cargo que o servidor não tem mais (excluído, num link antigo) sai da URL,
+  // sem toast: o filtro mostra só os que existem.
+  const missingRoleKey = missingRoleIds.join(',');
+  useEffect(() => {
+    if (!missingRoleKey) return;
+    const missingIds = missingRoleKey.split(',');
+    void navigate({
+      to: '.',
+      replace: true,
+      search: (previous: Record<string, unknown>) =>
+        withoutRoleIds(previous, missingIds),
+    });
+  }, [missingRoleKey, navigate]);
+
+  const filters = useMemo<DataTableFilter[]>(
+    () => [
+      textFilter({
+        key: 'search',
+        label: 'Buscar',
+        placeholder: 'Nome ou e-mail...',
+      }),
+      ...(canReadRoles
+        ? [
+            multiSelectFilter({
+              key: 'roleId',
+              label: 'Cargos',
+              placeholder: 'Todos',
+              options: roleOptions,
+              onSearchChange: onRoleSearchChange,
+              loading: rolesLoading,
+              emptyText: 'Nenhum cargo encontrado.',
+            }),
+          ]
+        : []),
+      selectFilter({
+        key: 'isActive',
+        label: 'Status',
+        placeholder: 'Todos',
+        options: STATUS_OPTIONS,
+      }),
+      dateRangeFilter({ key: 'createdAt', label: 'Criado em' }),
+    ],
+    [canReadRoles, roleOptions, onRoleSearchChange, rolesLoading]
+  );
+
+  // Sem o filtro "Cargos" na tela, um `roleId` que ficou na URL não filtra a
+  // lista: a pessoa não teria como ver nem limpar esse filtro. O cargo que o
+  // servidor não tem mais também não: a lista viria vazia sem explicação.
+  const roleIds = canReadRoles
+    ? urlRoleIds.filter((roleId) => !missingRoleIds.includes(roleId))
+    : [];
+  const params = { ...listParams, roleId: roleIds.join(',') || undefined };
+
+  const { data, isPending } = useQuery({
+    queryKey: userKeys.list(params),
+    queryFn: () => fetchUsers(params),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
-  const data = queryUsers({
-    filters: query.filters,
-    sort: query.sort,
-    page: query.page,
-    pageSize: PAGE_SIZE,
-  });
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    action: UserRowAction | null;
+  }>({ open: false, action: null });
 
-  const columns: DataTableColumnDef<ManagedUser>[] = [
-    {
-      id: 'user',
-      header: ({ column }) => (
-        <SortableHeader column={column}>Usuário</SortableHeader>
-      ),
-      accessorKey: 'name',
-      cell: ({ row }) => {
-        const user = row.original;
-        return (
-          <div className="flex items-center gap-3">
-            <UserAvatar name={user.name} />
-            <div className="min-w-0">
-              <Typography as="span" variant="small" className="block truncate">
-                {user.name}
-              </Typography>
-              <Typography
-                as="span"
-                variant="muted"
-                className="block truncate text-xs"
-              >
-                {user.email}
-              </Typography>
-            </div>
-          </div>
-        );
-      },
-      meta: { label: 'Usuário', className: 'min-w-[260px]' },
-    },
-    {
-      accessorKey: 'role',
-      header: 'Papel',
-      cell: ({ row }) => {
-        const role = row.original.role;
-        return (
-          <Badge variant={roleBadgeVariants.get(role)}>
-            {userRoleLabels.get(role)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const status = row.original.status;
-        return (
-          <Badge variant={statusBadgeVariants.get(status)}>
-            {userStatusLabels.get(status)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'createdAt',
-      header: ({ column }) => (
-        <SortableHeader column={column}>Cadastrado em</SortableHeader>
-      ),
-      meta: { label: 'Cadastrado em' },
-      cell: ({ row }) =>
-        dateFormatter({ date: row.original.createdAt, hasTimeStamp: false }),
-    },
-    {
-      accessorKey: 'lastLoginAt',
-      header: ({ column }) => (
-        <SortableHeader column={column}>Último acesso</SortableHeader>
-      ),
-      meta: { label: 'Último acesso' },
-      cell: ({ row }) => {
-        const value = row.original.lastLoginAt;
-        if (!value) {
-          return (
-            <Typography as="span" variant="muted">
-              Nunca acessou
-            </Typography>
-          );
-        }
-        return dateFormatter({ date: value, hasTimeStamp: false });
-      },
-    },
-    actionsColumn<ManagedUser>({
-      label: 'Ações',
-      actions: (user) => [
-        {
-          label: 'Copiar e-mail',
-          icon: <Copy />,
-          onSelect: () => {
-            void navigator.clipboard.writeText(user.email);
-            toast.success('E-mail copiado para a área de transferência.');
-          },
-        },
-        // Sem "Editar" no menu: editar é sempre pelo clique na linha (abre o
-        // detalhe). O "⋯" fica só com ações que não sejam abrir/editar.
-        {
-          label: user.status === 'active' ? 'Desativar' : 'Reativar',
-          icon: <UserX />,
-          separatorBefore: true,
-          onSelect: () =>
-            toast(
-              user.status === 'active'
-                ? `${user.name} foi desativado.`
-                : `${user.name} foi reativado.`
-            ),
-        },
-        {
-          label: 'Excluir',
-          icon: <Trash2 />,
-          destructive: true,
-          onSelect: () => toast(`Excluir ${user.name}.`),
-        },
-      ],
-    }),
-  ];
+  const openAction = useCallback(
+    (action: UserRowAction) => setDialog({ open: true, action }),
+    []
+  );
+
+  const columns = useMemo(
+    () => buildUserColumns({ canUpdate, canDelete, onAction: openAction }),
+    [canUpdate, canDelete, openAction]
+  );
 
   return (
     <>
-      <PageActions>
-        <Button
-          aria-label="Novo usuário"
-          onClick={() => toast('Abrir formulário de novo usuário.')}
-        >
-          <UserPlus />
-          <span className="hidden sm:inline">Novo usuário</span>
-        </Button>
-      </PageActions>
+      {canCreate && (
+        <PageActions>
+          <Button asChild aria-label="Novo usuário">
+            <Link
+              href="/users/create"
+              newTabIcon={false}
+              className="no-underline hover:text-primary-foreground"
+            >
+              <UserPlus />
+              <span className="hidden sm:inline">Novo usuário</span>
+            </Link>
+          </Button>
+        </PageActions>
+      )}
 
       <DataTable
         columns={columns}
-        data={data}
+        data={data?.users ?? []}
+        rowCount={data?.count}
         filters={filters}
+        isLoading={isPending}
         emptyMessage="Nenhum usuário encontrado."
         columnVisibilityKey="users"
         onRowClick={(user) =>
-          navigate({
-            to: '/users/$userId',
-            params: { userId: user.id },
-          })
+          navigate({ to: '/users/$userId', params: { userId: user.id } })
         }
         getRowHref={(user) => `/users/${user.id}`}
         {...tableProps}
+      />
+
+      <UserActionDialog
+        action={dialog.action}
+        open={dialog.open}
+        setOpen={(next) =>
+          setDialog((previous) => ({
+            ...previous,
+            open: typeof next === 'function' ? next(previous.open) : next,
+          }))
+        }
       />
     </>
   );

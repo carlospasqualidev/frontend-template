@@ -373,7 +373,6 @@ function ItemListWithActionsDemo() {
 
 // ============================================================================
 // Lista de toggles — padrão usado em
-// screens/users/details/permissionsTab.tsx e
 // screens/account/notificationsTab.tsx
 // ============================================================================
 
@@ -451,7 +450,7 @@ function ToggleListDemo() {
 
 // ============================================================================
 // Definition list — padrão usado em
-// screens/users/details/overviewTab.tsx
+// screens/users/details/overviewTab.tsx (card "Situação")
 // ============================================================================
 
 interface DefinitionItemProps {

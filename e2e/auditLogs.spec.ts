@@ -235,7 +235,18 @@ test.describe('Auditoria — filtro por usuário', () => {
       const notByAuditor = rowWith(adminPage, 'Criou o usuário');
       await expect(notByAuditor.first()).toBeVisible();
 
+      // As opções vêm da busca no servidor pelo que é digitado (a empresa
+      // pode ter mais usuários que uma página).
       await adminPage.getByLabel('Usuário', { exact: true }).click();
+      const searched = adminPage.waitForRequest(
+        (request) =>
+          request.url().startsWith(serverApiUrl('/client/users?')) &&
+          new URL(request.url()).searchParams.get('search') === auditorName
+      );
+      await adminPage
+        .getByRole('textbox', { name: 'Buscar...' })
+        .fill(auditorName);
+      await searched;
       await adminPage.getByRole('checkbox', { name: auditorName }).click();
       await adminPage.keyboard.press('Escape');
       await adminPage.getByRole('button', { name: 'Buscar' }).click();
@@ -249,24 +260,67 @@ test.describe('Auditoria — filtro por usuário', () => {
 });
 
 // Aba "Atividade" do detalhe do usuário: a linha do tempo vem da trilha do
-// server (`GET /client/audit-logs/entities/User/:id`). A lista e o detalhe de
-// usuários ainda são dados de demonstração, com ids que o server não conhece:
-// a linha do tempo volta vazia. A linha do tempo com eventos e a paginação
-// voltam ao e2e quando os usuários forem do server.
+// server (`GET /client/audit-logs/entities/User/:id`), pelo id real de uma
+// pessoa criada no preparo. Com a criação, 10 edições e o bloqueio, ela tem 12
+// eventos: a primeira página traz os 10 mais recentes e a seguinte, os 2
+// restantes.
 test.describe('Atividade do usuário', () => {
-  test('lê a linha do tempo do server e mostra o estado vazio', async ({
+  const personName = `Pessoa Com Atividade ${uniqueSuffix()}`;
+
+  let admin: APIRequestContext | undefined;
+  let person: PreparedUser | undefined;
+
+  test.beforeAll(async () => {
+    admin = await newAdminApiContext();
+    person = await createUserWithoutRole(admin, personName);
+    for (let edit = 1; edit <= PHONE_EDITS; edit += 1) {
+      await updateUser(admin, person.id, {
+        phone: `1198888${String(edit).padStart(4, '0')}`,
+      });
+    }
+    await updateUser(admin, person.id, { isActive: false });
+  });
+
+  test.afterAll(async () => {
+    try {
+      if (admin && person) await deleteUser(admin, person.id);
+    } finally {
+      await admin?.dispose();
+    }
+  });
+
+  test('mostra a linha do tempo do usuário, paginada, a mais recente primeiro', async ({
     page,
   }) => {
+    if (!person) throw new Error('Pessoa do preparo ausente.');
     await openAdminSession(page);
 
     const timeline = page.waitForResponse((response) =>
       response
         .url()
-        .startsWith(serverApiUrl('/client/audit-logs/entities/User/u_005'))
+        .startsWith(
+          serverApiUrl(`/client/audit-logs/entities/User/${person?.id}`)
+        )
     );
-    await page.goto('/users/u_005?tab=activity');
-
+    await page.goto(`/users/${person.id}?tab=activity`);
     expect((await timeline).status()).toBe(200);
-    await expect(page.getByText('Sem atividade registrada')).toBeVisible();
+
+    const events = page
+      .locator('[data-slot="card"]', { hasText: 'Linha do tempo' })
+      .locator('ol > li');
+    await expect(events).toHaveCount(10);
+    await expect(events.first()).toContainText(
+      `Bloqueou o usuário "${personName}".`
+    );
+    await expect(events.first()).toContainText('Ativo');
+    await expect(page.getByText('1–10 de 12 eventos')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Próxima' }).click();
+
+    await expect(page).toHaveURL(/activityPage=1/);
+    await expect(events).toHaveCount(2);
+    await expect(events.last()).toContainText(
+      `Criou o usuário "${personName}".`
+    );
   });
 });

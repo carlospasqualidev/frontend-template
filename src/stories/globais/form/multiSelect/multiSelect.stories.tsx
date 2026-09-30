@@ -1,10 +1,12 @@
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { useForm, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { MultiSelect } from '@/components/global/form/multiSelect';
 import { Card } from '@/components/global/card/card';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const meta = {
   title: 'Formulário/MultiSelect',
@@ -37,6 +39,71 @@ const longOptions = Array.from({ length: 20 }, (_, i) => ({
   value: `option_${i + 1}`,
 }));
 
+// Pessoas fictícias para a busca no servidor simulada (o Storybook não tem backend).
+const people = [
+  'Ana Souza',
+  'Bruno Lima',
+  'Camila Oliveira',
+  'Diego Martins',
+  'Eduarda Costa',
+  'Felipe Rocha',
+  'Gabriela Nunes',
+  'Henrique Pereira',
+].map((name, index) => ({ label: name, value: `person_${index + 1}` }));
+
+type VitrineValues = {
+  basic: string[];
+  searchable: string[];
+  remote: string[];
+  prefilled: string[];
+  many: string[];
+  disabled: string[];
+  validated: string[];
+};
+
+/**
+ * Busca no servidor: o campo repassa o texto (`onSearchChange`), a tela espera
+ * o debounce e troca as opções pelo resultado. Aqui o "servidor" é um filtro
+ * com atraso; a opção marcada continua no gatilho quando sai do resultado.
+ */
+function ServerSearchField({ control }: { control: Control<VitrineValues> }) {
+  const [search, setSearch] = useState('');
+  const typed = search.trim().toLowerCase();
+  const term = useDebouncedValue(typed, 300);
+  const [result, setResult] = useState({
+    term: '',
+    options: people.slice(0, 3),
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        setResult({
+          term,
+          options: people
+            .filter((person) => person.label.toLowerCase().includes(term))
+            .slice(0, 3),
+        }),
+      400
+    );
+    return () => clearTimeout(timer);
+  }, [term]);
+
+  return (
+    <MultiSelect
+      id="ms-remote"
+      name="remote"
+      control={control}
+      label="Pessoas"
+      placeholder="Selecione"
+      options={result.options}
+      onSearchChange={setSearch}
+      loading={result.term !== typed}
+      emptyText="Ninguém encontrado."
+    />
+  );
+}
+
 const schema = z.object({
   benefits: z.array(z.string()).min(1, 'Selecione pelo menos um benefício.'),
 });
@@ -46,18 +113,12 @@ function VitrineDemo() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<{
-    basic: string[];
-    searchable: string[];
-    prefilled: string[];
-    many: string[];
-    disabled: string[];
-    validated: string[];
-  }>({
+  } = useForm<VitrineValues>({
     resolver: zodResolver(
       z.object({
         basic: z.array(z.string()),
         searchable: z.array(z.string()),
+        remote: z.array(z.string()),
         prefilled: z.array(z.string()),
         many: z.array(z.string()),
         disabled: z.array(z.string()),
@@ -67,6 +128,7 @@ function VitrineDemo() {
     defaultValues: {
       basic: [],
       searchable: [],
+      remote: [],
       prefilled: ['plano_saude', 'vale_refeicao'],
       many: benefitOptions.map((option) => option.value),
       disabled: ['plano_saude'],
@@ -105,6 +167,13 @@ function VitrineDemo() {
           searchPlaceholder="Buscar opção..."
           options={longOptions}
         />
+      </Card>
+
+      <Card
+        title="Busca no servidor"
+        description="onSearchChange + loading: a tela busca (com debounce) e troca as opções."
+      >
+        <ServerSearchField control={control} />
       </Card>
 
       <Card

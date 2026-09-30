@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -125,6 +126,108 @@ describe('MultiSelect (primitive)', () => {
     expect(
       screen.queryByRole('button', { name: 'Limpar seleção' })
     ).not.toBeInTheDocument();
+  });
+
+  describe('busca no servidor (onSearchChange)', () => {
+    // Controlado como numa tela: quem busca troca `options` pelo resultado.
+    function ServerSearchHarness({
+      onSearchChange,
+      onValueChange,
+    }: {
+      onSearchChange: (search: string) => void;
+      onValueChange: (value: string[]) => void;
+    }) {
+      const [value, setValue] = useState<string[]>([]);
+      const [search, setSearch] = useState('');
+      const results = FRUITS.filter((fruit) =>
+        fruit.label.toLowerCase().startsWith(search.toLowerCase())
+      );
+      return (
+        <MultiSelect
+          options={search === 'nada' ? [] : results}
+          value={value}
+          onValueChange={(next) => {
+            setValue(next);
+            onValueChange(next);
+          }}
+          onSearchChange={(next) => {
+            setSearch(next);
+            onSearchChange(next);
+          }}
+          loading={search === 'nada'}
+          searchPlaceholder="Buscar fruta..."
+        />
+      );
+    }
+
+    it('repassa o texto digitado e mostra as opções como vieram', async () => {
+      const handleSearch = vi.fn();
+      render(
+        <MultiSelect
+          options={FRUITS}
+          onSearchChange={handleSearch}
+          searchPlaceholder="Buscar fruta..."
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'ma'
+      );
+
+      expect(handleSearch).toHaveBeenLastCalledWith('ma');
+      // Sem filtro local: quem filtra é o servidor.
+      expect(screen.getByText('Banana')).toBeInTheDocument();
+    });
+
+    it('mantém a opção marcada no gatilho e no topo quando sai do resultado', async () => {
+      const handleChange = vi.fn();
+      render(
+        <ServerSearchHarness
+          onSearchChange={() => undefined}
+          onValueChange={handleChange}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.click(screen.getByText('Banana'));
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'la'
+      );
+
+      // Com a lista aberta (modal), o gatilho sai da árvore acessível.
+      expect(screen.getByRole('combobox', { hidden: true })).toHaveTextContent(
+        'Banana'
+      );
+      expect(screen.getByRole('checkbox', { name: 'Banana' })).toBeChecked();
+      expect(screen.getByText('Laranja')).toBeInTheDocument();
+
+      // Desmarca pela opção guardada no topo da lista.
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Banana' }));
+      expect(handleChange).toHaveBeenLastCalledWith([]);
+    });
+
+    it('avisa a busca em andamento e limpa o termo ao fechar', async () => {
+      const handleSearch = vi.fn();
+      render(
+        <ServerSearchHarness
+          onSearchChange={handleSearch}
+          onValueChange={() => undefined}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'nada'
+      );
+      expect(screen.getByText('Buscando...')).toBeInTheDocument();
+
+      await userEvent.keyboard('{Escape}');
+      expect(handleSearch).toHaveBeenLastCalledWith('');
+    });
   });
 
   it('permite limpar a seleção via botão "Limpar seleção"', async () => {

@@ -84,15 +84,15 @@ Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example
 
 Tela com rota no backend fala só com ele, sem modo fictício: a sessão (login,
 cadastro, logout e validação, com as permissões efetivas e o tempo de
-inatividade), as configurações do sistema, a trilha de auditoria e o upload. Os
-E2E dessas telas rodam contra o server real (ver [E2E](#e2e)).
+inatividade), as configurações do sistema, a trilha de auditoria, o upload e a
+gestão de usuários (lista com filtros no servidor, criação, edição, bloqueio,
+exclusão e os cargos de cada usuário, no modelo do servidor: vários cargos por
+usuário, status ativo ou bloqueado). Os E2E dessas telas rodam contra o server
+real (ver [E2E](#e2e)).
 
-Continuam com dados de demonstração as telas ainda não ligadas: lista e
-detalhe de usuários, Minha conta e a home. Parte delas não tem rota no backend
-(sessões ativas, notificações por usuário, cobrança, métricas do painel). A aba
-"Atividade" do usuário já lê a trilha do backend, mas os usuários de
-demonstração não existem lá, então a linha do tempo aparece vazia até a lista
-de usuários ser ligada.
+Continuam com dados de demonstração Minha conta, a home e a aba "Sessões" do
+detalhe do usuário: parte delas não tem rota no backend (sessões ativas,
+notificações por usuário, cobrança, métricas do painel).
 
 A suíte de unidade (`npm test`) e o Storybook não precisam do backend.
 
@@ -271,8 +271,10 @@ recarregar (cookie HTTP-only) e logout, menu por permissão, tempo de
 inatividade vindo da configuração da empresa, configurações (gravação em lote,
 campo marcado quando o server recusa o valor, recusa da regra entre os prazos) e
 a trilha de auditoria (lista, busca, filtros por módulo e por usuário,
-paginação, detalhe). As telas que ainda usam dados de demonstração (usuários,
-Minha conta, home) rodam com a sessão real do admin. O empilhamento
+paginação, detalhe, a linha do tempo de um usuário) e os usuários (lista e
+filtros, criar, editar, bloquear, excluir, trocar cargo, a recusa do servidor
+no toast e o anti-escalonamento). As telas que ainda usam dados de
+demonstração (Minha conta, home) rodam com a sessão real do admin. O empilhamento
 (`npm run test:layers`) roda contra o Storybook, sem backend.
 
 Suba o server antes, na pasta dele:
@@ -306,11 +308,11 @@ npm run test:e2e
 - Os specs criam o que precisam pela API (usuários e cargo com nome de sufixo
   único, configurações da empresa) e desfazem no fim: rodam quantas vezes for
   preciso contra o mesmo banco de desenvolvimento.
-- O server aceita 10 logins por minuto por IP, e a suíte usa 8: o do admin no
-  `globalSetup` e 7 pela tela (os dois chegam ao server por `127.0.0.1` e
+- O server aceita 10 logins por minuto por IP, e a suíte usa 9: o do admin no
+  `globalSetup` e 8 pela tela (os dois chegam ao server por `127.0.0.1` e
   dividem o contador); os demais specs entram com a sessão do admin, sem login.
   O `globalSetup` lê o limite na resposta do login do admin; se sobrarem menos
-  de 7, ou se o login vier recusado (429), ele espera a janela reiniciar (até 1
+  de 8, ou se o login vier recusado (429), ele espera a janela reiniciar (até 1
   minuto, com o tempo no log) e segue. Se o 429 continuar depois da espera, ele
   para com a mensagem de que outro cliente no mesmo IP está gastando o limite (a
   tela de login aberta, outra suíte): pare esse cliente e rode de novo. Rodar de

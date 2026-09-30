@@ -28,6 +28,19 @@ export const usersListRoute = createRoute({
   component: lazyRouteComponent(() => import('./list'), 'UsersPage'),
 });
 
+/**
+ * Criação — `/users/create`. Segmento estático: o roteador o prefere ao
+ * `$userId` da rota de detalhe.
+ */
+export const userCreateRoute = createRoute({
+  getParentRoute: () => usersLayoutRoute,
+  path: 'create',
+  staticData: {
+    breadcrumb: 'Novo usuário',
+  },
+  component: lazyRouteComponent(() => import('./create'), 'UserCreatePage'),
+});
+
 interface UserDetailsSearch {
   tab?: string;
   /** Página (0-based) da linha do tempo da aba "Atividade". */

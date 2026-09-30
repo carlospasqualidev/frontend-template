@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
-import { type DateRangeValue } from '@/components/global/dataTable/filters';
 import { type DataTableQuery } from '@/components/global/dataTable/useDataTableQuery';
-import { transformIntoDatabaseQueryDate } from '@/lib/dateTime/transformIntoDatabaseQueryDate';
+import { dateRangeParams, listParam, textParam } from '@/lib/listQueryParams';
 import { api } from '@/services/api';
 
 /*
@@ -146,41 +145,21 @@ function resolveSort(sort: DataTableQuery['sort']): Pick<AuditListParams, 'order
   return { orderBy, order: first.desc ? 'desc' : 'asc' };
 }
 
-function getRange(value: unknown): DateRangeValue {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as DateRangeValue)
-    : { from: '', to: '' };
-}
-
-function toBound(date: string, type: 'start' | 'end'): string | undefined {
-  if (!date) return undefined;
-  return (
-    transformIntoDatabaseQueryDate({ date, type, hasTimeStamp: false, databaseDateHasTimeStamp: true }) || undefined
-  );
-}
-
-/** Junta um filtro de múltipla escolha (array) em `a,b,c` para a query. */
-function joinMulti(value: unknown): string | undefined {
-  if (Array.isArray(value) && value.length > 0) return value.filter(Boolean).join(',');
-  if (typeof value === 'string' && value) return value;
-  return undefined;
-}
-
 /** Traduz o estado da DataTable (0-based, filtros) para os params do endpoint. */
 export function buildAuditListParams(query: DataTableQuery): AuditListParams {
   const { filters } = query;
-  const createdAt = getRange(filters.createdAt);
+  const createdAt = dateRangeParams(filters.createdAt);
 
   return {
     page: query.page,
     pageSize: query.pageSize,
-    search: typeof filters.search === 'string' && filters.search ? filters.search : undefined,
-    module: joinMulti(filters.module),
-    action: joinMulti(filters.action),
-    entity: joinMulti(filters.entity),
-    userId: joinMulti(filters.userId),
-    createdFrom: toBound(createdAt.from, 'start'),
-    createdTo: toBound(createdAt.to, 'end'),
+    search: textParam(filters.search),
+    module: listParam(filters.module),
+    action: listParam(filters.action),
+    entity: listParam(filters.entity),
+    userId: listParam(filters.userId),
+    createdFrom: createdAt.from,
+    createdTo: createdAt.to,
     ...resolveSort(query.sort),
   };
 }
@@ -223,36 +202,10 @@ export async function fetchEntityAuditLogs({
   return entityAuditLogsResponseSchema.parse(response);
 }
 
-export interface AuditUserOption {
-  id: string;
-  name: string;
-}
-
-// Do usuário da listagem, o filtro só usa o id e o nome.
-const auditUserOptionsResponseSchema = z.object({
-  users: z.array(z.object({ id: z.string(), name: z.string() })),
-});
-
-// Teto de `pageSize` do servidor: as opções são os primeiros 100 usuários por
-// nome.
-const AUDIT_USER_OPTIONS_LIMIT = 100;
-
-/**
- * Opções do filtro "Usuário": a listagem de usuários (`GET /client/users`),
- * que exige `backoffice.users.read` — a tela só chama com essa permissão.
- */
-export async function fetchAuditUserOptions(): Promise<AuditUserOption[]> {
-  const response = await api.get<unknown>('/client/users', {
-    params: { page: 0, pageSize: AUDIT_USER_OPTIONS_LIMIT, orderBy: 'name', order: 'asc' },
-  });
-  return auditUserOptionsResponseSchema.parse(response).users;
-}
-
 export const auditKeys = {
   all: ['audit-logs'] as const,
   list: (params: AuditListParams) => [...auditKeys.all, 'list', params] as const,
   detail: (id: string) => [...auditKeys.all, id] as const,
   entity: (params: EntityAuditLogsParams) => [...auditKeys.all, 'entity', params] as const,
-  userOptions: ['audit-logs', 'user-options'] as const,
   options: ['audit-logs', 'options'] as const,
 };

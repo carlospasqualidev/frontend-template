@@ -8,15 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
-import { getUserSessions } from '@/screens/users/utils/mockUsers';
-import { type ManagedUser } from '@/screens/users/utils/types';
+import { getDemoUserSessions } from '@/screens/users/details/userSessionsDemo';
+import { type CompanyUser } from '@/services/users/types';
 
 interface SessionsTabProps {
-  user: ManagedUser;
+  user: CompanyUser;
 }
 
 export function SessionsTab({ user }: SessionsTabProps) {
-  const sessions = getUserSessions(user);
+  const sessions = getDemoUserSessions(user);
 
   if (sessions.length === 0) {
     return (
@@ -54,7 +54,8 @@ export function SessionsTab({ user }: SessionsTabProps) {
                   Último uso em{' '}
                   {dateFormatter({
                     date: session.lastActiveAt,
-                    hasTimeStamp: false,
+                    hasTimeStamp: true,
+                    showHours: false,
                   })}
                 </Typography>
               </div>

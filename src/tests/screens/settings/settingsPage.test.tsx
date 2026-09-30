@@ -339,10 +339,71 @@ describe('SettingsPage — recusa do servidor', () => {
     expect(toast.error).toHaveBeenCalledTimes(1);
     expect(sendErrorMessage).toHaveBeenCalledWith({ error: parseError });
     expect(consoleError).toHaveBeenCalledWith(expect.any(String), parseError);
-    // A alteração continua pendente, para tentar de novo.
+    consoleError.mockRestore();
+  });
+
+  // Gravação que respondeu 200 com `message` (o toast de sucesso já saiu) e
+  // corpo fora do contrato: o cache não recebeu a resposta. A tela relê as
+  // configurações e mostra o que o servidor gravou.
+  it('relê as configurações e adota o que o servidor gravou', async () => {
+    const user = userEvent.setup();
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    vi.mocked(updateSystemConfigs).mockRejectedValue(new ZodError([]));
+    renderSettings();
+
+    const name = await screen.findByLabelText('Nome da aplicação');
+    await user.clear(name);
+    await user.type(name, 'Produto Gravado');
+    vi.mocked(fetchSystemConfigs).mockResolvedValue({
+      systemConfigs: CONFIGS.map((config) =>
+        config.key === 'app.name'
+          ? { ...config, value: 'Produto Gravado' }
+          : config
+      ),
+    });
+    await user.click(
+      await screen.findByRole('button', { name: 'Salvar alterações' })
+    );
+
+    await waitFor(() => expect(fetchSystemConfigs).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Salvar alterações' })
+      ).not.toBeInTheDocument()
+    );
+    expect(name).toHaveValue('Produto Gravado');
+
+    // "Descartar" volta ao valor do servidor, não ao de antes da gravação.
+    await user.type(name, '!');
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(name).toHaveValue('Produto Gravado');
+    consoleError.mockRestore();
+  });
+
+  // Sem a releitura (servidor fora), a alteração continua pendente.
+  it('mantém a alteração pendente quando a releitura falha', async () => {
+    const user = userEvent.setup();
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    vi.mocked(updateSystemConfigs).mockRejectedValue(new ZodError([]));
+    renderSettings();
+
+    await user.click(await screen.findByLabelText('Notificações por e-mail'));
+    vi.mocked(fetchSystemConfigs).mockRejectedValue(
+      new AxiosError('Network Error', AxiosError.ERR_NETWORK)
+    );
+    await user.click(
+      await screen.findByRole('button', { name: 'Salvar alterações' })
+    );
+
+    await waitFor(() => expect(fetchSystemConfigs).toHaveBeenCalledTimes(2));
     expect(
       screen.getByRole('button', { name: 'Salvar alterações' })
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('Notificações por e-mail')).not.toBeChecked();
     consoleError.mockRestore();
   });
 });

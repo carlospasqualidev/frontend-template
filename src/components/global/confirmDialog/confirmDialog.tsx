@@ -60,6 +60,11 @@ function ConfirmDialogInternal({
     try {
       await onConfirm();
       setOpen(false);
+    } catch {
+      // A rejeição de `onConfirm` é o sinal de "não deu certo": o dialog fica
+      // aberto. Quem rejeita já deu a resposta ao usuário (o toast do
+      // interceptor do `api`, ou o `onError` da mutation); relançar daqui só
+      // viraria uma rejeição sem dono no clique.
     } finally {
       setIsPending(false);
     }

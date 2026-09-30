@@ -51,6 +51,16 @@ export interface MultiSelectFilter extends BaseFilter {
   options: { value: string; label: string }[];
   /** Exibe um campo de busca dentro do dropdown. */
   searchable?: boolean;
+  /**
+   * Busca no servidor (ver `onSearchChange` do `MultiSelect`): recebe o texto
+   * digitado, e `options` passa a ser o resultado da busca, não filtrado aqui.
+   * As opções já aplicadas (da URL) precisam vir em `options`.
+   */
+  onSearchChange?: (search: string) => void;
+  /** Busca no servidor em andamento. */
+  loading?: boolean;
+  /** Texto da lista sem resultado. */
+  emptyText?: string;
 }
 
 export interface DateFilter extends BaseFilter {
@@ -223,6 +233,9 @@ function renderFilter(
             onValueChange={(next) => setValue(filter.key, next)}
             placeholder={filter.placeholder ?? 'Selecione...'}
             searchable={filter.searchable}
+            onSearchChange={filter.onSearchChange}
+            loading={filter.loading}
+            emptyText={filter.emptyText}
             className="w-full"
           />
         </Field>

@@ -20,11 +20,11 @@ import { dateFormatter } from '@/lib/dateTime/dateFormatter';
 import { hasPermission } from '@/lib/permissions';
 import { AuditLogDetailModal } from '@/screens/audit-logs/list/auditLogDetail';
 import { useAuditOptions } from '@/screens/audit-logs/utils/useAuditOptions';
+import { useAuditUserFilter } from '@/screens/audit-logs/utils/useAuditUserFilter';
 import {
   auditKeys,
   buildAuditListParams,
   fetchAuditLogs,
-  fetchAuditUserOptions,
   type AuditLogListItem,
 } from '@/services/audit/auditApi';
 
@@ -57,15 +57,14 @@ export function AuditLogsPage() {
 
   const { options, moduleLabel, actionLabel, entityLabel } = useAuditOptions();
 
-  // As opções do filtro "Usuário" vêm da listagem de usuários, que exige
-  // `backoffice.users.read`: sem ela, o filtro não aparece.
+  // As opções do filtro "Usuário" vêm da busca na listagem de usuários, que
+  // exige `backoffice.users.read`: sem ela, o filtro não aparece.
   const canReadUsers = useSessionStore((state) => hasPermission(state.user, 'backoffice.users.read'));
 
-  const { data: userOptions } = useQuery({
-    queryKey: auditKeys.userOptions,
-    queryFn: fetchAuditUserOptions,
+  const listParams = buildAuditListParams(query);
+  const userFilter = useAuditUserFilter({
     enabled: canReadUsers,
-    staleTime: 5 * 60_000,
+    selectedIds: listParams.userId?.split(',') ?? [],
   });
 
   const filters = useMemo<DataTableFilter[]>(
@@ -98,19 +97,20 @@ export function AuditLogsPage() {
               key: 'userId',
               label: 'Usuário',
               placeholder: 'Selecione',
-              searchable: true,
-              options: (userOptions ?? []).map((user) => ({ value: user.id, label: user.name })),
+              options: userFilter.options,
+              onSearchChange: userFilter.onSearchChange,
+              loading: userFilter.loading,
+              emptyText: 'Nenhum usuário encontrado.',
             }),
           ]
         : []),
       dateRangeFilter({ key: 'createdAt', label: 'Período' }),
     ],
-    [canReadUsers, userOptions, options]
+    [canReadUsers, userFilter.options, userFilter.onSearchChange, userFilter.loading, options]
   );
 
   // Sem o filtro "Usuário" na tela, um `userId` que ficou na URL não filtra a
   // lista: a pessoa não teria como ver nem limpar esse filtro.
-  const listParams = buildAuditListParams(query);
   const params = canReadUsers ? listParams : { ...listParams, userId: undefined };
 
   const { data, isPending } = useQuery({

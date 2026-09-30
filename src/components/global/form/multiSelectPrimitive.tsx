@@ -25,6 +25,16 @@ type MultiSelectProps = {
   placeholder?: string;
   /** Exibe um campo de busca no topo da lista. */
   searchable?: boolean;
+  /**
+   * Busca no SERVIDOR: recebe o texto digitado (e `''` ao fechar a lista), e a
+   * lista mostra `options` como vieram, sem filtrar aqui — quem chama busca e
+   * troca as opções (com debounce). Liga o campo de busca. As opções já
+   * marcadas que saírem do resultado continuam no topo da lista e no gatilho;
+   * as que chegam marcadas de fora (ex.: da URL) precisam vir em `options`.
+   */
+  onSearchChange?: (search: string) => void;
+  /** Busca em andamento (com `onSearchChange`): a lista vazia diz "Buscando...". */
+  loading?: boolean;
   searchPlaceholder?: string;
   /** Texto exibido quando a busca não retorna opções. */
   emptyText?: string;
@@ -85,6 +95,8 @@ function MultiSelect({
   onValueChange,
   placeholder = 'Selecione...',
   searchable = false,
+  onSearchChange,
+  loading = false,
   searchPlaceholder = 'Buscar...',
   emptyText = 'Nenhuma opção encontrada.',
   maxDisplay = 3,
@@ -102,7 +114,16 @@ function MultiSelect({
   );
   const selected = isControlled ? value : internalValue;
 
+  const serverSearch = onSearchChange !== undefined;
+  const showSearch = searchable || serverSearch;
   const [search, setSearch] = React.useState('');
+
+  // Rótulo das opções marcadas aqui. Na busca no servidor, a opção marcada sai
+  // de `options` quando a busca muda; o rótulo guardado a mantém no gatilho e
+  // no topo da lista (para desmarcar).
+  const [pinnedLabels, setPinnedLabels] = React.useState<
+    ReadonlyMap<string, string>
+  >(() => new Map());
 
   // Lookup O(1) do estado selecionado (evita `selected.includes` por opção).
   const selectedSet = React.useMemo(() => new Set(selected), [selected]);
@@ -111,10 +132,12 @@ function MultiSelect({
   // não re-renderizarem só porque o handler mudou de identidade a cada render.
   // Os refs são sincronizados em efeito (nunca escritos durante o render).
   const selectedRef = React.useRef(selected);
+  const optionsRef = React.useRef(options);
   const isControlledRef = React.useRef(isControlled);
   const onValueChangeRef = React.useRef(onValueChange);
   React.useEffect(() => {
     selectedRef.current = selected;
+    optionsRef.current = options;
     isControlledRef.current = isControlled;
     onValueChangeRef.current = onValueChange;
   });
@@ -127,43 +150,71 @@ function MultiSelect({
   const toggle = React.useCallback(
     (optionValue: string) => {
       const current = selectedRef.current;
-      commit(
-        current.includes(optionValue)
-          ? current.filter((item) => item !== optionValue)
-          : [...current, optionValue]
+      if (current.includes(optionValue)) {
+        commit(current.filter((item) => item !== optionValue));
+        return;
+      }
+
+      const option = optionsRef.current.find(
+        (item) => item.value === optionValue
       );
+      if (option) {
+        setPinnedLabels((previous) =>
+          new Map(previous).set(option.value, option.label)
+        );
+      }
+      commit([...current, optionValue]);
     },
     [commit]
   );
 
+  // Marcadas que não estão em `options` (saíram do resultado da busca), com o
+  // rótulo guardado.
+  const pinnedSelected = React.useMemo(() => {
+    const listed = new Set(options.map((option) => option.value));
+    return selected.flatMap((item) => {
+      const label = pinnedLabels.get(item);
+      return !listed.has(item) && label !== undefined
+        ? [{ value: item, label }]
+        : [];
+    });
+  }, [options, selected, pinnedLabels]);
+
   const display = React.useMemo(() => {
-    const labels = options
-      .filter((option) => selectedSet.has(option.value))
-      .map((option) => option.label);
+    const labels = [
+      ...options
+        .filter((option) => selectedSet.has(option.value))
+        .map((option) => option.label),
+      ...pinnedSelected.map((option) => option.label),
+    ];
     if (labels.length === 0) return null;
     return labels.length > maxDisplay
       ? `${labels.length} selecionados`
       : labels.join(', ');
-  }, [options, selectedSet, maxDisplay]);
+  }, [options, pinnedSelected, selectedSet, maxDisplay]);
 
   const showClear = Boolean(clearable && selected.length > 0 && !disabled);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredOptions = React.useMemo(
-    () =>
-      searchable && normalizedSearch
-        ? options.filter((option) =>
-            option.label.toLowerCase().includes(normalizedSearch)
-          )
-        : options,
-    [options, searchable, normalizedSearch]
-  );
+  const filteredOptions = React.useMemo(() => {
+    if (serverSearch) return [...pinnedSelected, ...options];
+    return searchable && normalizedSearch
+      ? options.filter((option) =>
+          option.label.toLowerCase().includes(normalizedSearch)
+        )
+      : options;
+  }, [options, pinnedSelected, serverSearch, searchable, normalizedSearch]);
+
+  const changeSearch = (next: string) => {
+    setSearch(next);
+    onSearchChange?.(next);
+  };
 
   return (
     <Popover
       onOpenChange={(open) => {
-        if (!open) {
-          setSearch('');
+        if (!open && search) {
+          changeSearch('');
         }
       }}
     >
@@ -214,23 +265,24 @@ function MultiSelect({
         data-slot="multi-select-content"
         className="w-(--radix-popover-trigger-width) gap-1.5 p-1"
       >
-        {searchable && (
+        {showSearch && (
           <div className="relative">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => changeSearch(event.target.value)}
               placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               className="h-8 w-full rounded-md border border-input bg-transparent pr-2.5 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
           </div>
         )}
 
         <ScrollArea viewportClassName="max-h-72">
-          <div role="group">
+          <div role="group" aria-busy={serverSearch && loading ? true : undefined}>
             {filteredOptions.length === 0 ? (
               <p className="px-1.5 py-6 text-center text-sm text-muted-foreground">
-                {emptyText}
+                {serverSearch && loading ? 'Buscando...' : emptyText}
               </p>
             ) : (
               filteredOptions.map((option) => (

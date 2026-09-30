@@ -12,9 +12,28 @@ test.describe('Configurações', () => {
     await page.goto('/settings');
   });
 
-  test('exibe os grupos de configuração', async ({ page }) => {
-    await expect(page.getByText('Geral', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('Nome da aplicação')).toBeVisible();
+  // Só as chaves do catálogo do servidor, nos três grupos dele.
+  test('exibe os grupos e só as configurações do servidor', async ({
+    page,
+  }) => {
+    for (const group of ['Geral', 'Segurança', 'Notificações']) {
+      await expect(page.getByText(group, { exact: true })).toBeVisible();
+    }
+    for (const label of [
+      'Nome da aplicação',
+      'E-mail de suporte',
+      'Tempo de inatividade até o logout (min)',
+      'Prazo para anonimizar a auditoria (meses)',
+      'Prazo para apagar a auditoria (meses)',
+      'Notificações por e-mail',
+    ]) {
+      await expect(page.getByLabel(label)).toBeVisible();
+    }
+
+    const form = page.locator('form#settings-form');
+    await expect(form.getByRole('textbox')).toHaveCount(2);
+    await expect(form.getByRole('spinbutton')).toHaveCount(3);
+    await expect(form.getByRole('switch')).toHaveCount(1);
   });
 
   test('salvar só aparece quando há mudança e o form volta a pristine ao salvar', async ({

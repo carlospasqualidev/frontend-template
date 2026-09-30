@@ -2,6 +2,20 @@ import type { JSX } from 'react';
 
 import { Card } from '@/components/global/card/card';
 import { SkeletonText } from '@/components/global/skeleton/skeleton';
+import {
+  groupByModule,
+  moduleDescription,
+} from '@/screens/settings/utils/configModules';
+import {
+  listMockSystemConfigOutline,
+  systemConfigModuleLabel,
+} from '@/services/systemConfigs/systemConfigsApi';
+
+// Um card por grupo e uma linha por chave do catálogo, na ordem da tela.
+const SKELETON_GROUPS = groupByModule(
+  listMockSystemConfigOutline(),
+  (config) => config.module
+);
 
 function ConfigRowSkeleton(): JSX.Element {
   return (
@@ -18,19 +32,19 @@ function ConfigRowSkeleton(): JSX.Element {
 export function SettingsSkeleton(): JSX.Element {
   return (
     <div className="space-y-4">
-      <Card title="Geral" description="Identidade e comportamento padrão da aplicação.">
-        <div>
-          <ConfigRowSkeleton />
-          <ConfigRowSkeleton />
-          <ConfigRowSkeleton />
-        </div>
-      </Card>
-      <Card title="Segurança" description="Autenticação, sessão e política de acesso.">
-        <div>
-          <ConfigRowSkeleton />
-          <ConfigRowSkeleton />
-        </div>
-      </Card>
+      {SKELETON_GROUPS.map(({ module, items }) => (
+        <Card
+          key={module}
+          title={systemConfigModuleLabel(module)}
+          description={moduleDescription(module)}
+        >
+          <div>
+            {items.map(({ key }) => (
+              <ConfigRowSkeleton key={key} />
+            ))}
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }

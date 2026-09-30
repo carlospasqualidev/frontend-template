@@ -85,6 +85,39 @@ afterEach(() => {
   queryClient.clear();
 });
 
+describe('SettingsPage — carregando', () => {
+  // O skeleton segue o catálogo: um card por grupo, com a descrição da tela, e
+  // uma linha por chave. Cada linha tem três blocos (rótulo, descrição, campo).
+  it('reserva os três grupos e as seis chaves do catálogo', () => {
+    vi.mocked(fetchSystemConfigs).mockReturnValue(new Promise(() => {}));
+    const { container } = renderSettings();
+
+    const titles = [
+      ...container.querySelectorAll('[data-slot="card-title"]'),
+    ].map((title) => title.textContent);
+    expect(titles).toEqual(['Geral', 'Segurança', 'Notificações']);
+
+    const rowsIn = (title: string) =>
+      (screen
+        .getByText(title)
+        .closest('[data-slot="card"]')
+        ?.querySelectorAll('[data-slot="skeleton"]').length ?? 0) / 3;
+    expect(rowsIn('Geral')).toBe(2);
+    expect(rowsIn('Segurança')).toBe(3);
+    expect(rowsIn('Notificações')).toBe(1);
+
+    expect(
+      screen.getByText('Nome da aplicação e e-mail de suporte.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Sessão e retenção da auditoria.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Envio de notificações por e-mail.')
+    ).toBeInTheDocument();
+  });
+});
+
 describe('SettingsPage — gravação em lote', () => {
   it('grava numa única chamada só os itens alterados, identificados pela `key`', async () => {
     const user = userEvent.setup();

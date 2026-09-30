@@ -14,6 +14,11 @@ import { Switch } from '@/components/ui/switch';
 import { Typography } from '@/components/ui/typography';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import { SettingsSkeleton } from '@/screens/settings/settingsSkeleton';
+import {
+  groupByModule,
+  moduleDescription,
+  type ModuleGroup,
+} from '@/screens/settings/utils/configModules';
 import { systemConfigKeys } from '@/screens/settings/utils/queryKeys';
 import {
   fetchSystemConfigs,
@@ -35,51 +40,12 @@ interface ConfigItem {
   index: number;
 }
 
-// Ordem de exibição dos módulos (Geral primeiro). `switch` — sem indexar objeto
-// por variável.
-function moduleRank(module: string): number {
-  switch (module) {
-    case 'GENERAL':
-      return 0;
-    case 'SECURITY':
-      return 1;
-    case 'NOTIFICATIONS':
-      return 2;
-    case 'INTEGRATIONS':
-      return 3;
-    default:
-      return 4;
-  }
-}
-
-// Descrição pt-BR do grupo de configurações (switch — sem indexar objeto por
-// variável).
-function moduleDescription(module: string): string {
-  switch (module) {
-    case 'SECURITY':
-      return 'Autenticação, sessão, política de acesso e retenção da auditoria.';
-    case 'NOTIFICATIONS':
-      return 'Como e quando o sistema avisa os usuários.';
-    case 'INTEGRATIONS':
-      return 'Conexões com serviços externos.';
-    case 'GENERAL':
-    default:
-      return 'Identidade e comportamento padrão da aplicação.';
-  }
-}
-
-// Agrupa as configurações por módulo preservando o índice plano de cada uma,
-// e ordena os grupos pela ordem de exibição dos módulos.
-function groupByModule(configs: SystemConfig[]): { module: string; items: ConfigItem[] }[] {
-  const groups = new Map<string, ConfigItem[]>();
-  configs.forEach((config, index) => {
-    const items = groups.get(config.module) ?? [];
-    items.push({ config, index });
-    groups.set(config.module, items);
-  });
-  return [...groups.entries()]
-    .map(([module, items]) => ({ module, items }))
-    .sort((a, b) => moduleRank(a.module) - moduleRank(b.module));
+// Agrupa as configurações por módulo preservando o índice plano de cada uma.
+function groupConfigsByModule(configs: SystemConfig[]): ModuleGroup<ConfigItem>[] {
+  return groupByModule(
+    configs.map((config, index) => ({ config, index })),
+    ({ config }) => config.module
+  );
 }
 
 export function SettingsPage() {
@@ -161,7 +127,7 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
       )}
 
       <form id={FORM_ID} onSubmit={onSubmit} className="space-y-4" noValidate>
-        {groupByModule(configs).map(({ module, items }) => (
+        {groupConfigsByModule(configs).map(({ module, items }) => (
           <Card key={module} title={systemConfigModuleLabel(module)} description={moduleDescription(module)}>
             <div>
               {items.map(({ config, index }) => (

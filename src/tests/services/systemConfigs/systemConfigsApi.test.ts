@@ -22,7 +22,6 @@ describe('systemConfigModuleLabel', () => {
     expect(systemConfigModuleLabel('GENERAL')).toBe('Geral');
     expect(systemConfigModuleLabel('SECURITY')).toBe('Segurança');
     expect(systemConfigModuleLabel('NOTIFICATIONS')).toBe('Notificações');
-    expect(systemConfigModuleLabel('INTEGRATIONS')).toBe('Integrações');
   });
 
   it('cai em "Geral" para módulo desconhecido', () => {
@@ -47,25 +46,38 @@ describe('fetchSystemConfigs', () => {
     expect(systemConfigs[0]).not.toHaveProperty('id');
   });
 
-  it('inclui o tempo de inatividade com a chave e o padrão do backend', async () => {
+  // Espelho do catálogo do servidor (`systemConfig.catalog.ts`): só as chaves
+  // dele, na ordem dele, com textos e padrões literais.
+  it('devolve exatamente o catálogo do servidor, na ordem, com os padrões', async () => {
     const { systemConfigs } = await fetchSystemConfigs();
 
-    expect(
-      systemConfigs.find(
-        (config) => config.key === 'security.idleTimeoutMinutes'
-      )
-    ).toMatchObject({ module: 'SECURITY', valueType: 'int', value: '20' });
-    expect(
-      systemConfigs.some((config) => config.key === 'security.sessionTimeout')
-    ).toBe(false);
-  });
-
-  it('inclui os prazos de retenção da auditoria com os textos e os padrões do backend', async () => {
-    const { systemConfigs } = await fetchSystemConfigs();
-
-    expect(
-      systemConfigs.filter((config) => config.key.startsWith('audit.'))
-    ).toEqual([
+    expect(systemConfigs).toEqual([
+      {
+        key: 'app.name',
+        module: 'GENERAL',
+        label: 'Nome da aplicação',
+        description:
+          'Nome exibido na interface e nas comunicações enviadas aos usuários.',
+        valueType: 'string',
+        value: 'Meu Produto',
+      },
+      {
+        key: 'app.supportEmail',
+        module: 'GENERAL',
+        label: 'E-mail de suporte',
+        description: 'Endereço que os usuários veem para pedir ajuda.',
+        valueType: 'string',
+        value: 'suporte@example.com',
+      },
+      {
+        key: 'security.idleTimeoutMinutes',
+        module: 'SECURITY',
+        label: 'Tempo de inatividade até o logout (min)',
+        description:
+          'Minutos sem atividade até a sessão ser encerrada no navegador. Vale para os usuários sem um tempo próprio no cadastro.',
+        valueType: 'int',
+        value: '20',
+      },
       {
         key: 'audit.anonymizeAfterMonths',
         module: 'SECURITY',
@@ -83,6 +95,14 @@ describe('fetchSystemConfigs', () => {
           'Meses até cada evento da auditoria ser apagado de vez. Precisa ser maior que o prazo para anonimizar.',
         valueType: 'int',
         value: '60',
+      },
+      {
+        key: 'notifications.email',
+        module: 'NOTIFICATIONS',
+        label: 'Notificações por e-mail',
+        description: 'Envia por e-mail os avisos do sistema.',
+        valueType: 'boolean',
+        value: 'true',
       },
     ]);
   });
@@ -332,6 +352,69 @@ describe('updateSystemConfigs', () => {
         },
       },
     });
+  });
+
+  // Regras de cada chave, com as mensagens do catálogo do servidor.
+  it('recusa valor fora da regra da chave, com o rótulo na mensagem, sem gravar nada', async () => {
+    await expect(
+      updateSystemConfigs([
+        { key: 'app.name', value: '   ' },
+        { key: 'app.supportEmail', value: 'nao-e-email' },
+        { key: 'security.idleTimeoutMinutes', value: '481' },
+        { key: 'notifications.email', value: 'sim' },
+      ])
+    ).rejects.toMatchObject({
+      response: {
+        status: 400,
+        data: {
+          message: 'items.0.value: Nome da aplicação: Informe o nome.',
+          issues: [
+            {
+              path: 'items.0.value',
+              message: 'Nome da aplicação: Informe o nome.',
+            },
+            {
+              path: 'items.1.value',
+              message:
+                'E-mail de suporte: O e-mail deve possuir o formato email@example.com.',
+            },
+            {
+              path: 'items.2.value',
+              message:
+                'Tempo de inatividade até o logout (min): Informe um valor de 1 a 480 minutos.',
+            },
+            {
+              path: 'items.3.value',
+              message: 'Notificações por e-mail: Use true ou false.',
+            },
+          ],
+        },
+      },
+    });
+
+    const { systemConfigs } = await fetchSystemConfigs();
+    expect(systemConfigs.map(({ key, value }) => ({ key, value }))).toEqual(
+      originals
+    );
+  });
+
+  // Como o servidor, grava e devolve o valor normalizado.
+  it('grava o valor normalizado pelo tipo e pela regra da chave', async () => {
+    const response = await updateSystemConfigs([
+      { key: 'app.name', value: '  Produto  ' },
+      { key: 'app.supportEmail', value: ' Ajuda@Example.COM ' },
+      { key: 'security.idleTimeoutMinutes', value: '030' },
+    ]);
+
+    expect(
+      response.systemConfigs
+        .slice(0, 3)
+        .map(({ key, value }) => ({ key, value }))
+    ).toEqual([
+      { key: 'app.name', value: 'Produto' },
+      { key: 'app.supportEmail', value: 'ajuda@example.com' },
+      { key: 'security.idleTimeoutMinutes', value: '30' },
+    ]);
   });
 
   it('recusa o lote vazio', async () => {

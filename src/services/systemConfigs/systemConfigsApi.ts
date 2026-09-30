@@ -13,8 +13,14 @@ import { catchHandler, thenHandler } from '@/services/api/errorHandlers';
  *     devolve `{ message, systemConfigs }` (a lista completa, igual à leitura).
  * O valor trafega sempre como string; `valueType` diz à tela como
  * renderizar/editar. Para trocar pelo backend, reimplemente as duas funções com
- * o `api` mantendo a assinatura. Aqui o `update` muta o mock em memória, então a
+ * o `api` mantendo a assinatura. Aqui o `update` grava em memória, então a
  * alteração "persiste" durante a sessão (até recarregar a página).
+ *
+ * O catálogo do mock espelha o do servidor
+ * (`../server-template/src/modules/systemConfigs/systemConfig.catalog.ts`): as
+ * mesmas chaves, na mesma ordem, com rótulo, descrição, tipo, padrão e regra
+ * literais. Chave nova nasce no catálogo do servidor e só depois é copiada
+ * para cá: a tela não mostra configuração que o servidor não tem.
  */
 const valueTypeSchema = z.enum(['string', 'int', 'float', 'boolean', 'json']);
 export type SystemConfigValueType = z.infer<typeof valueTypeSchema>;
@@ -48,69 +54,222 @@ export interface SystemConfigUpdateItem {
   value: string;
 }
 
-let MOCK_CONFIGS: SystemConfig[] = [
+/** Valor já convertido, por tipo, como no servidor. */
+interface SystemConfigValueByType {
+  string: string;
+  int: number;
+  float: number;
+  boolean: boolean;
+  json: unknown;
+}
+
+interface MockConfigDefinitionOf<TType extends SystemConfigValueType> {
+  key: string;
+  module: string;
+  label: string;
+  description: string;
+  valueType: TType;
+  /** Vale enquanto nada for gravado. */
+  defaultValue: SystemConfigValueByType[TType];
+  /** Regra da chave sobre o valor já convertido (faixa, formato, tamanho). Sem ela, vale só o tipo. */
+  rule?: z.ZodType<
+    SystemConfigValueByType[TType],
+    SystemConfigValueByType[TType]
+  >;
+}
+
+/** Definição de uma configuração do mock, como a do catálogo do servidor. */
+type MockConfigDefinition = {
+  [TType in SystemConfigValueType]: MockConfigDefinitionOf<TType>;
+}[SystemConfigValueType];
+
+const IDLE_TIMEOUT_MINUTES_RANGE = { min: 1, max: 480 } as const;
+const IDLE_TIMEOUT_RANGE_MESSAGE = `Informe um valor de ${IDLE_TIMEOUT_MINUTES_RANGE.min} a ${IDLE_TIMEOUT_MINUTES_RANGE.max} minutos.`;
+
+// Faixas dos prazos de retenção da trilha de auditoria, em meses. A exclusão
+// também precisa vir depois da anonimização.
+const AUDIT_ANONYMIZE_AFTER_MONTHS_RANGE = { min: 1, max: 120 } as const;
+const AUDIT_DELETE_AFTER_MONTHS_RANGE = { min: 2, max: 240 } as const;
+
+function monthsRule(range: { min: number; max: number }) {
+  const message = `Informe um valor de ${range.min} a ${range.max} meses.`;
+
+  return z.number().min(range.min, message).max(range.max, message);
+}
+
+// E-mail como o `emailSchema` do servidor (sem espaço nas pontas, em
+// minúsculas).
+const emailRule = z
+  .string({ message: 'Informe o e-mail.' })
+  .trim()
+  .toLowerCase()
+  .max(254, 'O e-mail deve ter no máximo 254 caracteres.')
+  .pipe(
+    z.email({ message: 'O e-mail deve possuir o formato email@example.com.' })
+  );
+
+const MOCK_CATALOG: readonly MockConfigDefinition[] = [
   {
-    key: 'app.name', module: 'GENERAL', label: 'Nome da aplicação',
-    description: 'Exibido no cabeçalho e nos e-mails do sistema.',
-    valueType: 'string', value: 'Meu Produto',
+    key: 'app.name',
+    module: 'GENERAL',
+    label: 'Nome da aplicação',
+    description:
+      'Nome exibido na interface e nas comunicações enviadas aos usuários.',
+    valueType: 'string',
+    defaultValue: 'Meu Produto',
+    rule: z
+      .string()
+      .trim()
+      .min(1, 'Informe o nome.')
+      .max(120, 'Use no máximo 120 caracteres.'),
   },
   {
-    key: 'app.supportEmail', module: 'GENERAL', label: 'E-mail de suporte',
-    description: 'Destino dos chamados enviados pelos usuários.',
-    valueType: 'string', value: 'suporte@example.com',
+    key: 'app.supportEmail',
+    module: 'GENERAL',
+    label: 'E-mail de suporte',
+    description: 'Endereço que os usuários veem para pedir ajuda.',
+    valueType: 'string',
+    defaultValue: 'suporte@example.com',
+    rule: emailRule,
   },
   {
-    key: 'app.itemsPerPage', module: 'GENERAL', label: 'Itens por página',
-    description: 'Tamanho padrão das listagens.',
-    valueType: 'int', value: '25',
-  },
-  {
-    key: 'security.idleTimeoutMinutes', module: 'SECURITY',
+    key: 'security.idleTimeoutMinutes',
+    module: 'SECURITY',
     label: 'Tempo de inatividade até o logout (min)',
     description:
       'Minutos sem atividade até a sessão ser encerrada no navegador. Vale para os usuários sem um tempo próprio no cadastro.',
-    valueType: 'int', value: '20',
+    valueType: 'int',
+    defaultValue: 20,
+    rule: z
+      .number()
+      .min(IDLE_TIMEOUT_MINUTES_RANGE.min, IDLE_TIMEOUT_RANGE_MESSAGE)
+      .max(IDLE_TIMEOUT_MINUTES_RANGE.max, IDLE_TIMEOUT_RANGE_MESSAGE),
   },
   {
-    key: 'security.enforce2fa', module: 'SECURITY', label: 'Exigir autenticação em duas etapas',
-    description: 'Obriga o segundo fator no login de todos os usuários.',
-    valueType: 'boolean', value: 'false',
-  },
-  {
-    key: 'audit.anonymizeAfterMonths', module: 'SECURITY',
+    key: 'audit.anonymizeAfterMonths',
+    module: 'SECURITY',
     label: 'Prazo para anonimizar a auditoria (meses)',
     description:
       'Meses até cada evento da auditoria perder o autor, o IP, o navegador e os dados pessoais registrados. O que foi feito continua no histórico.',
-    valueType: 'int', value: '12',
+    valueType: 'int',
+    defaultValue: 12,
+    rule: monthsRule(AUDIT_ANONYMIZE_AFTER_MONTHS_RANGE),
   },
   {
-    key: 'audit.deleteAfterMonths', module: 'SECURITY',
+    key: 'audit.deleteAfterMonths',
+    module: 'SECURITY',
     label: 'Prazo para apagar a auditoria (meses)',
     description:
       'Meses até cada evento da auditoria ser apagado de vez. Precisa ser maior que o prazo para anonimizar.',
-    valueType: 'int', value: '60',
+    valueType: 'int',
+    defaultValue: 60,
+    rule: monthsRule(AUDIT_DELETE_AFTER_MONTHS_RANGE),
   },
   {
-    key: 'security.passwordPolicy', module: 'SECURITY', label: 'Política de senha (JSON)',
-    description: 'Regras aplicadas na criação e troca de senha.',
-    valueType: 'json', value: '{\n  "minLength": 8,\n  "requireNumber": true\n}',
-  },
-  {
-    key: 'notifications.email', module: 'NOTIFICATIONS', label: 'Notificações por e-mail',
-    description: 'Envia avisos operacionais por e-mail.',
-    valueType: 'boolean', value: 'true',
-  },
-  {
-    key: 'notifications.dailyDigest', module: 'NOTIFICATIONS', label: 'Resumo diário',
-    description: 'Envia um consolidado das atividades do dia.',
-    valueType: 'boolean', value: 'false',
-  },
-  {
-    key: 'integrations.webhookUrl', module: 'INTEGRATIONS', label: 'URL de webhook',
-    description: 'Endpoint chamado a cada evento relevante.',
-    valueType: 'string', value: 'https://hooks.example.com/inbound',
+    key: 'notifications.email',
+    module: 'NOTIFICATIONS',
+    label: 'Notificações por e-mail',
+    description: 'Envia por e-mail os avisos do sistema.',
+    valueType: 'boolean',
+    defaultValue: true,
   },
 ];
+
+// Valor gravado na sessão, por chave, no texto em que a API o devolve. Sem
+// gravação, vale o padrão do catálogo.
+const storedValues = new Map<string, string>();
+
+function findDefinition(key: string): MockConfigDefinition | undefined {
+  return MOCK_CATALOG.find((candidate) => candidate.key === key);
+}
+
+// Mensagens sem o valor recebido: quem monta o erro prefixa o rótulo.
+const MAX_SYSTEM_CONFIG_VALUE_LENGTH = 10_000;
+
+const valueText = z
+  .string()
+  .max(
+    MAX_SYSTEM_CONFIG_VALUE_LENGTH,
+    `Use no máximo ${MAX_SYSTEM_CONFIG_VALUE_LENGTH} caracteres.`
+  );
+
+// Até 15 dígitos: acima disso o número perde precisão no `Number`.
+const intValue = valueText
+  .regex(/^-?\d{1,15}$/, 'Informe um número inteiro.')
+  .transform(Number);
+
+const floatValue = valueText
+  .regex(
+    /^-?\d{1,15}$|^-?\d{1,15}\.\d{1,15}$/,
+    'Informe um número, com ponto como separador decimal.'
+  )
+  .transform(Number);
+
+const booleanValue = valueText
+  .regex(/^(true|false)$/, 'Use true ou false.')
+  .transform((text) => text === 'true');
+
+const jsonValue = valueText.transform((text, context) => {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    context.addIssue({ code: 'custom', message: 'Informe um JSON válido.' });
+    return z.NEVER;
+  }
+});
+
+function withRule<TValue>(
+  parser: z.ZodType<TValue, string>,
+  rule: z.ZodType<TValue, TValue> | undefined
+): z.ZodType<TValue, string> {
+  return rule ? parser.pipe(rule) : parser;
+}
+
+/** Texto → valor tipado, como o servidor: converte pelo `valueType` e aplica a regra da chave. */
+function valueSchemaFor(
+  definition: MockConfigDefinition
+): z.ZodType<unknown, string> {
+  switch (definition.valueType) {
+    case 'string':
+      return withRule(valueText, definition.rule);
+    case 'int':
+      return withRule(intValue, definition.rule);
+    case 'float':
+      return withRule(floatValue, definition.rule);
+    case 'boolean':
+      return withRule(booleanValue, definition.rule);
+    case 'json':
+      return withRule(jsonValue, definition.rule);
+  }
+}
+
+/** Valor tipado → texto gravado e devolvido pela API (`'true'`, `'20'`, JSON compacto). */
+function serializeValue(
+  valueType: SystemConfigValueType,
+  value: unknown
+): string {
+  return valueType === 'json' ? JSON.stringify(value) : String(value);
+}
+
+/** Valor efetivo em texto: o gravado, senão o padrão do catálogo. */
+function effectiveValue(definition: MockConfigDefinition): string {
+  return (
+    storedValues.get(definition.key) ??
+    serializeValue(definition.valueType, definition.defaultValue)
+  );
+}
+
+/** O catálogo inteiro, na ordem do servidor, com o valor efetivo. */
+function listMockConfigs(): SystemConfig[] {
+  return MOCK_CATALOG.map((definition) => ({
+    key: definition.key,
+    module: definition.module,
+    label: definition.label,
+    description: definition.description,
+    valueType: definition.valueType,
+    value: effectiveValue(definition),
+  }));
+}
 
 const MOCK_DELAY_MS = 300;
 
@@ -120,20 +279,37 @@ function sleep(ms: number): Promise<void> {
 
 export async function fetchSystemConfigs(): Promise<SystemConfigsResponse> {
   await sleep(MOCK_DELAY_MS);
-  return systemConfigsResponseSchema.parse({ systemConfigs: MOCK_CONFIGS });
+  return systemConfigsResponseSchema.parse({
+    systemConfigs: listMockConfigs(),
+  });
 }
 
 /**
  * Rótulo e tipo de uma configuração do mock, ou `undefined` para chave fora
  * dele. Existe para o mock da auditoria (`services/audit/auditMock.ts`) montar
  * a frase e formatar o `value` pelo tipo da chave, como o servidor faz pelo
- * catálogo dele. Sai com os dados em memória ao trocar este serviço pelo `api`.
+ * catálogo dele. Sai com o catálogo do mock ao trocar este serviço pelo `api`.
  */
 export function findMockSystemConfig(
   key: string
 ): Pick<SystemConfig, 'label' | 'valueType'> | undefined {
-  const config = MOCK_CONFIGS.find((candidate) => candidate.key === key);
-  return config && { label: config.label, valueType: config.valueType };
+  const definition = findDefinition(key);
+  return (
+    definition && { label: definition.label, valueType: definition.valueType }
+  );
+}
+
+/**
+ * Chave e módulo de cada configuração do mock, na ordem do catálogo, sem
+ * valor. Existe para o skeleton da tela de configurações reservar um card por
+ * grupo e uma linha por chave enquanto a leitura não volta. Sai com o catálogo
+ * do mock ao trocar este serviço pelo `api`.
+ */
+export function listMockSystemConfigOutline(): Pick<
+  SystemConfig,
+  'key' | 'module'
+>[] {
+  return MOCK_CATALOG.map(({ key, module }) => ({ key, module }));
 }
 
 interface MockValidationIssue {
@@ -146,68 +322,58 @@ interface MockErrorBody {
   issues?: MockValidationIssue[];
 }
 
-const ANONYMIZE_KEY = 'audit.anonymizeAfterMonths';
-const DELETE_KEY = 'audit.deleteAfterMonths';
-
-// Faixa (inteiro, em meses) de cada prazo de retenção da auditoria, como no
-// catálogo do servidor.
-const RETENTION_RANGES = new Map<string, { min: number; max: number }>([
-  [ANONYMIZE_KEY, { min: 1, max: 120 }],
-  [DELETE_KEY, { min: 2, max: 240 }],
-]);
-
-// Inteiro como o servidor aceita no texto do valor (até 15 dígitos).
-const INTEGER_TEXT = /^-?\d{1,15}$/;
-
-// Regra entre os prazos, no texto do servidor (abre com o rótulo do prazo para
-// apagar, o item que o erro aponta).
-const RETENTION_ORDER_MESSAGE =
-  'Prazo para apagar a auditoria (meses): Informe um valor maior que o prazo para anonimizar.';
-
-/** O que o servidor diz de um prazo de retenção inválido, sem o rótulo; `null` se vale. */
-function retentionValueProblem(
-  range: { min: number; max: number },
-  value: string
-): string | null {
-  if (!INTEGER_TEXT.test(value)) return 'Informe um número inteiro.';
-
-  const months = Number(value);
-  return months < range.min || months > range.max
-    ? `Informe um valor de ${range.min} a ${range.max} meses.`
-    : null;
+interface ParsedBatch {
+  issues: MockValidationIssue[];
+  /** Os itens com o valor normalizado (`'020'` vira `'20'`, e-mail em minúsculas), quando não há `issues`. */
+  items: SystemConfigUpdateItem[];
 }
 
 /**
  * O que o servidor recusa item a item com 400, sem gravar nada: lote vazio,
- * chave fora do catálogo e prazo de retenção que não é inteiro ou está fora da
- * faixa. `path` e `message` no formato do backend (a mensagem do valor abre com
- * o rótulo da configuração).
+ * chave fora do catálogo e valor fora do tipo ou da regra da chave. `path` e
+ * `message` no formato do backend (a mensagem do valor abre com o rótulo da
+ * configuração).
  */
-function findBatchIssues(
-  items: SystemConfigUpdateItem[]
-): MockValidationIssue[] {
+function parseBatch(items: SystemConfigUpdateItem[]): ParsedBatch {
   if (items.length === 0) {
-    return [{ path: 'items', message: 'Informe ao menos uma configuração.' }];
+    return {
+      issues: [
+        { path: 'items', message: 'Informe ao menos uma configuração.' },
+      ],
+      items: [],
+    };
   }
 
-  const configsByKey = new Map(MOCK_CONFIGS.map((config) => [config.key, config]));
-  return items.flatMap((item, index) => {
-    const config = configsByKey.get(item.key);
-    if (!config) {
-      return [{ path: `items.${index}.key`, message: 'Configuração desconhecida.' }];
+  const issues: MockValidationIssue[] = [];
+  const parsedItems: SystemConfigUpdateItem[] = [];
+  items.forEach((item, index) => {
+    const definition = findDefinition(item.key);
+    if (!definition) {
+      issues.push({
+        path: `items.${index}.key`,
+        message: 'Configuração desconhecida.',
+      });
+      return;
     }
 
-    const range = RETENTION_RANGES.get(item.key);
-    const problem = range ? retentionValueProblem(range, item.value) : null;
-    return problem
-      ? [
-          {
-            path: `items.${index}.value`,
-            message: `${config.label}: ${problem}`,
-          },
-        ]
-      : [];
+    const parsed = valueSchemaFor(definition).safeParse(item.value);
+    if (!parsed.success) {
+      issues.push(
+        ...parsed.error.issues.map((issue) => ({
+          path: `items.${index}.value`,
+          message: `${definition.label}: ${issue.message}`,
+        }))
+      );
+      return;
+    }
+
+    parsedItems.push({
+      key: item.key,
+      value: serializeValue(definition.valueType, parsed.data),
+    });
   });
+
+  return { issues, items: parsedItems };
 }
 
 /** Corpo do 400 de validação do servidor: o `message` é o do primeiro item, com o `path` na frente. */
@@ -221,12 +387,21 @@ function toValidationError(issues: MockValidationIssue[]): MockErrorBody {
   };
 }
 
+const ANONYMIZE_KEY = 'audit.anonymizeAfterMonths';
+const DELETE_KEY = 'audit.deleteAfterMonths';
+
+// Regra entre os prazos, no texto do servidor (abre com o rótulo do prazo para
+// apagar, o item que o erro aponta).
+const RETENTION_ORDER_MESSAGE =
+  'Prazo para apagar a auditoria (meses): Informe um valor maior que o prazo para anonimizar.';
+
 /**
  * Regra entre os prazos de retenção, como o servidor: o prazo para apagar tem
- * de ficar maior que o para anonimizar, com o valor do lote, senão o gravado.
- * Com as duas chaves no lote, a recusa é de validação e aponta o item do prazo
- * para apagar (`issues`); com uma só, conferida contra o gravado, volta só com
- * `message`. `null` quando o lote respeita a regra (ou não a toca).
+ * de ficar maior que o para anonimizar, com o valor do lote, senão o gravado,
+ * senão o padrão. Com as duas chaves no lote, a recusa é de validação e aponta
+ * o item do prazo para apagar (`issues`); com uma só, conferida contra o
+ * gravado, volta só com `message`. `null` quando o lote respeita a regra (ou
+ * não a toca).
  */
 function findRetentionOrderError(
   items: SystemConfigUpdateItem[]
@@ -236,11 +411,12 @@ function findRetentionOrderError(
     return null;
   }
 
-  const monthsAfter = (key: string) =>
-    Number(
-      batchValues.get(key) ??
-        MOCK_CONFIGS.find((config) => config.key === key)?.value
+  const monthsAfter = (key: string) => {
+    const definition = findDefinition(key);
+    return Number(
+      batchValues.get(key) ?? (definition && effectiveValue(definition))
     );
+  };
   if (monthsAfter(DELETE_KEY) > monthsAfter(ANONYMIZE_KEY)) return null;
 
   if (batchValues.has(ANONYMIZE_KEY) && batchValues.has(DELETE_KEY)) {
@@ -272,51 +448,46 @@ function rejectAsServer(data: MockErrorBody): never {
 }
 
 /**
- * Grava o lote inteiro numa chamada e devolve a lista completa atualizada. O
- * `message` da resposta vira o toast de sucesso — no backend, pelo interceptor
- * do `api`; aqui o mock o repassa ao mesmo `thenHandler` para a tela se
- * comportar igual. Quem chama não dispara toast próprio. Lote vazio, com chave
- * desconhecida, com prazo de retenção inválido ou que deixe o prazo para apagar
- * a auditoria não maior que o para anonimizar é recusado inteiro, como no
- * servidor (toast de erro pelo `catchHandler`, nada gravado).
+ * Grava o lote inteiro numa chamada e devolve a lista completa atualizada, com
+ * o valor normalizado como o servidor grava. O `message` da resposta vira o
+ * toast de sucesso — no backend, pelo interceptor do `api`; aqui o mock o
+ * repassa ao mesmo `thenHandler` para a tela se comportar igual. Quem chama
+ * não dispara toast próprio. Lote vazio, com chave desconhecida, com valor fora
+ * do tipo ou da regra da chave, ou que deixe o prazo para apagar a auditoria
+ * não maior que o para anonimizar é recusado inteiro, como no servidor (toast
+ * de erro pelo `catchHandler`, nada gravado).
  */
 export async function updateSystemConfigs(
   items: SystemConfigUpdateItem[]
 ): Promise<UpdateSystemConfigsResponse> {
   await sleep(MOCK_DELAY_MS);
-  const issues = findBatchIssues(items);
-  if (issues.length > 0) {
-    rejectAsServer(toValidationError(issues));
+  const batch = parseBatch(items);
+  if (batch.issues.length > 0) {
+    rejectAsServer(toValidationError(batch.issues));
   }
-  const retentionOrderError = findRetentionOrderError(items);
+  const retentionOrderError = findRetentionOrderError(batch.items);
   if (retentionOrderError) {
     rejectAsServer(retentionOrderError);
   }
 
-  const valueByKey = new Map(items.map((item) => [item.key, item.value]));
-  MOCK_CONFIGS = MOCK_CONFIGS.map((config) => ({
-    ...config,
-    value: valueByKey.get(config.key) ?? config.value,
-  }));
+  batch.items.forEach((item) => storedValues.set(item.key, item.value));
 
   const response = updateSystemConfigsResponseSchema.parse({
     message: 'Configurações atualizadas.',
-    systemConfigs: MOCK_CONFIGS,
+    systemConfigs: listMockConfigs(),
   });
   thenHandler({ data: response });
   return response;
 }
 
-// Rótulo pt-BR do módulo dono da configuração (switch — sem indexar objeto por
-// variável).
+// Rótulo pt-BR do módulo dono da configuração, para os módulos do catálogo do
+// servidor (switch — sem indexar objeto por variável).
 export function systemConfigModuleLabel(module: string): string {
   switch (module) {
     case 'SECURITY':
       return 'Segurança';
     case 'NOTIFICATIONS':
       return 'Notificações';
-    case 'INTEGRATIONS':
-      return 'Integrações';
     case 'GENERAL':
     default:
       return 'Geral';

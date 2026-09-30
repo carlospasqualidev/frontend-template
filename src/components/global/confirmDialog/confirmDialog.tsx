@@ -19,6 +19,12 @@ interface BaseProps {
   cancelLabel?: string;
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
+  /**
+   * Para onde vai o foco quando o dialog fecha. Sem ele, o foco volta ao
+   * `trigger`; no modo controlled sem `trigger`, cairia no `body`. Chame
+   * `event.preventDefault()` e foque o elemento de volta.
+   */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 interface ControlledProps extends BaseProps {
@@ -51,6 +57,7 @@ function ConfirmDialogInternal({
   cancelLabel = 'Cancelar',
   destructive = false,
   onConfirm,
+  onCloseAutoFocus,
 }: InternalProps) {
   const [isPending, setIsPending] = React.useState(false);
 
@@ -75,7 +82,7 @@ function ConfirmDialogInternal({
       {trigger ? (
         <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       ) : null}
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -111,7 +118,8 @@ function UncontrolledConfirmDialog(props: UncontrolledProps) {
  *   (atalho de teclado, evento externo, abertura programática).
  *
  * Em ambos os modos, o componente gerencia o loading interno
- * enquanto `onConfirm` resolve, e fecha automaticamente em sucesso.
+ * enquanto `onConfirm` resolve, e fecha automaticamente em sucesso. No
+ * controlled sem `trigger`, `onCloseAutoFocus` devolve o foco ao fechar.
  */
 function isUncontrolled(props: IConfirmDialog): props is UncontrolledProps {
   return 'trigger' in props;

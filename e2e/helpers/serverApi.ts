@@ -2,17 +2,17 @@ import {
   expect,
   request,
   type APIRequestContext,
-  type BrowserContext,
   type Response,
 } from '@playwright/test';
 
 import type { LoginCredentials } from './session';
+import { ADMIN_STORAGE_STATE } from './storageState';
 
 /*
  * Preparo e limpeza de dado dos E2E contra o server real (`npm run test:e2e`).
  * Os specs dirigem o app como uma pessoa; só o preparo fala com a API direto,
  * por aqui, com a sessão do admin do seed aberta uma vez pelo
- * `e2e/globalSetup.ts`.
+ * `e2e/globalSetup.ts` (`ADMIN_STORAGE_STATE`).
  *
  * Tudo o que um spec cria tem sufixo único e é desfeito no `afterAll`: o spec
  * roda quantas vezes for preciso contra o mesmo banco de desenvolvimento.
@@ -32,29 +32,6 @@ export const SEED_BLOCKED: LoginCredentials = {
   email: 'blocked@admin.com',
   password: '123123123',
 };
-
-type StorageState = Awaited<ReturnType<BrowserContext['storageState']>>;
-
-/**
- * Guarda a sessão do admin (cookie `token`) aberta pelo `globalSetup`. Vai por
- * `process.env`, que o Playwright repassa aos workers dos specs.
- */
-export function storeAdminStorageState(storageState: string): void {
-  process.env.E2E_API_ADMIN_STORAGE_STATE = storageState;
-}
-
-/** A sessão do admin aberta pelo `globalSetup` (cookie HTTP-only do server). */
-export function readAdminStorageState(): StorageState {
-  const storageState = process.env.E2E_API_ADMIN_STORAGE_STATE;
-
-  if (!storageState) {
-    throw new Error(
-      'Sessão do admin ausente: rode pelo `npm run test:e2e`, que abre a sessão no globalSetup.'
-    );
-  }
-
-  return JSON.parse(storageState) as StorageState;
-}
 
 export function serverApiUrl(path: string): string {
   return `${SERVER_API_URL.replace(/\/+$/, '')}${path}`;
@@ -77,7 +54,7 @@ export function isValidateResponse(response: Response): boolean {
 
 /** Cliente HTTP com a sessão do admin do seed, para preparar e limpar dado. */
 export async function newAdminApiContext(): Promise<APIRequestContext> {
-  return request.newContext({ storageState: readAdminStorageState() });
+  return request.newContext({ storageState: ADMIN_STORAGE_STATE });
 }
 
 export interface PreparedUser extends LoginCredentials {
@@ -85,10 +62,35 @@ export interface PreparedUser extends LoginCredentials {
   name: string;
 }
 
+/**
+ * Guarda os dados do gestor criado pelo `globalSetup` (a sessão dele fica em
+ * `MANAGER_STORAGE_STATE`). Vai por `process.env`, que o Playwright repassa
+ * aos workers dos specs.
+ */
+export function storeManager(manager: PreparedUser): void {
+  process.env.E2E_MANAGER = JSON.stringify(manager);
+}
+
+/** O gestor criado pelo `globalSetup`: o id, para os specs darem o cargo. */
+export function readManager(): PreparedUser {
+  const manager = process.env.E2E_MANAGER;
+
+  if (!manager) {
+    throw new Error(
+      'Gestor ausente: rode pelo `npm run test:e2e`, que o cria no globalSetup.'
+    );
+  }
+
+  return JSON.parse(manager) as PreparedUser;
+}
+
 /** Sufixo único por execução, para o dado criado não colidir com o de outra. */
 export function uniqueSuffix(): string {
   return `${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/** Início do e-mail de quem o `createUserWithoutRole` cria. */
+const PREPARED_USER_EMAIL_PREFIX = 'e2e.sem.cargo.';
 
 /**
  * Cria, pelo admin, um usuário ativo SEM cargo (`POST /users` não vincula
@@ -99,7 +101,7 @@ export async function createUserWithoutRole(
   name = 'Pessoa Sem Cargo'
 ): Promise<PreparedUser> {
   const suffix = uniqueSuffix();
-  const email = `e2e.sem.cargo.${suffix}@example.com`;
+  const email = `${PREPARED_USER_EMAIL_PREFIX}${suffix}@example.com`;
   const password = `senha-${suffix}`;
 
   const response = await admin.post(serverApiUrl('/client/users'), {
@@ -232,6 +234,48 @@ export async function deleteUserByEmail(
   };
   for (const user of users.filter((item) => item.email === email)) {
     await deleteUser(admin, user.id);
+  }
+}
+
+/**
+ * Exclui o que uma execução interrompida (Ctrl+C, processo morto) deixou no
+ * banco: os usuários criados pelo `createUserWithoutRole` cujo nome começa com
+ * `namePrefix`. Confere o nome e o e-mail do preparo, então não toca em quem
+ * foi cadastrado à mão. Devolve quantos excluiu.
+ */
+export async function deleteLeftoverPreparedUsers(
+  admin: APIRequestContext,
+  namePrefix: string
+): Promise<number> {
+  const deleted = new Set<string>();
+
+  // Cada volta exclui o que a primeira página trouxe; a seguinte relê.
+  for (;;) {
+    const response = await admin.get(serverApiUrl('/client/users'), {
+      params: { search: namePrefix.trim(), pageSize: 100 },
+    });
+    await expect(response).toBeOK();
+
+    const { users } = (await response.json()) as {
+      users: { id: string; name: string; email: string }[];
+    };
+    const leftovers = users.filter(
+      (user) =>
+        user.name.startsWith(namePrefix) &&
+        user.email.startsWith(PREPARED_USER_EMAIL_PREFIX) &&
+        user.email.endsWith('@example.com')
+    );
+    if (leftovers.length === 0) return deleted.size;
+
+    for (const user of leftovers) {
+      if (deleted.has(user.id)) {
+        throw new Error(
+          `O usuário ${user.email} continua na lista depois de excluído.`
+        );
+      }
+      await deleteUser(admin, user.id);
+      deleted.add(user.id);
+    }
   }
 }
 

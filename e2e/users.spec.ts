@@ -12,6 +12,7 @@ import {
   deleteUserByEmail,
   deleteUserIfExists,
   newAdminApiContext,
+  readManager,
   serverApiUrl,
   SEED_ADMIN,
   setUserRoles,
@@ -19,7 +20,10 @@ import {
   updateUser,
   type PreparedUser,
 } from './helpers/serverApi';
-import { login, openAdminSession } from './helpers/session';
+import {
+  ADMIN_STORAGE_STATE,
+  MANAGER_STORAGE_STATE,
+} from './helpers/storageState';
 
 function rowWith(page: Page, text: string) {
   return page.locator('tbody tr', { hasText: text });
@@ -67,7 +71,9 @@ async function pickRole(page: Page, roleName: string) {
 // Usuários (`/users`) contra o server real: lista com filtros no servidor,
 // criação, edição, bloqueio, exclusão e troca de cargos. O preparo cria pela
 // API, com o sufixo único desta execução no nome, as pessoas e os cargos de
-// que cada teste precisa; a busca pelo sufixo isola o que o spec criou.
+// que cada teste precisa; a busca pelo sufixo isola o que o spec criou. O
+// anti-escalonamento entra com o gestor do `globalSetup`, que recebe aqui o
+// cargo de gestão e o perde no fim.
 test.describe('Usuários', () => {
   const suffix = uniqueSuffix();
   const createdEmail = `e2e.criado.${suffix}@example.com`;
@@ -80,7 +86,7 @@ test.describe('Usuários', () => {
   let active: PreparedUser;
   let blocked: PreparedUser;
   let withoutRole: PreparedUser;
-  let manager: PreparedUser;
+  let manager: PreparedUser | undefined;
   let auditRoleId: string;
 
   async function prepareUser(name: string): Promise<PreparedUser> {
@@ -114,7 +120,7 @@ test.describe('Usuários', () => {
     blocked = await prepareUser('Pessoa Bloqueada');
     await updateUser(admin, blocked.id, { isActive: false });
     withoutRole = await prepareUser('Pessoa Sem Cargo');
-    manager = await prepareUser('Pessoa Gestora');
+    manager = readManager();
     await setUserRoles(admin, manager.id, [managerRoleId]);
   });
 
@@ -127,6 +133,8 @@ test.describe('Usuários', () => {
         for (const user of preparedUsers) {
           await deleteUserIfExists(admin, user.id);
         }
+        // O gestor segue na suíte: sai sem o cargo, antes de o cargo sair.
+        if (manager) await setUserRoles(admin, manager.id, []);
         for (const roleId of roleIds) await deleteRole(admin, roleId);
       }
     } finally {
@@ -135,9 +143,7 @@ test.describe('Usuários', () => {
   });
 
   test.describe('como admin', () => {
-    test.beforeEach(async ({ page }) => {
-      await openAdminSession(page);
-    });
+    test.use({ storageState: ADMIN_STORAGE_STATE });
 
     test('lista do servidor, com cargos e status derivado de isActive', async ({
       page,
@@ -157,6 +163,68 @@ test.describe('Usuários', () => {
       await expect(activeRow).toContainText('Nunca acessou');
       await expect(rowWith(page, blocked.name)).toContainText('Bloqueado');
       await expect(rowWith(page, withoutRole.name)).toContainText('Sem cargo');
+    });
+
+    // O servidor ordena o booleano com `false` antes: o primeiro clique pede
+    // `desc` (ativos primeiro), o segundo, `asc` (bloqueados primeiro).
+    test('ordena por status pelo cabeçalho, no servidor', async ({ page }) => {
+      await page.goto(usersUrl({ search: suffix }));
+      await expect(rowWith(page, blocked.name)).toBeVisible();
+
+      const sortedBy = (order: 'asc' | 'desc') =>
+        page.waitForResponse((response) => {
+          if (!response.url().startsWith(serverApiUrl('/client/users?'))) {
+            return false;
+          }
+          const params = new URL(response.url()).searchParams;
+          return (
+            params.get('orderBy') === 'isActive' &&
+            params.get('order') === order
+          );
+        });
+
+      const descending = sortedBy('desc');
+      await page.getByRole('button', { name: 'Status' }).click();
+      expect((await descending).status()).toBe(200);
+      await expect(page.locator('tbody tr').first()).toContainText('Ativo');
+      await expect(page.locator('tbody tr').last()).toContainText('Bloqueado');
+
+      const ascending = sortedBy('asc');
+      await page.getByRole('button', { name: 'Status' }).click();
+      expect((await ascending).status()).toBe(200);
+      await expect(page.locator('tbody tr').first()).toContainText('Bloqueado');
+    });
+
+    // Link editado à mão: o id nunca vai ao servidor (que responderia 400 com
+    // o toast "Identificador inválido.") e sai da URL.
+    test('id de cargo fora do formato na URL sai do filtro, sem toast', async ({
+      page,
+    }) => {
+      const listedRoleIds: (string | null)[] = [];
+      page.on('request', (request) => {
+        if (request.url().startsWith(serverApiUrl('/client/users?'))) {
+          listedRoleIds.push(new URL(request.url()).searchParams.get('roleId'));
+        }
+      });
+
+      await page.goto(usersUrl({ search: suffix, roleId: ['nao-e-um-id'] }));
+      await expect(rowWith(page, active.name)).toBeVisible();
+      await expect(page).not.toHaveURL(/roleId/);
+      await expect(page).toHaveURL(/filters=/);
+
+      expect(listedRoleIds.length).toBeGreaterThan(0);
+      expect(listedRoleIds.every((roleId) => roleId === null)).toBe(true);
+      expect(await page.locator('[data-sonner-toast]').count()).toBe(0);
+    });
+
+    test('a aba "Sessões" do detalhe mostra o aviso de demonstração', async ({
+      page,
+    }) => {
+      await page.goto(`/users/${withoutRole.id}?tab=sessions`);
+
+      await expect(
+        page.getByRole('note', { name: 'Dados de demonstração' })
+      ).toBeVisible();
     });
 
     test('filtra por status pelos campos: o que casa aparece, o que não casa some', async ({
@@ -358,29 +426,33 @@ test.describe('Usuários', () => {
   // Anti-escalonamento: quem gerencia usuários sem ter a trilha de auditoria
   // não pode dar um cargo que a tem. A tela deixa escolher; quem recusa é o
   // servidor, e o toast é o dele.
-  test('o servidor recusa dar cargo com permissão que o autor não tem', async ({
-    page,
-  }) => {
-    await login(page, manager);
-    await page.goto(`/users/${blocked.id}?tab=roles`);
+  test.describe('como gestor', () => {
+    test.use({ storageState: MANAGER_STORAGE_STATE });
 
-    await pickRole(page, auditRoleName);
-    const refused = page.waitForResponse(
-      (response) =>
-        response.url() === serverApiUrl(`/client/users/${blocked.id}/roles`) &&
-        response.request().method() === 'PUT'
-    );
-    await page.getByRole('button', { name: 'Salvar alterações' }).click();
-    expect((await refused).status()).toBe(403);
+    test('o servidor recusa dar cargo com permissão que o autor não tem', async ({
+      page,
+    }) => {
+      await page.goto(`/users/${blocked.id}?tab=roles`);
 
-    await expect(
-      toastWith(page, 'Você não pode conceder permissões que não possui.')
-    ).toBeVisible();
-    // A troca continua pendente.
-    await expect(
-      page.getByRole('button', { name: 'Salvar alterações' })
-    ).toBeVisible();
-    // Sem `backoffice.users.delete` nem a trilha: sem "Excluir" e sem "Atividade".
-    await expect(page.getByRole('tab', { name: 'Atividade' })).toHaveCount(0);
+      await pickRole(page, auditRoleName);
+      const refused = page.waitForResponse(
+        (response) =>
+          response.url() ===
+            serverApiUrl(`/client/users/${blocked.id}/roles`) &&
+          response.request().method() === 'PUT'
+      );
+      await page.getByRole('button', { name: 'Salvar alterações' }).click();
+      expect((await refused).status()).toBe(403);
+
+      await expect(
+        toastWith(page, 'Você não pode conceder permissões que não possui.')
+      ).toBeVisible();
+      // A troca continua pendente.
+      await expect(
+        page.getByRole('button', { name: 'Salvar alterações' })
+      ).toBeVisible();
+      // Sem `backoffice.users.delete` nem a trilha: sem "Excluir" e sem "Atividade".
+      await expect(page.getByRole('tab', { name: 'Atividade' })).toHaveCount(0);
+    });
   });
 });

@@ -7,7 +7,7 @@ import {
   uniqueSuffix,
   writeSystemConfigValue,
 } from './helpers/serverApi';
-import { openAdminSession } from './helpers/session';
+import { ADMIN_STORAGE_STATE } from './helpers/storageState';
 
 const NAME_KEY = 'app.name';
 const IDLE_KEY = 'security.idleTimeoutMinutes';
@@ -28,6 +28,8 @@ const RETENTION_ORDER_MESSAGE =
 // lê pela API o que o teste de gravação vai mudar, e o fim devolve os valores:
 // o spec roda quantas vezes for preciso contra o mesmo banco.
 test.describe('Configurações', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE });
+
   let admin: APIRequestContext | undefined;
   let nameToRestore: string | undefined;
   let idleToRestore: string | undefined;
@@ -77,7 +79,6 @@ test.describe('Configurações', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await openAdminSession(page);
     await page.goto('/settings');
   });
 

@@ -6,10 +6,14 @@ import {
   SERVER_API_URL,
 } from './helpers/serverApi';
 import { login } from './helpers/session';
+import { ADMIN_STORAGE_STATE } from './helpers/storageState';
 
 // Sessão contra o server real, pela tela de login: cookie HTTP-only `token`
 // gravado pelo server, validado em `GET /client/users/me`; o menu segue as
-// permissões da sessão, e sair devolve as rotas protegidas ao login.
+// permissões da sessão, e sair devolve as rotas protegidas ao login. Só o
+// teste do login entra pela tela; o de sair parte da sessão do admin aberta
+// pelo `globalSetup` (sair só apaga o cookie deste navegador: o JWT não é
+// revogado, e a sessão guardada continua valendo para os outros specs).
 const serverOrigin = new URL(SERVER_API_URL).origin;
 
 function sidebarOf(page: Page) {
@@ -78,20 +82,25 @@ test.describe('Sessão contra o server real', () => {
     await expectAdministrationMenu(page);
   });
 
-  test('sair volta ao login, e a rota protegida depois redireciona para o login', async ({
-    page,
-  }) => {
-    await login(page, SEED_ADMIN);
+  test.describe('com a sessão aberta', () => {
+    test.use({ storageState: ADMIN_STORAGE_STATE });
 
-    await page.getByRole('button', { name: /admin@admin\.com/ }).click();
-    await page.getByRole('menuitem', { name: 'Sair' }).click();
-    await expect(page).toHaveURL(/\/login$/);
-    expect(await findSessionCookie(page)).toBeUndefined();
+    test('sair volta ao login, e a rota protegida depois redireciona para o login', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      expect(await findSessionCookie(page)).toMatchObject({ httpOnly: true });
 
-    const validation = page.waitForResponse(isValidateResponse);
-    await page.goto('/settings');
+      await page.getByRole('button', { name: /admin@admin\.com/ }).click();
+      await page.getByRole('menuitem', { name: 'Sair' }).click();
+      await expect(page).toHaveURL(/\/login$/);
+      expect(await findSessionCookie(page)).toBeUndefined();
 
-    expect((await validation).status()).toBe(401);
-    await expect(page).toHaveURL(/\/login$/);
+      const validation = page.waitForResponse(isValidateResponse);
+      await page.goto('/settings');
+
+      expect((await validation).status()).toBe(401);
+      await expect(page).toHaveURL(/\/login$/);
+    });
   });
 });

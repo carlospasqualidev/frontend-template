@@ -1,19 +1,30 @@
-import { expect, type Page } from '@playwright/test';
+import {
+  expect,
+  request,
+  type APIRequestContext,
+  type Page,
+} from '@playwright/test';
 
-import { readAdminStorageState } from './serverApi';
+import { serverApiUrl } from './serverApi';
 
 /*
  * Autenticação dos E2E, contra o `../server-template` no ar: o login é de
  * verdade e precisa de credenciais existentes, as do seed
  * (`e2e/helpers/serverApi.ts`) ou as de um usuário criado no preparo do teste.
  *
- * - `openAdminSession(page)`: entra como o admin do seed sem passar pela tela,
- *   com a sessão que o `globalSetup` abriu. É o padrão dos specs que só
- *   precisam de alguém com todas as permissões, e não gasta o limite de login
- *   do server (10 por minuto por IP).
- * - `login(page, credenciais)`: o login pela tela, para o spec que prova o
- *   próprio login ou precisa de outro usuário. Cada chamada soma em
- *   `SPEC_LOGIN_COUNT` (`e2e/globalSetup.ts`).
+ * - Sem login, o padrão: `test.use({ storageState: ADMIN_STORAGE_STATE })` (o
+ *   admin do seed) ou `MANAGER_STORAGE_STATE` (o gestor, que recebe do spec o
+ *   cargo de que ele precisa), de `e2e/helpers/storageState.ts`: as sessões
+ *   que o `globalSetup` abriu uma vez. Não gastam o limite de login do server
+ *   (10 por minuto por IP).
+ * - `login(page, credenciais)`: o login pela tela, só para o spec que prova o
+ *   próprio login (a tela, a pessoa sem cargo). Cada chamada soma em
+ *   `SPEC_LOGIN_COUNT` (`e2e/globalSetup.ts`), como cada `submitLogin`
+ *   recusado de propósito.
+ * - `signInThroughApi(credenciais)` + `openSession(page, sessão)`: a sessão de
+ *   uma pessoa preparada que não pode ser o gestor (a que troca a própria
+ *   senha), aberta uma vez pela API e reaproveitada pelos testes do spec (um
+ *   login só, também contado em `SPEC_LOGIN_COUNT`).
  */
 export interface LoginCredentials {
   email: string;
@@ -41,10 +52,35 @@ export async function login(
   await expect(page).not.toHaveURL(/\/login$/);
 }
 
+export type SessionState = Awaited<
+  ReturnType<APIRequestContext['storageState']>
+>;
+
 /**
- * Põe no navegador o cookie HTTP-only da sessão do admin aberta pelo
- * `globalSetup`: a próxima navegação já entra autenticada.
+ * Abre pela API a sessão de um usuário preparado pelo spec (o cookie
+ * HTTP-only que o server grava no login), para vários testes entrarem com ela
+ * sem passar pela tela. Gasta UM login do limite do server: soma em
+ * `SPEC_LOGIN_COUNT` (`e2e/globalSetup.ts`).
  */
-export async function openAdminSession(page: Page): Promise<void> {
-  await page.context().addCookies(readAdminStorageState().cookies);
+export async function signInThroughApi(
+  credentials: LoginCredentials
+): Promise<SessionState> {
+  const context = await request.newContext();
+  try {
+    const response = await context.post(serverApiUrl('/client/session/login'), {
+      data: credentials,
+    });
+    await expect(response).toBeOK();
+    return await context.storageState();
+  } finally {
+    await context.dispose();
+  }
+}
+
+/** Põe no navegador a sessão aberta por `signInThroughApi`. */
+export async function openSession(
+  page: Page,
+  session: SessionState
+): Promise<void> {
+  await page.context().addCookies(session.cookies);
 }

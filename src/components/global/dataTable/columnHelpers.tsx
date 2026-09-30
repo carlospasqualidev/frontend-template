@@ -155,11 +155,23 @@ interface SortableHeaderProps<TData extends RowData, TValue> {
  *   header: ({ column }) => <SortableHeader column={column}>E-mail</SortableHeader>,
  * }
  * ```
+ *
+ * O primeiro clique ordena em ascendente; a coluna com `sortDescFirst: true`
+ * começa em descendente (ex.: um booleano de status que o servidor ordena
+ * `false` antes de `true`, quando a tela quer os ativos primeiro). Os cliques
+ * seguintes alternam a direção.
  */
 export function SortableHeader<TData extends RowData, TValue>({
   column,
   children,
 }: SortableHeaderProps<TData, TValue>) {
+  const toggle = () => {
+    const sorted = column.getIsSorted();
+    column.toggleSorting(
+      sorted ? sorted === 'asc' : column.columnDef.sortDescFirst === true
+    );
+  };
+
   return (
     <Button
       variant="ghost"
@@ -167,7 +179,7 @@ export function SortableHeader<TData extends RowData, TValue>({
       // com o conteúdo da célula (TableHead/TableCell usam px-3). Sem isso, o
       // cabeçalho ordenável fica ~10px à direita do dado da coluna.
       className="-ml-2.5"
-      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      onClick={toggle}
     >
       {children}
       <ArrowUpDownIcon />

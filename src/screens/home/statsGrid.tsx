@@ -1,3 +1,5 @@
+import { createElement, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -6,55 +8,126 @@ import {
   UserPlus,
   Users,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
 
+import { DemoNotice } from '@/components/global/demoNotice/demoNotice';
+import { SkeletonValue } from '@/components/global/skeleton/skeleton';
 import { Typography } from '@/components/ui/typography';
+import { useSessionStore } from '@/hooks/useSessionStore';
+import { hasPermission } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
-import { HOME_STATS, type HomeStat } from '@/screens/home/utils/homeMockData';
+import {
+  DEMO_STATS,
+  type DemoStat,
+  type DemoStatId,
+} from '@/screens/home/utils/homeDemo';
+import {
+  newUsersThisMonthParams,
+  TOTAL_USERS_PARAMS,
+} from '@/services/home/homeApi';
+import { userKeys } from '@/services/users/queryKeys';
+import { fetchUsers, type UserListParams } from '@/services/users/userListApi';
 
-const STAT_ICON: Record<HomeStat['id'], React.ComponentType> = {
-  totalUsers: Users,
-  newUsers: UserPlus,
-  activeSessions: Zap,
-  pendingInvites: Mail,
-};
+// Ícones (Map: sem indexar objeto por variável).
+const DEMO_STAT_ICON = new Map<DemoStatId, LucideIcon>([
+  ['activeSessions', Zap],
+  ['pendingInvites', Mail],
+]);
 
-const TREND_ICON: Record<HomeStat['trend'], React.ComponentType> = {
-  up: ArrowUpRight,
-  down: ArrowDownRight,
-  neutral: Minus,
-};
+const TREND_ICON = new Map<DemoStat['trend'], LucideIcon>([
+  ['up', ArrowUpRight],
+  ['down', ArrowDownRight],
+  ['neutral', Minus],
+]);
 
-function deltaColor(stat: HomeStat): string {
+function deltaColor(stat: DemoStat): string {
   if (stat.trend === 'neutral') return 'text-muted-foreground';
   const isPositive = stat.trend === 'up';
   const isGood = stat.invertSentiment ? !isPositive : isPositive;
-  return isGood
-    ? 'text-emerald-600 dark:text-emerald-500'
-    : 'text-rose-600 dark:text-rose-500';
+  return isGood ? 'text-success' : 'text-destructive';
 }
 
 interface StatCardProps {
-  stat: HomeStat;
+  label: string;
+  icon: LucideIcon;
+  /** `undefined` enquanto carrega: o skeleton ocupa o lugar do número. */
+  value: string | undefined;
+  children: ReactNode;
 }
 
-function StatCard({ stat }: StatCardProps) {
-  const Icon = STAT_ICON[stat.id];
-  const TrendIcon = TREND_ICON[stat.trend];
-
+function StatCard({ label, icon, value, children }: StatCardProps) {
   return (
     <article className="space-y-3 rounded-2xl border border-border/70 bg-card p-5 shadow-sm sm:rounded-3xl dark:shadow-none">
       <div className="flex items-center justify-between gap-3">
         <Typography variant="small" className="text-muted-foreground">
-          {stat.label}
+          {label}
         </Typography>
         <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground [&>svg]:size-4">
-          <Icon />
+          {createElement(icon, { 'aria-hidden': true })}
         </span>
       </div>
-      <Typography as="strong" variant="h2" className="block">
-        {stat.value}
+      {value === undefined ? (
+        <SkeletonValue className="w-20" />
+      ) : (
+        <Typography as="strong" variant="h2" className="block">
+          {value}
+        </Typography>
+      )}
+      {children}
+    </article>
+  );
+}
+
+/**
+ * Número real: o `count` da listagem de usuários com os parâmetros dados, na
+ * chave da própria listagem (o cache guarda a resposta inteira; a tela lê só o
+ * total).
+ */
+function UserCountCard({
+  label,
+  icon,
+  params,
+  hint,
+}: {
+  label: string;
+  icon: LucideIcon;
+  params: UserListParams;
+  hint: string;
+}) {
+  const {
+    data: count,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: userKeys.list(params),
+    queryFn: () => fetchUsers(params),
+    select: (response) => response.count,
+    staleTime: 30_000,
+  });
+
+  const value = isPending
+    ? undefined
+    : isError || count === undefined
+      ? '—'
+      : count.toLocaleString('pt-BR');
+
+  return (
+    <StatCard label={label} icon={icon} value={value}>
+      <Typography variant="muted" className="text-xs">
+        {isError ? 'Não foi possível carregar.' : hint}
       </Typography>
+    </StatCard>
+  );
+}
+
+function DemoStatCard({ stat }: { stat: DemoStat }) {
+  return (
+    <StatCard
+      label={stat.label}
+      icon={DEMO_STAT_ICON.get(stat.id) ?? Zap}
+      value={stat.value}
+    >
       <div className="flex items-center gap-2 text-xs">
         <span
           className={cn(
@@ -62,22 +135,54 @@ function StatCard({ stat }: StatCardProps) {
             deltaColor(stat)
           )}
         >
-          <TrendIcon />
+          {createElement(TREND_ICON.get(stat.trend) ?? Minus, {
+            'aria-hidden': true,
+          })}
           {stat.delta}
         </span>
         <Typography as="span" variant="muted" className="text-xs">
           {stat.hint}
         </Typography>
       </div>
-    </article>
+      <DemoNotice />
+    </StatCard>
   );
 }
 
+/**
+ * Indicadores da home. Usuários totais e novos no mês são reais (o `count` de
+ * `GET /client/users`) e só aparecem com `backoffice.users.read`; sessões
+ * ativas e convites pendentes não têm rota no servidor e ficam como
+ * demonstração, com o aviso.
+ */
 export function StatsGrid() {
+  const canReadUsers = useSessionStore((state) =>
+    hasPermission(state.user, 'backoffice.users.read')
+  );
+
   return (
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {HOME_STATS.map((stat) => (
-        <StatCard key={stat.id} stat={stat} />
+    <section
+      aria-label="Indicadores"
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+    >
+      {canReadUsers && (
+        <>
+          <UserCountCard
+            label="Usuários totais"
+            icon={Users}
+            params={TOTAL_USERS_PARAMS}
+            hint="na empresa"
+          />
+          <UserCountCard
+            label="Novos este mês"
+            icon={UserPlus}
+            params={newUsersThisMonthParams(new Date())}
+            hint="cadastrados desde o dia 1º"
+          />
+        </>
+      )}
+      {DEMO_STATS.map((stat) => (
+        <DemoStatCard key={stat.id} stat={stat} />
       ))}
     </section>
   );

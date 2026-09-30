@@ -742,6 +742,30 @@ describe('UserDetailsPage — aba "Cargos"', () => {
   });
 });
 
+describe('UserDetailsPage — aba "Sessões"', () => {
+  // O servidor não registra sessões: a aba é exemplo de tela, rotulada, e
+  // "Encerrar" diz que nada mudou em vez de simular a confirmação.
+  it('mostra o aviso de demonstração e não simula o encerramento', async () => {
+    const user = userEvent.setup();
+    renderDetail('?tab=sessions');
+
+    expect(
+      await screen.findByRole('note', { name: 'Dados de demonstração' })
+    ).toBeVisible();
+    const [endSession] = screen
+      .getAllByRole('button', { name: 'Encerrar' })
+      .filter((button) => !button.hasAttribute('disabled'));
+    if (!endSession) throw new Error('Nenhuma sessão para encerrar.');
+    await user.click(endSession);
+
+    expect(toast).toHaveBeenCalledWith(
+      'Dados de demonstração: nada foi alterado.',
+      { id: 'demoActionToastId' }
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
 describe('UserDetailsPage — permissões', () => {
   it('sem editar: campos em leitura, cargos travados e sem bloquear', async () => {
     signIn(['backoffice.users.read', 'backoffice.roles.read']);

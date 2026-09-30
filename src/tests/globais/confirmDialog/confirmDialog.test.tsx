@@ -150,8 +150,10 @@ function DoubleConfirmationHarness() {
 describe('ConfirmDialog (global) — modo controlled', () => {
   function ControlledHarness({
     onConfirm,
+    onCloseAutoFocus,
   }: {
     onConfirm: () => void | Promise<void>;
+    onCloseAutoFocus?: (event: Event) => void;
   }) {
     const [open, setOpen] = useState(false);
 
@@ -160,6 +162,7 @@ describe('ConfirmDialog (global) — modo controlled', () => {
         <button type="button" onClick={() => setOpen(true)}>
           Abrir via externo
         </button>
+        <button type="button">Destino do foco</button>
         <ConfirmDialog
           open={open}
           setOpen={setOpen}
@@ -168,10 +171,49 @@ describe('ConfirmDialog (global) — modo controlled', () => {
           confirmLabel="Excluir"
           destructive
           onConfirm={onConfirm}
+          onCloseAutoFocus={onCloseAutoFocus}
         />
       </>
     );
   }
+
+  // Sem `trigger`, o Radix não tem para onde devolver o foco: cai no `body`.
+  it('sem `trigger`, o foco cai no body ao fechar', async () => {
+    render(<ControlledHarness onConfirm={vi.fn()} />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Abrir via externo' })
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Excluir registro?')).not.toBeInTheDocument()
+    );
+    await waitFor(() => expect(document.body).toHaveFocus());
+  });
+
+  it('`onCloseAutoFocus` devolve o foco ao elemento escolhido', async () => {
+    const onCloseAutoFocus = vi.fn((event: Event) => {
+      event.preventDefault();
+      screen.getByRole('button', { name: 'Destino do foco' }).focus();
+    });
+    render(
+      <ControlledHarness
+        onConfirm={vi.fn()}
+        onCloseAutoFocus={onCloseAutoFocus}
+      />
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Abrir via externo' })
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(onCloseAutoFocus).toHaveBeenCalledTimes(1));
+    expect(
+      screen.getByRole('button', { name: 'Destino do foco' })
+    ).toHaveFocus();
+  });
 
   it('abre via setOpen externo e dispara onConfirm', async () => {
     const handleConfirm = vi.fn();

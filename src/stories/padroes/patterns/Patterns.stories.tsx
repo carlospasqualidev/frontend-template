@@ -276,8 +276,9 @@ function TimelineDemo() {
 
 // ============================================================================
 // Itens de lista com ações alinhadas — padrão usado em
-// screens/account/securityTab.tsx (sessões), billingTab.tsx (faturas)
-// e users/userDetails/sessionsTab.tsx
+// screens/account/security/securityTab.tsx (sessões),
+// screens/account/billing/billingTab.tsx (faturas) e
+// screens/users/details/sessionsTab.tsx
 // ============================================================================
 
 interface DeviceSession {
@@ -373,7 +374,7 @@ function ItemListWithActionsDemo() {
 
 // ============================================================================
 // Lista de toggles — padrão usado em
-// screens/account/notificationsTab.tsx
+// screens/account/notifications/notificationsTab.tsx
 // ============================================================================
 
 interface PermissionRow {

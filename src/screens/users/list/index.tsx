@@ -17,6 +17,7 @@ import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTable
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Link } from '@/components/global/link/link';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { isUuid } from '@/lib/ids';
 import { listParam } from '@/lib/listQueryParams';
 import { hasPermission } from '@/lib/permissions';
 import {
@@ -35,8 +36,9 @@ const STATUS_OPTIONS = [
   { value: 'false', label: 'Bloqueado' },
 ];
 
-// Tira do filtro "Cargos" da URL os ids que o servidor não tem mais, mantendo
-// os outros filtros e parâmetros; sem filtro nenhum, sai o `filters`.
+// Tira do filtro "Cargos" da URL os ids fora do formato e os que o servidor
+// não tem mais, mantendo os outros filtros e parâmetros; sem filtro nenhum,
+// sai o `filters`.
 function withoutRoleIds(
   search: Record<string, unknown>,
   missingIds: string[]
@@ -73,7 +75,11 @@ export function UsersPage() {
   const { query, tableProps } = useDataTableUrlQuery({ pageSize: PAGE_SIZE });
 
   const listParams = buildUserListParams(query);
+  // Um id fora do formato (link editado à mão ou de outro sistema) nunca vai
+  // ao servidor, que recusaria a listagem inteira com 400 e um toast.
   const urlRoleIds = listParams.roleId?.split(',') ?? [];
+  const validRoleIds = urlRoleIds.filter(isUuid);
+  const invalidRoleIds = urlRoleIds.filter((roleId) => !isUuid(roleId));
   // Busca no servidor; os cargos aplicados pela URL entram pela leitura de
   // cada um, para o filtro mostrar o nome deles.
   const {
@@ -81,21 +87,21 @@ export function UsersPage() {
     onSearchChange: onRoleSearchChange,
     loading: rolesLoading,
     missingIds: missingRoleIds,
-  } = useRoleOptions({ enabled: canReadRoles, selectedIds: urlRoleIds });
+  } = useRoleOptions({ enabled: canReadRoles, selectedIds: validRoleIds });
 
-  // O cargo que o servidor não tem mais (excluído, num link antigo) sai da URL,
-  // sem toast: o filtro mostra só os que existem.
-  const missingRoleKey = missingRoleIds.join(',');
+  // O id fora do formato e o cargo que o servidor não tem mais (excluído, num
+  // link antigo) saem da URL, sem toast: o filtro mostra só os que existem.
+  const droppedRoleKey = [...invalidRoleIds, ...missingRoleIds].join(',');
   useEffect(() => {
-    if (!missingRoleKey) return;
-    const missingIds = missingRoleKey.split(',');
+    if (!droppedRoleKey) return;
+    const droppedIds = droppedRoleKey.split(',');
     void navigate({
       to: '.',
       replace: true,
       search: (previous: Record<string, unknown>) =>
-        withoutRoleIds(previous, missingIds),
+        withoutRoleIds(previous, droppedIds),
     });
-  }, [missingRoleKey, navigate]);
+  }, [droppedRoleKey, navigate]);
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -132,7 +138,7 @@ export function UsersPage() {
   // lista: a pessoa não teria como ver nem limpar esse filtro. O cargo que o
   // servidor não tem mais também não: a lista viria vazia sem explicação.
   const roleIds = canReadRoles
-    ? urlRoleIds.filter((roleId) => !missingRoleIds.includes(roleId))
+    ? validRoleIds.filter((roleId) => !missingRoleIds.includes(roleId))
     : [];
   const params = { ...listParams, roleId: roleIds.join(',') || undefined };
 

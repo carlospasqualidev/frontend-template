@@ -87,12 +87,16 @@ cadastro, logout e validação, com as permissões efetivas e o tempo de
 inatividade), as configurações do sistema, a trilha de auditoria, o upload e a
 gestão de usuários (lista com filtros no servidor, criação, edição, bloqueio,
 exclusão e os cargos de cada usuário, no modelo do servidor: vários cargos por
-usuário, status ativo ou bloqueado). Os E2E dessas telas rodam contra o server
-real (ver [E2E](#e2e)).
+usuário, status ativo ou bloqueado), Minha conta (o próprio perfil, a foto e a
+troca de senha) e a home (total de usuários, novos no mês, atividade recente e
+atalhos para as telas). Os E2E dessas telas rodam contra o server real (ver
+[E2E](#e2e)).
 
-Continuam com dados de demonstração Minha conta, a home e a aba "Sessões" do
-detalhe do usuário: parte delas não tem rota no backend (sessões ativas,
-notificações por usuário, cobrança, métricas do painel).
+O que o backend não atende continua como exemplo de tela, com o aviso
+"Dados de demonstração" visível em cada parte: autenticação em 2 fatores,
+sessões ativas (da conta e do usuário), preferências de notificação, plano e
+cobrança, convites, pendências e as métricas da home sem rota. Os dados dessas
+partes ficam em arquivos `*Demo.ts`, e nada nelas é gravado.
 
 A suíte de unidade (`npm test`) e o Storybook não precisam do backend.
 
@@ -137,6 +141,7 @@ Wrappers sobre primitivos do shadcn que padronizam API, defaults visuais (inclui
 | `Button`           | [`global/button/button.tsx`](src/components/global/button/button.tsx)                                 | Estende o Button do shadcn com prop `loading` (spinner + disable automático).                                                                                           |
 | `ConfirmDialog`    | [`global/confirmDialog/confirmDialog.tsx`](src/components/global/confirmDialog/confirmDialog.tsx)     | Confirmação para ações destrutivas/reversíveis. Uncontrolled (`trigger`) ou controlled (`open`/`setOpen`). Loading interno + auto-close.                                |
 | `PageHeader`       | [`global/pageHeader/pageHeader.tsx`](src/components/global/pageHeader/pageHeader.tsx)                 | Cabeçalho padrão de tela: título, descrição e área opcional de ações. Usado em `home/`.                                                                                 |
+| `DemoNotice`       | [`global/demoNotice/demoNotice.tsx`](src/components/global/demoNotice/demoNotice.tsx)                 | Aviso "Dados de demonstração" em toda parte que o backend não atende: `badge` no cabeçalho do card, `banner` no topo de uma aba inteira.                                |
 | `ErrorFallback`    | [`global/errorFallback/index.tsx`](src/components/global/errorFallback/index.tsx)                     | Fallback do `react-error-boundary` no topo do app. CTA para tentar restabelecer a sessão.                                                                               |
 | `Layout` + sidebar | [`global/layout/`](src/components/global/layout) + [`global/sidebar/`](src/components/global/sidebar) | Shell autenticado: `SidebarProvider` + `AppSidebar` + header com `SidebarTrigger`, breadcrumb e `Outlet`.                                                               |
 | Form fields        | [`global/form/`](src/components/global/form)                                                          | `InputField`, `Select`, `MultiSelect`, `Checkbox`, `Switch`, `TextArea`, `DateField`, `DateTimeField`, `FieldGroup`. Uncontrolled ou controlled via `control` + `name`. |
@@ -272,9 +277,13 @@ inatividade vindo da configuração da empresa, configurações (gravação em l
 campo marcado quando o server recusa o valor, recusa da regra entre os prazos) e
 a trilha de auditoria (lista, busca, filtros por módulo e por usuário,
 paginação, detalhe, a linha do tempo de um usuário) e os usuários (lista e
-filtros, criar, editar, bloquear, excluir, trocar cargo, a recusa do servidor
-no toast e o anti-escalonamento). As telas que ainda usam dados de
-demonstração (Minha conta, home) rodam com a sessão real do admin. O empilhamento
+filtros, ordenação por status, criar, editar, bloquear, excluir, trocar cargo,
+a recusa do servidor no toast e o anti-escalonamento), Minha conta (editar o
+próprio perfil, o tempo acima do limite da empresa recusado no campo, a
+confirmação ao trocar de aba com o perfil alterado, trocar a senha e voltar à
+original) e a home (números e atividade reais, blocos que
+somem sem a permissão); em todas, o aviso de demonstração nas partes que o
+servidor não atende. O empilhamento
 (`npm run test:layers`) roda contra o Storybook, sem backend.
 
 Suba o server antes, na pasta dele:
@@ -304,16 +313,21 @@ npm run test:e2e
   o mesmo título) ou o `vite preview` deste frontend (que usa a mesma 4173)
   para a suíte antes dos specs, com a mensagem.
 - Antes dos specs, o `globalSetup` confere a porta, `GET /health/ready` e o
-  login do admin do seed; se faltar algo, para com a instrução.
+  login do admin do seed; se faltar algo, para com a instrução. Depois, entra
+  uma vez com o admin e com um gestor que ele mesmo cria (e exclui no fim da
+  suíte; o de uma execução interrompida sai no começo da seguinte) e grava as duas sessões em `playwright/.auth/` (fora do git): os specs
+  entram com elas pelo `storageState` do Playwright, sem login.
 - Os specs criam o que precisam pela API (usuários e cargo com nome de sufixo
   único, configurações da empresa) e desfazem no fim: rodam quantas vezes for
   preciso contra o mesmo banco de desenvolvimento.
-- O server aceita 10 logins por minuto por IP, e a suíte usa 9: o do admin no
-  `globalSetup` e 8 pela tela (os dois chegam ao server por `127.0.0.1` e
-  dividem o contador); os demais specs entram com a sessão do admin, sem login.
-  O `globalSetup` lê o limite na resposta do login do admin; se sobrarem menos
-  de 8, ou se o login vier recusado (429), ele espera a janela reiniciar (até 1
-  minuto, com o tempo no log) e segue. Se o 429 continuar depois da espera, ele
-  para com a mensagem de que outro cliente no mesmo IP está gastando o limite (a
-  tela de login aberta, outra suíte): pare esse cliente e rode de novo. Rodar de
-  novo logo em seguida funciona, só demora mais.
+- O server aceita 10 logins por minuto por IP, e a suíte usa 7: os 2 do
+  `globalSetup` (o admin e o gestor) e 5 dos specs que provam o próprio login
+  (a tela, a senha errada, a conta bloqueada, a pessoa sem cargo e a pessoa
+  que troca a própria senha). O Node do `globalSetup` e o navegador chegam ao
+  server por `127.0.0.1` e dividem o contador. O `globalSetup` lê o limite na
+  resposta do login do admin; se sobrarem menos de 6, ou se o login vier
+  recusado (429), ele espera a janela reiniciar (até 1 minuto, com o tempo no
+  log) e segue. Se o 429 continuar depois da espera, ele para com a mensagem de
+  que outro cliente no mesmo IP está gastando o limite (a tela de login aberta,
+  outra suíte): pare esse cliente e rode de novo. Rodar de novo logo em seguida
+  cabe no limite, sem espera.

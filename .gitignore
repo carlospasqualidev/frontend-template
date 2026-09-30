@@ -18,6 +18,8 @@ storybook-static
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Sessões abertas pelo globalSetup dos E2E (cookie de sessão; regravadas a cada execução)
+/playwright/.auth/
 .env
 # Editor directories and files
 .vscode/*

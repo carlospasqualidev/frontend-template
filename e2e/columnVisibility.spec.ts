@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-import { openAdminSession } from './helpers/session';
+import { ADMIN_STORAGE_STATE } from './helpers/storageState';
 
 // Menu "Colunas" da DataTable, exercitado na listagem de Usuários: o usuário
 // oculta uma coluna, a escolha sobrevive ao recarregar (fica neste navegador)
 // e "Mostrar todas" volta ao padrão.
 test.describe('Tabela — mostrar e ocultar colunas', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE });
+
   test.beforeEach(async ({ page }) => {
-    await openAdminSession(page);
     await page.goto('/users');
   });
 

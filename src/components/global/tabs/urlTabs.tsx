@@ -1,12 +1,7 @@
 import * as React from 'react';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 export interface UrlTabItem {
@@ -21,6 +16,14 @@ interface IUrlTabs {
   defaultValue: string;
   /** Chave do search param na URL. Default: `'tab'`. */
   searchKey?: string;
+  /**
+   * Chamado antes de trocar de aba (clique ou teclado), com a aba pedida e a
+   * troca em si. Sem ele, a aba troca na hora; com ele, só quando `change` é
+   * chamado — é por aqui que a tela pede confirmação antes de descartar uma
+   * edição não salva. Abrir a aba em nova guia do navegador não passa por
+   * aqui: a aba atual fica como está.
+   */
+  onBeforeChange?: (next: string, change: () => void) => void;
   listClassName?: string;
   contentClassName?: string;
 }
@@ -34,12 +37,16 @@ interface IUrlTabs {
  * - **Responsivo**: a lista de abas rola horizontalmente quando não cabe na
  *   largura (em vez de quebrar ou esconder abas em mobile).
  * - **Nova aba do navegador**: clique do meio (scroll) ou Ctrl/Cmd/Shift+clique
- *   numa aba abrem a URL correspondente (`?tab=...`) em nova guia, como um link.
+ *   numa aba abrem a URL correspondente (`?tab=...`) em nova guia, como um link,
+ *   sem trocar a aba atual.
+ * - **Confirmar a troca**: `onBeforeChange` recebe a troca e decide quando
+ *   (e se) ela acontece.
  */
 export function UrlTabs({
   items,
   defaultValue,
   searchKey = 'tab',
+  onBeforeChange,
   listClassName,
   contentClassName,
 }: IUrlTabs) {
@@ -67,6 +74,11 @@ export function UrlTabs({
     void navigate({ to: '.', search: tabSearch(next), replace: true });
   };
 
+  const requestTab = (next: string) => {
+    if (onBeforeChange) onBeforeChange(next, () => setTab(next));
+    else setTab(next);
+  };
+
   const hrefForTab = (next: string) =>
     router.buildLocation({ to: '.', search: tabSearch(next) }).href;
 
@@ -75,7 +87,7 @@ export function UrlTabs({
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={setTab}>
+    <Tabs value={activeTab} onValueChange={requestTab}>
       {/* Container rolável: mantém as abas acessíveis por scroll lateral em
           telas estreitas. O `pb-2`/`-mb-2` reserva espaço para o sublinhado da
           aba ativa não ser cortado pelo overflow, sem alterar o ritmo vertical. */}
@@ -100,8 +112,12 @@ export function UrlTabs({
                 }
               }}
               onMouseDown={(event) => {
-                // Evita o cursor de autoscroll do clique do meio.
-                if (event.button === 1) event.preventDefault();
+                const opensNewTab =
+                  event.button === 0 && (event.metaKey || event.shiftKey);
+                // Botão do meio: evita o cursor de autoscroll. Cmd/Shift+clique:
+                // o Radix troca a aba já no mousedown (só poupa o Ctrl+clique),
+                // e esses cliques só abrem a nova guia, no `onClick`.
+                if (event.button === 1 || opensNewTab) event.preventDefault();
               }}
             >
               {item.icon}

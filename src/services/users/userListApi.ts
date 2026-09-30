@@ -19,8 +19,10 @@ const userListResponseSchema = z.object({
 
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
 
-// Campos ordenáveis (allowlist do servidor).
-export type UserListOrderBy = 'name' | 'email' | 'createdAt' | 'lastLoginAt';
+// Campos ordenáveis (allowlist do servidor). `isActive` segue a ordem do
+// booleano: em `asc`, os bloqueados (`false`) antes dos ativos.
+export type UserListOrderBy =
+  'name' | 'email' | 'createdAt' | 'lastLoginAt' | 'isActive';
 
 export interface UserListParams {
   /** 0-based, como a `DataTable` e o backend. */
@@ -46,6 +48,7 @@ function toOrderBy(columnId: string): UserListOrderBy | undefined {
     case 'email':
     case 'createdAt':
     case 'lastLoginAt':
+    case 'isActive':
       return columnId;
     default:
       return undefined;

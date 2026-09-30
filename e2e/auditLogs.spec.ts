@@ -11,12 +11,17 @@ import {
   deleteUser,
   grantRoleWithPermissions,
   newAdminApiContext,
+  readManager,
   serverApiUrl,
+  setUserRoles,
   uniqueSuffix,
   updateUser,
   type PreparedUser,
 } from './helpers/serverApi';
-import { login, openAdminSession } from './helpers/session';
+import {
+  ADMIN_STORAGE_STATE,
+  MANAGER_STORAGE_STATE,
+} from './helpers/storageState';
 
 // Edições de telefone no preparo: com a criação e o bloqueio, a pessoa
 // auditada fica com 12 eventos, mais que uma página (10).
@@ -37,6 +42,8 @@ async function searchContent(page: Page, text: string): Promise<void> {
 // bloqueio) e, por último, uma vizinha (só a criação, o evento mais recente).
 // Buscar pelo nome da auditada isola os eventos dela dos que o banco já tem.
 test.describe('Auditoria', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE });
+
   const suffix = uniqueSuffix();
   const auditedName = `Pessoa Auditada ${suffix}`;
   const neighborName = `Pessoa Vizinha ${suffix}`;
@@ -73,7 +80,6 @@ test.describe('Auditoria', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await openAdminSession(page);
     await page.goto('/audit-logs');
   });
 
@@ -137,6 +143,12 @@ test.describe('Auditoria', () => {
     page,
   }) => {
     await searchContent(page, auditedName);
+    // A lista filtrada já na tela: a página cheia (10) só com a auditada, o
+    // que a lista de antes da busca não tem (a criação da vizinha, mais nova
+    // que tudo da auditada, ocupa uma das 10). Sem isso, o clique pode achar o
+    // bloqueio na lista de antes e cair na linha que a resposta põe no lugar.
+    await expect(rowWith(page, auditedName)).toHaveCount(10);
+    await expect(page.locator('tbody tr')).toHaveCount(10);
     await rowWith(page, blocked).click();
 
     const dialog = page.getByRole('dialog', { name: 'Detalhe da auditoria' });
@@ -173,11 +185,11 @@ test.describe('Auditoria', () => {
 });
 
 // Filtro "Usuário": as opções vêm da listagem de usuários, que exige
-// `backoffice.users.read`. O preparo cria uma pessoa auditora com um cargo só
-// com `backoffice.audit.read`: ela vê a trilha sem o filtro; o admin vê o
-// filtro e, pelo nome dela, chega ao login que ela acabou de fazer.
+// `backoffice.users.read`. O preparo dá ao gestor (a sessão do `globalSetup`)
+// um cargo só com `backoffice.audit.read`: ele vê a trilha sem o filtro; o
+// admin vê o filtro e, pelo nome do gestor, chega ao login que o setup fez.
 test.describe('Auditoria — filtro por usuário', () => {
-  const auditorName = `Pessoa Auditora ${uniqueSuffix()}`;
+  test.use({ storageState: MANAGER_STORAGE_STATE });
 
   let admin: APIRequestContext | undefined;
   let auditor: PreparedUser | undefined;
@@ -185,7 +197,7 @@ test.describe('Auditoria — filtro por usuário', () => {
 
   test.beforeAll(async () => {
     admin = await newAdminApiContext();
-    auditor = await createUserWithoutRole(admin, auditorName);
+    auditor = readManager();
     roleId = await grantRoleWithPermissions(
       admin,
       auditor.id,
@@ -196,7 +208,7 @@ test.describe('Auditoria — filtro por usuário', () => {
 
   test.afterAll(async () => {
     try {
-      if (admin && auditor) await deleteUser(admin, auditor.id);
+      if (admin && auditor) await setUserRoles(admin, auditor.id, []);
       if (admin && roleId) await deleteRole(admin, roleId);
     } finally {
       await admin?.dispose();
@@ -207,7 +219,8 @@ test.describe('Auditoria — filtro por usuário', () => {
     page,
     browser,
   }) => {
-    if (!auditor) throw new Error('Usuária do preparo ausente.');
+    if (!auditor) throw new Error('Gestor do preparo ausente.');
+    const auditorName = auditor.name;
 
     // Sem `backoffice.users.read`: a trilha abre, sem o filtro nem a chamada
     // à listagem de usuários.
@@ -217,16 +230,17 @@ test.describe('Auditoria — filtro por usuário', () => {
         usersCalls.push(request.url());
       }
     });
-    await login(page, auditor);
     await page.goto('/audit-logs');
     await expect(page.getByLabel('Módulo')).toBeVisible();
     await expect(page.getByLabel('Usuário', { exact: true })).toHaveCount(0);
     expect(usersCalls).toEqual([]);
 
     // Com a permissão (o admin): o filtro aparece e casa o autor do evento.
-    const adminPage = await (await browser.newContext()).newPage();
+    const adminContext = await browser.newContext({
+      storageState: ADMIN_STORAGE_STATE,
+    });
+    const adminPage = await adminContext.newPage();
     try {
-      await openAdminSession(adminPage);
       await adminPage.goto('/audit-logs');
 
       const ownLogin = rowWith(adminPage, auditorName).filter({
@@ -254,7 +268,7 @@ test.describe('Auditoria — filtro por usuário', () => {
       await expect(ownLogin).toBeVisible();
       await expect(notByAuditor).toHaveCount(0);
     } finally {
-      await adminPage.context().close();
+      await adminContext.close();
     }
   });
 });
@@ -265,6 +279,8 @@ test.describe('Auditoria — filtro por usuário', () => {
 // eventos: a primeira página traz os 10 mais recentes e a seguinte, os 2
 // restantes.
 test.describe('Atividade do usuário', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE });
+
   const personName = `Pessoa Com Atividade ${uniqueSuffix()}`;
 
   let admin: APIRequestContext | undefined;
@@ -293,7 +309,6 @@ test.describe('Atividade do usuário', () => {
     page,
   }) => {
     if (!person) throw new Error('Pessoa do preparo ausente.');
-    await openAdminSession(page);
 
     const timeline = page.waitForResponse((response) =>
       response

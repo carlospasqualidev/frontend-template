@@ -104,6 +104,18 @@ describe('buildUserListParams', () => {
     ).toMatchObject({ orderBy: 'email', order: 'asc' });
   });
 
+  // A coluna Status: o servidor ordena o booleano (`asc` = bloqueados antes).
+  it('ordena pelo status (`isActive`) no sentido do cabeçalho', () => {
+    expect(
+      buildUserListParams(makeQuery({ sort: [{ id: 'isActive', desc: true }] }))
+    ).toMatchObject({ orderBy: 'isActive', order: 'desc' });
+    expect(
+      buildUserListParams(
+        makeQuery({ sort: [{ id: 'isActive', desc: false }] })
+      )
+    ).toMatchObject({ orderBy: 'isActive', order: 'asc' });
+  });
+
   it('sem filtros nem ordenação, não manda nada além da página', () => {
     expect(buildUserListParams(makeQuery())).toEqual({
       page: 0,

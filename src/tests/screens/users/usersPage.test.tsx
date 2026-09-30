@@ -41,6 +41,13 @@ vi.mock('@/services/users/userFormApi', () => ({
   deleteUser: vi.fn(),
 }));
 
+// Ids no formato do servidor (uuid): id fora do formato nem vai ao servidor.
+const ROLE_FINANCEIRO = '01a0ee28-61ed-7028-957f-9a3ab51f18f1';
+const ROLE_SUPORTE = '01a0ee28-61ed-7028-957f-9a3ab51f18f2';
+const ROLE_AUDITORIA = '01a0ee28-61ed-7028-957f-9a3ab51f18f3';
+const ROLE_EXCLUIDO = '01a0ee28-61ed-7028-957f-9a3ab51f18f4';
+const ROLE_RESULTADO = '01a0ee28-61ed-7028-957f-9a3ab51f18f5';
+
 const ALL_PERMISSIONS = [
   'backoffice.users.read',
   'backoffice.users.create',
@@ -66,8 +73,8 @@ const CAMILA = makeCompanyUser({
   name: 'Camila Oliveira',
   email: 'camila@example.com',
   roles: [
-    { id: 'role-financeiro', name: 'Financeiro' },
-    { id: 'role-suporte', name: 'Suporte' },
+    { id: ROLE_FINANCEIRO, name: 'Financeiro' },
+    { id: ROLE_SUPORTE, name: 'Suporte' },
   ],
 });
 
@@ -161,13 +168,13 @@ beforeEach(() => {
     .mockImplementation(async (search) => [
       search === ''
         ? {
-            id: 'role-financeiro',
+            id: ROLE_FINANCEIRO,
             name: 'Financeiro',
             description: null,
             isSystem: false,
           }
         : {
-            id: 'role-900',
+            id: ROLE_RESULTADO,
             name: `Resultado de ${search}`,
             description: null,
             isSystem: false,
@@ -227,7 +234,7 @@ describe('UsersPage — listagem', () => {
   it('manda os filtros da URL ao servidor, a partir da primeira página', async () => {
     renderUsers({
       search: 'cam',
-      roleId: ['role-financeiro'],
+      roleId: [ROLE_FINANCEIRO],
       isActive: 'true',
     });
 
@@ -237,7 +244,7 @@ describe('UsersPage — listagem', () => {
         page: 0,
         pageSize: 25,
         search: 'cam',
-        roleId: 'role-financeiro',
+        roleId: ROLE_FINANCEIRO,
         isActive: 'true',
       })
     );
@@ -288,14 +295,14 @@ describe('UsersPage — filtro "Cargos"', () => {
   // O cargo da URL pode não estar entre os primeiros da busca: o nome vem da
   // leitura dele.
   it('mostra o nome do cargo aplicado pela URL', async () => {
-    renderUsers({ roleId: ['role-auditoria'] });
+    renderUsers({ roleId: [ROLE_AUDITORIA] });
 
     await waitFor(() =>
       expect(screen.getByLabelText('Cargos')).toHaveTextContent('Auditoria')
     );
-    expect(fetchRoleDetail).toHaveBeenCalledWith('role-auditoria');
+    expect(fetchRoleDetail).toHaveBeenCalledWith(ROLE_AUDITORIA);
     expect(fetchUsers).toHaveBeenLastCalledWith(
-      expect.objectContaining({ roleId: 'role-auditoria' })
+      expect.objectContaining({ roleId: ROLE_AUDITORIA })
     );
   });
 
@@ -303,7 +310,7 @@ describe('UsersPage — filtro "Cargos"', () => {
   // da busca e da URL, sem toast, e o filtro mostra só o cargo que existe.
   it('tira da busca e da URL o cargo que o servidor não tem mais', async () => {
     vi.mocked(fetchRoleDetail).mockImplementation(async (id) => {
-      if (id === 'role-excluido') throw notFound();
+      if (id === ROLE_EXCLUIDO) throw notFound();
       return {
         id,
         name: 'Auditoria',
@@ -314,17 +321,17 @@ describe('UsersPage — filtro "Cargos"', () => {
     });
     const { router } = renderUsers({
       search: 'cam',
-      roleId: ['role-excluido', 'role-auditoria'],
+      roleId: [ROLE_EXCLUIDO, ROLE_AUDITORIA],
     });
 
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
-        filters: { search: 'cam', roleId: ['role-auditoria'] },
+        filters: { search: 'cam', roleId: [ROLE_AUDITORIA] },
       })
     );
     await waitFor(() =>
       expect(fetchUsers).toHaveBeenLastCalledWith(
-        expect.objectContaining({ search: 'cam', roleId: 'role-auditoria' })
+        expect.objectContaining({ search: 'cam', roleId: ROLE_AUDITORIA })
       )
     );
     expect(screen.getByLabelText('Cargos')).toHaveTextContent('Auditoria');
@@ -334,7 +341,7 @@ describe('UsersPage — filtro "Cargos"', () => {
 
   it('só com o cargo excluído, a URL fica sem filtro e a lista, sem cargo', async () => {
     vi.mocked(fetchRoleDetail).mockRejectedValue(notFound());
-    const { router } = renderUsers({ roleId: ['role-excluido'] });
+    const { router } = renderUsers({ roleId: [ROLE_EXCLUIDO] });
 
     await waitFor(() => expect(router.state.location.search).toEqual({}));
     await waitFor(() =>
@@ -342,6 +349,70 @@ describe('UsersPage — filtro "Cargos"', () => {
     );
     expect(screen.getByLabelText('Cargos')).toHaveTextContent('Todos');
     expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+describe('UsersPage — id de cargo fora do formato na URL', () => {
+  // Link editado à mão: o servidor recusaria a listagem inteira (400, toast
+  // "Identificador inválido."). O id sai antes de qualquer chamada.
+  it('não manda o id ao servidor e o tira da URL, sem toast', async () => {
+    const { router } = renderUsers({
+      search: 'cam',
+      roleId: ['nao-e-uuid', ROLE_AUDITORIA],
+    });
+
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        filters: { search: 'cam', roleId: [ROLE_AUDITORIA] },
+      })
+    );
+    await screen.findByText('Camila Oliveira');
+    for (const [params] of vi.mocked(fetchUsers).mock.calls) {
+      expect(params.roleId).toBe(ROLE_AUDITORIA);
+    }
+    expect(fetchRoleDetail).not.toHaveBeenCalledWith('nao-e-uuid');
+    expect(router.history.length).toBe(1);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('só com o id fora do formato, a URL fica sem filtro e a lista, sem cargo', async () => {
+    const { router } = renderUsers({ roleId: ['123'] });
+
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    await screen.findByText('Camila Oliveira');
+    for (const [params] of vi.mocked(fetchUsers).mock.calls) {
+      expect(params.roleId).toBeUndefined();
+    }
+    expect(fetchRoleDetail).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+describe('UsersPage — ordenação por status', () => {
+  // O servidor ordena o booleano com `false` (Bloqueado) antes: o primeiro
+  // clique pede `desc`, para os ativos virem primeiro.
+  it('o primeiro clique em "Status" traz os ativos primeiro; o segundo inverte', async () => {
+    const user = userEvent.setup();
+    const { router } = renderUsers();
+
+    await screen.findByText('Camila Oliveira');
+    await user.click(screen.getByRole('button', { name: 'Status' }));
+
+    await waitFor(() =>
+      expect(fetchUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({ orderBy: 'isActive', order: 'desc' })
+      )
+    );
+    expect(router.state.location.search).toMatchObject({
+      sort: [{ id: 'isActive', desc: true }],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Status' }));
+    await waitFor(() =>
+      expect(fetchUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({ orderBy: 'isActive', order: 'asc' })
+      )
+    );
   });
 });
 
@@ -370,7 +441,7 @@ describe('UsersPage — permissões', () => {
   it('só com a leitura, esconde criar, bloquear, excluir e o filtro de cargos', async () => {
     const user = userEvent.setup();
     signIn(['backoffice.users.read']);
-    renderUsers({ roleId: ['role-financeiro'], search: 'cam' });
+    renderUsers({ roleId: [ROLE_FINANCEIRO], search: 'cam' });
 
     await screen.findByText('Camila Oliveira');
     expect(

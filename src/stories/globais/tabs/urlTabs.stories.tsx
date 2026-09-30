@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import {
   Activity,
   Bell,
@@ -20,6 +21,8 @@ import {
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { Card } from '@/components/global/card/card';
+import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
+import { Switch } from '@/components/global/form/switch';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 import { Typography } from '@/components/ui/typography';
 
@@ -236,4 +239,74 @@ export const Vitrine: Story = {
       },
     },
   },
+};
+
+function ConfirmBeforeChangeDemo() {
+  const [dirty, setDirty] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingChange = useRef<() => void>(undefined);
+
+  return (
+    <Card
+      title="Confirmação antes de trocar"
+      description="Com `onBeforeChange`, a troca só acontece quando a tela chama `change` — aqui, depois do `ConfirmDialog`, enquanto há edição não salva. Padrão de `screens/account` (o perfil alterado)."
+    >
+      <UrlTabs
+        defaultValue="profile"
+        onBeforeChange={(_next, change) => {
+          if (!dirty) {
+            change();
+            return;
+          }
+          pendingChange.current = change;
+          setConfirmOpen(true);
+        }}
+        items={[
+          {
+            value: 'profile',
+            icon: <UserCog />,
+            label: 'Perfil',
+            content: (
+              <Switch
+                id="story-url-tabs-dirty"
+                label="Edição não salva"
+                description="Ligado, trocar de aba pede confirmação."
+                checked={dirty}
+                onCheckedChange={setDirty}
+              />
+            ),
+          },
+          {
+            value: 'security',
+            icon: <Shield />,
+            label: 'Segurança',
+            content: (
+              <Typography variant="muted">
+                Senha, autenticação em 2 fatores e sessões ativas.
+              </Typography>
+            ),
+          },
+        ]}
+      />
+      <ConfirmDialog
+        open={confirmOpen}
+        setOpen={setConfirmOpen}
+        title="Descartar as alterações do perfil?"
+        description="O que você mudou no perfil ainda não foi salvo. Trocar de aba descarta essas alterações."
+        confirmLabel="Descartar alterações"
+        cancelLabel="Continuar editando"
+        destructive
+        onConfirm={() => {
+          setDirty(false);
+          pendingChange.current?.();
+        }}
+      />
+    </Card>
+  );
+}
+
+export const ConfirmacaoAntesDeTrocar: Story = {
+  name: 'Confirmação antes de trocar',
+  render: () => <ConfirmBeforeChangeDemo />,
+  decorators: [withRouter],
 };

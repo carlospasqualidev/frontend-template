@@ -28,10 +28,19 @@ test.describe('Usuário sem cargo', () => {
     await admin?.dispose();
   });
 
-  test('entra e não vê Usuários, Auditoria nem Configurações', async ({
+  test('entra e não vê Usuários, Auditoria nem Configurações, nem os blocos deles na home', async ({
     page,
   }) => {
     if (!user) throw new Error('Usuário do preparo ausente.');
+
+    // Os blocos da home que exigem permissão somem sem chamar o servidor.
+    const gatedCalls: string[] = [];
+    page.on('request', (request) => {
+      const { pathname } = new URL(request.url());
+      if (/\/client\/(users|audit-logs)$/.test(pathname)) {
+        gatedCalls.push(pathname);
+      }
+    });
 
     const signIn = page.waitForResponse(isLoginResponse);
     await login(page, user);
@@ -53,5 +62,25 @@ test.describe('Usuário sem cargo', () => {
     for (const item of ['Usuários', 'Auditoria', 'Configurações']) {
       await expect(sidebar.getByRole('link', { name: item })).toHaveCount(0);
     }
+
+    // Home: dos atalhos, só "Minha conta"; os de demonstração continuam,
+    // rotulados; nada de erro.
+    const shortcuts = page.locator('[data-slot="card"]', {
+      has: page.locator('[data-slot="card-title"]', {
+        hasText: 'Acesso rápido',
+      }),
+    });
+    await expect(shortcuts.getByRole('link')).toHaveCount(1);
+    await expect(
+      shortcuts.getByRole('link', { name: /Minha conta/ })
+    ).toHaveAttribute('href', '/account');
+    await expect(
+      page.locator('article', { hasText: 'Sessões ativas' })
+    ).toContainText('Dados de demonstração');
+    await expect(page.getByText('Usuários totais')).toHaveCount(0);
+    await expect(page.getByText('Novos este mês')).toHaveCount(0);
+    await expect(page.getByText('Atividade recente')).toHaveCount(0);
+    expect(gatedCalls).toEqual([]);
+    expect(await page.locator('[data-sonner-toast]').count()).toBe(0);
   });
 });

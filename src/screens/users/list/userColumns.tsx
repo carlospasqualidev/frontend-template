@@ -70,8 +70,8 @@ function rowActions(
 
 /**
  * Colunas da listagem. Ordenáveis as que o servidor ordena (`name`, `email`,
- * `lastLoginAt`, `createdAt`); "Cargos" (vários por usuário) e "Status" não
- * estão na allowlist de `orderBy` do servidor.
+ * `isActive`, `lastLoginAt`, `createdAt`); "Cargos" (vários por usuário) não
+ * está na allowlist de `orderBy` do servidor.
  */
 export function buildUserColumns(
   options: UserColumnsOptions
@@ -117,8 +117,13 @@ export function buildUserColumns(
         ),
     },
     {
-      id: 'isActive',
-      header: 'Status',
+      accessorKey: 'isActive',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Status</SortableHeader>
+      ),
+      // O servidor ordena o booleano com `false` (Bloqueado) antes de `true`:
+      // o primeiro clique manda `desc`, para os ativos virem primeiro.
+      sortDescFirst: true,
       meta: { label: 'Status' },
       cell: ({ row }) => <UserStatusBadge isActive={row.original.isActive} />,
     },

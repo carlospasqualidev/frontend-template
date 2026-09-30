@@ -27,7 +27,7 @@ vi.mock('@tanstack/react-router', () => ({
   useMatchRoute: () => () => false,
 }));
 
-const ADMIN_ITEMS = ['Usuários', 'Auditoria', 'Configurações'];
+const ADMIN_ITEMS = ['Usuários', 'Cargos', 'Auditoria', 'Configurações'];
 
 function setUser(permissions: string[]) {
   const user: IUser = {
@@ -55,7 +55,7 @@ afterEach(() => {
 
 describe('NavMain com o menu do projeto', () => {
   // Usuário sem cargo chega do backend com `[]`.
-  it('usuário sem permissões não vê Usuários, Auditoria nem Configurações', () => {
+  it('usuário sem permissões não vê Usuários, Cargos, Auditoria nem Configurações', () => {
     setUser([]);
     renderNav();
 
@@ -70,6 +70,7 @@ describe('NavMain com o menu do projeto', () => {
 
   it.each([
     { permission: 'backoffice.users.read', title: 'Usuários', url: '/users' },
+    { permission: 'backoffice.roles.read', title: 'Cargos', url: '/roles' },
     {
       permission: 'backoffice.audit.read',
       title: 'Auditoria',

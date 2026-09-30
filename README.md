@@ -87,10 +87,15 @@ cadastro, logout e validação, com as permissões efetivas e o tempo de
 inatividade), as configurações do sistema, a trilha de auditoria, o upload e a
 gestão de usuários (lista com filtros no servidor, criação, edição, bloqueio,
 exclusão e os cargos de cada usuário, no modelo do servidor: vários cargos por
-usuário, status ativo ou bloqueado), Minha conta (o próprio perfil, a foto e a
+usuário, status ativo ou bloqueado), a gestão de cargos (lista com busca,
+criação, edição, cópia e exclusão, as permissões numa árvore de módulos, grupos
+e ações do catálogo do servidor, e os usuários de cada cargo; o Administrador só
+aparece), Minha conta (o próprio perfil, a foto e a
 troca de senha) e a home (total de usuários, novos no mês, atividade recente e
 atalhos para as telas). Os E2E dessas telas rodam contra o server real (ver
-[E2E](#e2e)).
+[E2E](#e2e)). A tela mostra desabilitado o que o servidor recusaria (a
+permissão que quem edita não tem), mas quem decide é o servidor: a recusa dele
+chega num toast.
 
 O que o backend não atende continua como exemplo de tela, com o aviso
 "Dados de demonstração" visível em cada parte: autenticação em 2 fatores,
@@ -278,7 +283,13 @@ campo marcado quando o server recusa o valor, recusa da regra entre os prazos) e
 a trilha de auditoria (lista, busca, filtros por módulo e por usuário,
 paginação, detalhe, a linha do tempo de um usuário) e os usuários (lista e
 filtros, ordenação por status, criar, editar, bloquear, excluir, trocar cargo,
-a recusa do servidor no toast e o anti-escalonamento), Minha conta (editar o
+a recusa do servidor no toast e o anti-escalonamento), os cargos (lista e
+busca, criar e editar com a escrita marcando a leitura do grupo, nome repetido,
+copiar, vincular usuário, o vínculo feito na tela de usuários aparecendo no
+cargo sem recarregar, excluir e a recusa do cargo com usuários, o
+Administrador só leitura, a permissão que o gestor não tem desabilitada, a
+cópia recusada pelo anti-escalonamento e o gestor editando o próprio cargo, com
+a tela seguindo as permissões novas sem recarregar), Minha conta (editar o
 próprio perfil, o tempo acima do limite da empresa recusado no campo, a
 confirmação ao trocar de aba com o perfil alterado, trocar a senha e voltar à
 original) e a home (números e atividade reais, blocos que
@@ -317,8 +328,9 @@ npm run test:e2e
   uma vez com o admin e com um gestor que ele mesmo cria (e exclui no fim da
   suíte; o de uma execução interrompida sai no começo da seguinte) e grava as duas sessões em `playwright/.auth/` (fora do git): os specs
   entram com elas pelo `storageState` do Playwright, sem login.
-- Os specs criam o que precisam pela API (usuários e cargo com nome de sufixo
-  único, configurações da empresa) e desfazem no fim: rodam quantas vezes for
+- Os specs criam o que precisam pela API (usuários e cargos com nome de sufixo
+  único, configurações da empresa) e desfazem no fim (os cargos que a tela
+  criou ou copiou saem pelo sufixo no nome): rodam quantas vezes for
   preciso contra o mesmo banco de desenvolvimento.
 - O server aceita 10 logins por minuto por IP, e a suíte usa 7: os 2 do
   `globalSetup` (o admin e o gestor) e 5 dos specs que provam o próprio login

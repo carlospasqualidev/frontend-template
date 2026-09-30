@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner';
 
 import { catchHandler, sendErrorMessage } from '@/services/api/errorHandlers';
+import { roleKeys } from '@/services/roles/queryKeys';
 import { userKeys } from '@/services/users/queryKeys';
 import { type CompanyUser } from '@/services/users/types';
 import { type UserDetailResponse } from '@/services/users/userDetailApi';
@@ -42,6 +43,16 @@ export function storeSavedUser(
         ),
       }
   );
+}
+
+/**
+ * Os cargos de alguém mudaram (a troca de cargos, a exclusão da pessoa): o
+ * cache dos cargos é relido, os usuários de cada um, as contagens da listagem
+ * e o detalhe. Sem isso, a aba "Usuários" de um cargo partiria da lista velha,
+ * e o `PUT` do conjunto completo desfaria o que mudou aqui.
+ */
+export function invalidateRoleMemberships(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: roleKeys.all });
 }
 
 /**
@@ -113,9 +124,9 @@ export function useSetUserActive() {
 }
 
 /**
- * Exclui; a listagem é relida (a contagem muda). O detalhe fica velho sem ser
- * rebuscado agora (a tela dele, quando é ela que exclui, está saindo): quem
- * voltar a ele relê e recebe o 404.
+ * Exclui; a listagem é relida (a contagem muda), e os cargos da pessoa perdem
+ * um usuário. O detalhe fica velho sem ser rebuscado agora (a tela dele,
+ * quando é ela que exclui, está saindo): quem voltar a ele relê e recebe o 404.
  */
 export function useDeleteUser() {
   const queryClient = useQueryClient();
@@ -128,6 +139,7 @@ export function useDeleteUser() {
         refetchType: 'none',
       });
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      invalidateRoleMemberships(queryClient);
     },
     onError: (error) => handleUserMutationError(error, queryClient),
   });

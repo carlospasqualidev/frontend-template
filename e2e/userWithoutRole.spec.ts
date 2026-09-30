@@ -28,7 +28,7 @@ test.describe('Usuário sem cargo', () => {
     await admin?.dispose();
   });
 
-  test('entra e não vê Usuários, Auditoria nem Configurações, nem os blocos deles na home', async ({
+  test('entra e não vê Usuários, Cargos, Auditoria nem Configurações, nem os blocos deles na home', async ({
     page,
   }) => {
     if (!user) throw new Error('Usuário do preparo ausente.');
@@ -59,7 +59,7 @@ test.describe('Usuário sem cargo', () => {
     await expect(
       sidebar.getByRole('button', { name: /Administração/ })
     ).toHaveCount(0);
-    for (const item of ['Usuários', 'Auditoria', 'Configurações']) {
+    for (const item of ['Usuários', 'Cargos', 'Auditoria', 'Configurações']) {
       await expect(sidebar.getByRole('link', { name: item })).toHaveCount(0);
     }
 

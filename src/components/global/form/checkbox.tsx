@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import {
   useController,
@@ -61,14 +62,26 @@ function CheckboxBase({
 }: CheckboxBaseProps) {
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
-  const { 'aria-invalid': ariaInvalid, ...checkboxProps } = props;
+  const descriptionId = useId();
+  const {
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    ...checkboxProps
+  } = props;
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  // A descrição é a descrição acessível do controle: o leitor de tela a lê
+  // junto do rótulo (ex.: por que o item está desabilitado).
+  const resolvedAriaDescribedBy =
+    [description ? descriptionId : undefined, ariaDescribedBy]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   return (
     <BaseField data-invalid={invalid}>
       <BaseField orientation="horizontal">
         <BaseCheckbox
           aria-invalid={resolvedAriaInvalid}
+          aria-describedby={resolvedAriaDescribedBy}
           {...checkboxProps}
           className="cursor-pointer"
         />
@@ -78,7 +91,9 @@ function CheckboxBase({
           </FieldLabel>
         )}
       </BaseField>
-      {description && <FieldDescription>{description}</FieldDescription>}
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
       <FieldError errors={allErrors} />
     </BaseField>
   );

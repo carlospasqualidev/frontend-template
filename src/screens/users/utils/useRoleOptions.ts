@@ -8,13 +8,11 @@ import {
 } from '@tanstack/react-query';
 
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { roleKeys } from '@/services/users/queryKeys';
+import { roleKeys } from '@/services/roles/queryKeys';
+import { fetchRoleDetail } from '@/services/roles/roleDetailApi';
+import { searchRoleOptions } from '@/services/roles/roleListApi';
+import { type Role } from '@/services/roles/types';
 import { type UserRole } from '@/services/users/types';
-import {
-  fetchRoleDetail,
-  searchRoleOptions,
-  type RoleDetail,
-} from '@/services/users/userRolesApi';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -35,7 +33,7 @@ interface RoleRead {
 
 // Fora do componente: com a mesma função, o `useQueries` devolve a mesma lista
 // enquanto os resultados não mudam. Na ordem dos ids lidos.
-function toRoleReads(results: UseQueryResult<RoleDetail>[]): RoleRead[] {
+function toRoleReads(results: UseQueryResult<Role>[]): RoleRead[] {
   return results.map(({ data, error }) => ({
     role: data && { id: data.id, name: data.name },
     missing: isRoleNotFound(error),

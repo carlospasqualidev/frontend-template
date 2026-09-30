@@ -31,6 +31,7 @@ async function expectAdministrationMenu(page: Page): Promise<void> {
   }
 
   await expect(sidebar.getByRole('link', { name: 'Usuários' })).toBeVisible();
+  await expect(sidebar.getByRole('link', { name: 'Cargos' })).toBeVisible();
   await expect(sidebar.getByRole('link', { name: 'Auditoria' })).toBeVisible();
   await expect(
     sidebar.getByRole('link', { name: 'Configurações' })
@@ -60,7 +61,7 @@ test.describe('Sessão contra o server real', () => {
     expect(await page.locator('[data-sonner-toast]').count()).toBe(0);
   });
 
-  test('o admin entra, vê Usuários, Auditoria e Configurações, e recarregar mantém a sessão', async ({
+  test('o admin entra, vê Usuários, Cargos, Auditoria e Configurações, e recarregar mantém a sessão', async ({
     page,
   }) => {
     await login(page, SEED_ADMIN);

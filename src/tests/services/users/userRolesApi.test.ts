@@ -2,12 +2,7 @@ import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { axiosApi } from '@/services/api/api';
-import {
-  fetchPermissionCatalog,
-  fetchRoleDetail,
-  searchRoleOptions,
-  setUserRoles,
-} from '@/services/users/userRolesApi';
+import { setUserRoles } from '@/services/users/userRolesApi';
 import { respondWith } from '@/tests/helpers/axiosAdapter';
 import { makeCompanyUser } from '@/tests/factories/companyUser';
 
@@ -33,98 +28,6 @@ function requestOf(adapter: ReturnType<typeof answerWith>) {
   if (!config) throw new Error('Nenhuma chamada ao servidor.');
   return config;
 }
-
-const ROLE = {
-  id: 'role-1',
-  name: 'Suporte',
-  description: null,
-  isSystem: false,
-  usersCount: 2,
-  permissionsCount: 1,
-  createdAt: '2026-09-01T12:00:00.000Z',
-  updatedAt: '2026-09-01T12:00:00.000Z',
-};
-
-describe('searchRoleOptions', () => {
-  it('busca os cargos pelo nome no servidor, uma página por nome', async () => {
-    const adapter = answerWith(200, { roles: [ROLE], count: 1 });
-
-    await expect(searchRoleOptions('sup')).resolves.toEqual([
-      { id: 'role-1', name: 'Suporte', description: null, isSystem: false },
-    ]);
-    expect(requestOf(adapter)).toMatchObject({
-      method: 'get',
-      url: '/client/roles',
-      params: {
-        page: 0,
-        pageSize: 20,
-        search: 'sup',
-        orderBy: 'name',
-        order: 'asc',
-      },
-    });
-  });
-
-  it('sem termo, não manda `search` (os primeiros por nome)', async () => {
-    const adapter = answerWith(200, { roles: [], count: 0 });
-
-    await searchRoleOptions('');
-    expect(requestOf(adapter).params?.search).toBeUndefined();
-  });
-});
-
-describe('fetchRoleDetail', () => {
-  it('lê o cargo com as permissões em GET /client/roles/:roleId', async () => {
-    const permissions = [{ id: 'perm-1', name: 'backoffice.users.read' }];
-    const adapter = answerWith(200, { role: { ...ROLE, permissions } });
-
-    await expect(fetchRoleDetail('role-1')).resolves.toMatchObject({
-      id: 'role-1',
-      permissions,
-    });
-    expect(requestOf(adapter).url).toBe('/client/roles/role-1');
-  });
-
-  // O cargo de um link antigo (o filtro da URL) pode não existir mais.
-  it('o 404 volta sem toast', async () => {
-    answerWith(404, { message: 'Cargo não encontrado.' });
-
-    await expect(fetchRoleDetail('role-x')).rejects.toMatchObject({
-      response: { status: 404 },
-    });
-    expect(toast.error).not.toHaveBeenCalled();
-  });
-});
-
-describe('fetchPermissionCatalog', () => {
-  it('lê o catálogo com o rótulo de cada permissão', async () => {
-    const catalog = {
-      modules: [
-        {
-          module: 'backoffice',
-          moduleLabel: 'Backoffice',
-          groups: [
-            {
-              groupLabel: 'Usuários',
-              permissions: [
-                {
-                  id: 'perm-1',
-                  name: 'backoffice.users.read',
-                  action: 'read',
-                  label: 'Visualizar usuários',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-    const adapter = answerWith(200, catalog);
-
-    await expect(fetchPermissionCatalog()).resolves.toEqual(catalog);
-    expect(requestOf(adapter).url).toBe('/client/roles/permissions');
-  });
-});
 
 describe('setUserRoles', () => {
   it('manda o conjunto completo em PUT /client/users/:userId/roles', async () => {

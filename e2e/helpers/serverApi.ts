@@ -287,6 +287,31 @@ export async function deleteRole(
   await expect(response).toBeOK();
 }
 
+/**
+ * Exclui os cargos cujo nome contém `term` (o sufixo único do spec): os do
+ * preparo e os que a tela criou (a criação, as cópias), cujo id o spec não
+ * recebe pela API. Os usuários deles saem antes (cargo com usuário não é
+ * excluído). Para a limpeza do `afterAll`.
+ */
+export async function deleteRolesMatching(
+  admin: APIRequestContext,
+  term: string
+): Promise<void> {
+  const response = await admin.get(serverApiUrl('/client/roles'), {
+    params: { search: term, pageSize: 100 },
+  });
+  await expect(response).toBeOK();
+
+  const { roles } = (await response.json()) as {
+    roles: { id: string; name: string; isSystem: boolean }[];
+  };
+  for (const role of roles.filter(
+    (item) => !item.isSystem && item.name.includes(term)
+  )) {
+    await deleteRole(admin, role.id);
+  }
+}
+
 export async function readSystemConfigValue(
   admin: APIRequestContext,
   key: string

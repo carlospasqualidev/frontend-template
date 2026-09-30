@@ -12,6 +12,12 @@ import { SessionValidation } from '@/components/global/layout/sessionValidation'
 import { accountRoute } from '@/screens/account/routes';
 import { auditLogsRoute } from '@/screens/audit-logs/routes';
 import { homeRoute } from '@/screens/home/routes';
+import {
+  roleCreateRoute,
+  roleDetailsRoute,
+  rolesLayoutRoute,
+  rolesListRoute,
+} from '@/screens/roles/routes';
 import { loginRoute, signupRoute } from '@/screens/session/routes';
 import { settingsRoute } from '@/screens/settings/routes';
 import {
@@ -61,6 +67,11 @@ export const router = createRouter({
       accountRoute,
       auditLogsRoute,
       settingsRoute,
+      rolesLayoutRoute.addChildren([
+        rolesListRoute,
+        roleCreateRoute,
+        roleDetailsRoute,
+      ]),
       usersLayoutRoute.addChildren([
         usersListRoute,
         userCreateRoute,

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Home, ScrollText, Settings, Users } from 'lucide-react';
+import { Home, ScrollText, Settings, Shield, Users } from 'lucide-react';
 
 import { env } from '@/lib/env';
 
@@ -67,6 +67,12 @@ export const sidebarData: {
           url: '/users',
           icon: <Users />,
           permission: 'backoffice.users.read',
+        },
+        {
+          title: 'Cargos',
+          url: '/roles',
+          icon: <Shield />,
+          permission: 'backoffice.roles.read',
         },
         {
           title: 'Auditoria',

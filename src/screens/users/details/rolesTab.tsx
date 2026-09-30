@@ -11,13 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { Typography } from '@/components/ui/typography';
 import { type UserFormValues } from '@/screens/users/utils/userForm';
 import { useRoleOptions } from '@/screens/users/utils/useRoleOptions';
-import { roleKeys } from '@/services/users/queryKeys';
-import { type CompanyUser, type UserRole } from '@/services/users/types';
+import { roleKeys } from '@/services/roles/queryKeys';
 import {
   fetchPermissionCatalog,
   fetchRoleDetail,
   type PermissionCatalog,
-} from '@/services/users/userRolesApi';
+} from '@/services/roles/roleDetailApi';
+import { type CompanyUser, type UserRole } from '@/services/users/types';
 
 const ROLES_DESCRIPTION =
   'A pessoa tem as permissões de todos os cargos dela. A troca vale depois de salvar.';

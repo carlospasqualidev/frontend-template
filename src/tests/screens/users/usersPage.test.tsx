@@ -7,13 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateDataTableSearch } from '@/components/global/dataTable/dataTableSearch';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { UsersPage } from '@/screens/users/list';
+import { fetchRoleDetail } from '@/services/roles/roleDetailApi';
+import { searchRoleOptions } from '@/services/roles/roleListApi';
 import { deleteUser, setUserActive } from '@/services/users/userFormApi';
 import { fetchUsers } from '@/services/users/userListApi';
-import {
-  fetchRoleDetail,
-  searchRoleOptions,
-} from '@/services/users/userRolesApi';
 import { makeCompanyUser } from '@/tests/factories/companyUser';
+import { makeRole } from '@/tests/factories/role';
 import {
   makeTestQueryClient,
   renderRoutes,
@@ -31,8 +30,11 @@ vi.mock('@/services/users/userListApi', async (importOriginal) => {
   return { ...actual, fetchUsers: vi.fn() };
 });
 
-vi.mock('@/services/users/userRolesApi', () => ({
+vi.mock('@/services/roles/roleListApi', () => ({
   searchRoleOptions: vi.fn(),
+}));
+
+vi.mock('@/services/roles/roleDetailApi', () => ({
   fetchRoleDetail: vi.fn(),
 }));
 
@@ -182,13 +184,9 @@ beforeEach(() => {
     ]);
   vi.mocked(fetchRoleDetail)
     .mockReset()
-    .mockImplementation(async (id) => ({
-      id,
-      name: 'Auditoria',
-      description: null,
-      isSystem: false,
-      permissions: [],
-    }));
+    .mockImplementation(async (id) =>
+      makeRole({ id, name: 'Auditoria', description: null })
+    );
   vi.mocked(setUserActive).mockReset();
   vi.mocked(deleteUser).mockReset();
   vi.mocked(toast.success).mockClear();
@@ -311,13 +309,7 @@ describe('UsersPage — filtro "Cargos"', () => {
   it('tira da busca e da URL o cargo que o servidor não tem mais', async () => {
     vi.mocked(fetchRoleDetail).mockImplementation(async (id) => {
       if (id === ROLE_EXCLUIDO) throw notFound();
-      return {
-        id,
-        name: 'Auditoria',
-        description: null,
-        isSystem: false,
-        permissions: [],
-      };
+      return makeRole({ id, name: 'Auditoria', description: null });
     });
     const { router } = renderUsers({
       search: 'cam',

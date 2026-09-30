@@ -130,3 +130,24 @@ describe('sessionService.validate', () => {
     await expect(sessionService.validate()).rejects.toThrow('401');
   });
 });
+
+describe('sessionService.refresh', () => {
+  // Com a sessão aberta, depois de uma gravação que já teve o próprio toast:
+  // nenhuma falha ganha outro (ver `useSessionStore.test.ts`).
+  it('relê o usuário em GET /client/users/me, sem toast em falha nenhuma', async () => {
+    get.mockResolvedValue({ user: makeServerUser() });
+
+    await expect(sessionService.refresh()).resolves.toEqual({
+      user: makeServerUser(),
+    });
+    expect(get).toHaveBeenCalledWith('/client/users/me', {
+      silentError: true,
+    });
+  });
+
+  it('rejeita a resposta fora do contrato', async () => {
+    get.mockResolvedValue({ user: makeServerUser({ permissions: null }) });
+
+    await expect(sessionService.refresh()).rejects.toThrow();
+  });
+});

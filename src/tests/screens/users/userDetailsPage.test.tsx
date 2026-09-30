@@ -8,6 +8,12 @@ import { useSessionStore } from '@/hooks/useSessionStore';
 import { UserDetailsPage } from '@/screens/users/details';
 import { UNEXPECTED_USER_ERROR_MESSAGE } from '@/screens/users/utils/userMutations';
 import { fetchEntityAuditLogs } from '@/services/audit/auditApi';
+import {
+  fetchPermissionCatalog,
+  fetchRoleDetail,
+} from '@/services/roles/roleDetailApi';
+import { searchRoleOptions } from '@/services/roles/roleListApi';
+import { roleKeys } from '@/services/roles/queryKeys';
 import { userKeys } from '@/services/users/queryKeys';
 import {
   fetchUser,
@@ -18,13 +24,9 @@ import {
   setUserActive,
   updateUser,
 } from '@/services/users/userFormApi';
-import {
-  fetchPermissionCatalog,
-  fetchRoleDetail,
-  searchRoleOptions,
-  setUserRoles,
-} from '@/services/users/userRolesApi';
+import { setUserRoles } from '@/services/users/userRolesApi';
 import { makeCompanyUser } from '@/tests/factories/companyUser';
+import { makeRole } from '@/tests/factories/role';
 import {
   makeTestQueryClient,
   renderRoutes,
@@ -49,10 +51,16 @@ vi.mock('@/services/users/userFormApi', async (importOriginal) => {
   };
 });
 
-vi.mock('@/services/users/userRolesApi', () => ({
+vi.mock('@/services/roles/roleListApi', () => ({
   searchRoleOptions: vi.fn(),
+}));
+
+vi.mock('@/services/roles/roleDetailApi', () => ({
   fetchRoleDetail: vi.fn(),
   fetchPermissionCatalog: vi.fn(),
+}));
+
+vi.mock('@/services/users/userRolesApi', () => ({
   setUserRoles: vi.fn(),
 }));
 
@@ -136,23 +144,37 @@ const CATALOG = {
 
 function roleDetail(id: string) {
   const isSupport = id === SUPORTE.id;
-  return {
+  return makeRole({
     id,
     name:
       [SUPORTE, AUDITORIA, FINANCEIRO].find((role) => role.id === id)?.name ??
       '',
     description: null,
-    isSystem: false,
     permissions: isSupport
       ? [
           { id: 'p-users-read', name: 'backoffice.users.read' },
           { id: 'p-users-update', name: 'backoffice.users.update' },
         ]
       : [{ id: 'p-audit-read', name: 'backoffice.audit.read' }],
-  };
+  });
 }
 
 let queryClient: ReturnType<typeof makeTestQueryClient>;
+
+// O que a tela de cargos deixou no cache: os usuários de um cargo (o ponto de
+// partida do `PUT` do conjunto completo) e uma página da listagem (as
+// contagens).
+const CACHED_MEMBERS = roleKeys.members(AUDITORIA.id);
+const CACHED_ROLE_LIST = roleKeys.list({ page: 0, pageSize: 10 });
+
+function seedRolesScreenCache() {
+  queryClient.setQueryData(CACHED_MEMBERS, { users: [], count: 0 });
+  queryClient.setQueryData(CACHED_ROLE_LIST, { roles: [], count: 0 });
+}
+
+function isInvalidated(queryKey: readonly unknown[]): boolean | undefined {
+  return queryClient.getQueryState(queryKey)?.isInvalidated;
+}
 
 function renderDetail(search = '') {
   return renderRoutes({
@@ -606,6 +628,29 @@ describe('UserDetailsPage — aba "Cargos"', () => {
     );
   });
 
+  // A tela de cargos grava o conjunto completo dos usuários de um cargo: com a
+  // lista velha no cache, o `PUT` dela desfaria a troca feita aqui.
+  it('trocar os cargos relê o cache dos cargos: usuários de cada um e contagens', async () => {
+    const user = userEvent.setup();
+    vi.mocked(setUserRoles).mockResolvedValue({
+      message: 'Cargos do usuário atualizados.',
+      user: { ...CAMILA, roles: [AUDITORIA, SUPORTE] },
+    });
+    seedRolesScreenCache();
+    renderDetail('?tab=roles');
+
+    await user.click(await screen.findByLabelText('Cargos do usuário'));
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'Auditoria' })
+    );
+    await user.keyboard('{Escape}');
+    expect(isInvalidated(CACHED_MEMBERS)).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(isInvalidated(CACHED_MEMBERS)).toBe(true));
+    expect(isInvalidated(CACHED_ROLE_LIST)).toBe(true);
+  });
+
   // Empresa com mais cargos que uma página: o cargo que não veio na primeira
   // é achado pela busca do servidor, e continua marcado depois dela.
   it('acha o cargo pela busca no servidor e o grava com os outros', async () => {
@@ -820,6 +865,23 @@ describe('UserDetailsPage — ações', () => {
     await waitFor(() => expect(deleteUser).toHaveBeenCalledWith('u-camila'));
     expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/users');
+  });
+
+  // Quem é excluído sai dos cargos: os usuários de cada um e as contagens.
+  it('excluir relê o cache dos cargos', async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteUser).mockResolvedValue(undefined);
+    seedRolesScreenCache();
+    renderDetail();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Excluir usuário' })
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
+
+    await waitFor(() => expect(isInvalidated(CACHED_MEMBERS)).toBe(true));
+    expect(isInvalidated(CACHED_ROLE_LIST)).toBe(true);
   });
 
   it('bloqueia pelo card "Situação" e mostra o status novo', async () => {

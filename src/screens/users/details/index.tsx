@@ -42,6 +42,7 @@ import {
 import {
   handleUserFormError,
   handleUserMutationError,
+  invalidateRoleMemberships,
   storeSavedUser,
   useDeleteUser,
 } from '@/screens/users/utils/userMutations';
@@ -256,9 +257,13 @@ function UserDetails({
 
   // A recusa (anti-escalonamento, o `Administrador`, os próprios cargos, o
   // último administrador) é o toast do servidor; a troca continua pendente.
+  // No sucesso, os cargos (os usuários de cada um, as contagens) são relidos.
   const rolesMutation = useMutation({
     mutationFn: (roleIds: string[]) => setUserRoles(user.id, roleIds),
-    onSuccess: ({ user: saved }) => storeSavedUser(queryClient, saved),
+    onSuccess: ({ user: saved }) => {
+      storeSavedUser(queryClient, saved);
+      invalidateRoleMemberships(queryClient);
+    },
     onError: (error) => handleUserMutationError(error, queryClient),
   });
 

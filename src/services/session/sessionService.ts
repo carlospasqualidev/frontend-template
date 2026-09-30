@@ -46,9 +46,21 @@ async function validate(): Promise<IValidateResponse> {
   return validateResponseSchema.parse(response);
 }
 
+// A mesma leitura, com a sessão já aberta: as permissões mudaram por uma
+// gravação que já teve o próprio toast. Nenhuma falha ganha outro toast; quem
+// chama decide o que fazer com ela (`refreshUser` do `useSessionStore` mantém
+// a sessão como está).
+async function refresh(): Promise<IValidateResponse> {
+  const response = await api.get<unknown>('/client/users/me', {
+    silentError: true,
+  });
+  return validateResponseSchema.parse(response);
+}
+
 export const sessionService: ISessionService = {
   signIn,
   signUp,
   signOut,
   validate,
+  refresh,
 };

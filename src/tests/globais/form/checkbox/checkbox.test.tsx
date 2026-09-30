@@ -55,6 +55,52 @@ describe('Checkbox (global)', () => {
     ).toBeInTheDocument();
   });
 
+  // O leitor de tela lê a descrição junto do rótulo (ex.: por que o item está
+  // desabilitado), não só quem vê a tela.
+  it('a descrição é a descrição acessível do controle', () => {
+    render(
+      <Checkbox
+        id="audit"
+        label="Visualizar auditoria"
+        description="Você não tem esta permissão."
+        disabled
+      />
+    );
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Visualizar auditoria',
+        description: 'Você não tem esta permissão.',
+      })
+    ).toBeDisabled();
+  });
+
+  it('soma a descrição a um `aria-describedby` de quem usa', () => {
+    render(
+      <>
+        <p id="terms-note">Leia antes de aceitar.</p>
+        <Checkbox
+          id="terms"
+          label="Aceito os termos"
+          description="Obrigatório para continuar."
+          aria-describedby="terms-note"
+        />
+      </>
+    );
+
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription(
+      'Obrigatório para continuar. Leia antes de aceitar.'
+    );
+  });
+
+  it('sem descrição, o controle não aponta para nenhuma', () => {
+    render(<Checkbox id="active" label="Ativo" />);
+
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute(
+      'aria-describedby'
+    );
+  });
+
   it('modo uncontrolled dispara onCheckedChange', async () => {
     const onCheckedChange = vi.fn();
     render(<Checkbox id="x" label="Ativo" onCheckedChange={onCheckedChange} />);

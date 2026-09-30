@@ -52,4 +52,6 @@ export interface ISessionService {
   signUp: (data: ISignUpService) => Promise<ISignInServiceResponse>;
   signOut: () => Promise<ISignOutServiceResponse>;
   validate: () => Promise<IValidateResponse>;
+  /** Relê `GET /client/users/me` com a sessão aberta, sem toast em falha nenhuma. */
+  refresh: () => Promise<IValidateResponse>;
 }

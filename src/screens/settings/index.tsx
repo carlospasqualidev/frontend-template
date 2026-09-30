@@ -14,6 +14,7 @@ import { TextArea } from '@/components/global/form/textArea';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Switch } from '@/components/ui/switch';
 import { Typography } from '@/components/ui/typography';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import { SettingsSkeleton } from '@/screens/settings/settingsSkeleton';
 import {
@@ -99,6 +100,8 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
     schema: settingsFormSchema,
     defaultValues: { values: configs.map((config) => config.value) },
   });
+
+  useUnsavedChangesGuard(isDirty);
 
   // A gravação pode ter acontecido sem a resposta chegar no contrato (200 com
   // `message`, recusado pelo `.parse`: o toast de sucesso já saiu). Relê as

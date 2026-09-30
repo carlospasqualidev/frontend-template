@@ -25,6 +25,11 @@ import { getRememberedSearch } from '@/lib/navigation/searchMemory';
  * cai na listagem sem filtro — a memória reinicia no reload e a URL volta a ser a
  * fonte de verdade.
  *
+ * O retorno é sempre uma saída que a própria tela pediu (salvou, criou,
+ * excluiu, cancelou): não passa pelo guard de edição não salva
+ * ([`useUnsavedChangesGuard`](src/hooks/useUnsavedChangesGuard.ts)), que só
+ * pergunta quando a pessoa sai por outro caminho.
+ *
  * Quando a tela pode ter sido aberta a partir de MAIS de um lugar (não só da
  * listagem), o retorno certo é "para onde o usuário veio" (`history.back`) — este
  * hook é para o caso comum, em que o destino é sempre a listagem.
@@ -33,6 +38,10 @@ export function useReturnToList(listPath: string) {
   const navigate = useNavigate();
 
   return useCallback(() => {
-    void navigate({ to: listPath, search: getRememberedSearch(listPath) });
+    void navigate({
+      to: listPath,
+      search: getRememberedSearch(listPath),
+      ignoreBlocker: true,
+    });
   }, [navigate, listPath]);
 }

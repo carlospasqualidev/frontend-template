@@ -346,6 +346,28 @@ describe('UserDetailsPage — edição', () => {
     );
   });
 
+  // A aba "Usuários" de um cargo mostra o nome, o e-mail e o status de cada
+  // pessoa: gravar o cadastro relê os usuários dos cargos, e as contagens da
+  // listagem de cargos (que não mudam) ficam como estão.
+  it('gravar o cadastro relê os usuários dos cargos, não as contagens', async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateUser).mockResolvedValue({
+      message: 'Usuário atualizado.',
+      user: { ...CAMILA, name: 'Camila Souza' },
+    });
+    seedRolesScreenCache();
+    renderDetail();
+
+    const name = await screen.findByLabelText('Nome');
+    await user.clear(name);
+    await user.type(name, 'Camila Souza');
+    expect(isInvalidated(CACHED_MEMBERS)).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(isInvalidated(CACHED_MEMBERS)).toBe(true));
+    expect(isInvalidated(CACHED_ROLE_LIST)).toBe(false);
+  });
+
   it('"Descartar" volta ao cadastro gravado', async () => {
     const user = userEvent.setup();
     renderDetail();
@@ -903,5 +925,103 @@ describe('UserDetailsPage — ações', () => {
     expect(
       screen.getByRole('button', { name: 'Desbloquear' })
     ).toBeInTheDocument();
+  });
+
+  // O status aparece na aba "Usuários" de cada cargo da pessoa.
+  it.each([
+    ['Bloquear', true],
+    ['Desbloquear', false],
+  ])(
+    '"%s" relê os usuários dos cargos, não as contagens',
+    async (action, isActive) => {
+      const user = userEvent.setup();
+      vi.mocked(fetchUser).mockResolvedValue({
+        user: { ...CAMILA, isActive },
+      });
+      vi.mocked(setUserActive).mockResolvedValue({
+        message: 'Usuário atualizado.',
+        user: { ...CAMILA, isActive: !isActive },
+      });
+      seedRolesScreenCache();
+      renderDetail();
+
+      await user.click(await screen.findByRole('button', { name: action }));
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: action }));
+
+      await waitFor(() =>
+        expect(setUserActive).toHaveBeenCalledWith('u-camila', !isActive)
+      );
+      await waitFor(() => expect(isInvalidated(CACHED_MEMBERS)).toBe(true));
+      expect(isInvalidated(CACHED_ROLE_LIST)).toBe(false);
+    }
+  );
+});
+
+// O formulário fica acima das abas: trocar de aba não perde nem pergunta;
+// sair da tela com a edição não salva pergunta, pelo guard global.
+describe('UserDetailsPage — edição não salva', () => {
+  async function editName(user: ReturnType<typeof userEvent.setup>) {
+    const name = await screen.findByLabelText('Nome');
+    await user.clear(name);
+    await user.type(name, 'Outro Nome');
+  }
+
+  it('com alteração, trocar de aba não pergunta e mantém a edição', async () => {
+    const user = userEvent.setup();
+    const { router } = renderDetail();
+
+    await editName(user);
+    await user.click(screen.getByRole('tab', { name: 'Cargos' }));
+
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: 'roles' })
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Visão geral' }));
+    expect(await screen.findByLabelText('Nome')).toHaveValue('Outro Nome');
+  });
+
+  it('com alteração, sair da tela pergunta; "Continuar editando" fica', async () => {
+    const user = userEvent.setup();
+    const { router } = renderDetail();
+
+    await editName(user);
+    await act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Continuar editando' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    expect(router.state.location.pathname).toBe('/users/u-camila');
+    expect(screen.getByLabelText('Nome')).toHaveValue('Outro Nome');
+  });
+
+  it('depois de salvar, sai sem perguntar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateUser).mockResolvedValue({
+      message: 'Usuário atualizado.',
+      user: { ...CAMILA, name: 'Outro Nome' },
+    });
+    const { router } = renderDetail();
+
+    await editName(user);
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+    expect(
+      await screen.findByRole('button', { name: 'Excluir usuário' })
+    ).toBeInTheDocument();
+    await act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });

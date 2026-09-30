@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -448,6 +448,50 @@ describe('RoleDetailsPage — edição do cargo', () => {
 // gravá-lo, `GET /client/users/me` é relido e o que a tela oferece segue as
 // novas, sem recarregar. A falha dessa releitura não encerra a sessão nem soma
 // um toast ao da gravação.
+// O formulário fica acima das abas: trocar de aba não pergunta; sair da tela
+// com a edição não salva pergunta, pelo guard global.
+describe('RoleDetailsPage — edição não salva', () => {
+  it('com alteração, trocar de aba não pergunta; sair pergunta e "Descartar alterações" sai sem gravar', async () => {
+    const user = userEvent.setup();
+    const { router } = renderDetail();
+
+    const description = await screen.findByLabelText('Descrição');
+    await user.clear(description);
+    await user.type(description, 'Outra descrição');
+    await user.click(screen.getByRole('tab', { name: 'Usuários' }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: 'users' })
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    await act(async () => {
+      void router.navigate({ to: '/roles' });
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Descartar alterações' })
+    );
+
+    expect(await screen.findByText('Lista de cargos')).toBeInTheDocument();
+    expect(updateRole).not.toHaveBeenCalled();
+    expect(setRoleUsers).not.toHaveBeenCalled();
+  });
+
+  it('sem alteração, sai sem perguntar', async () => {
+    const { router } = renderDetail();
+
+    await screen.findByLabelText('Descrição');
+    await act(async () => {
+      void router.navigate({ to: '/roles' });
+    });
+
+    expect(await screen.findByText('Lista de cargos')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
 describe('RoleDetailsPage — permissões da própria sessão', () => {
   const MARIA = makeRoleMember({
     id: 'u_admin',

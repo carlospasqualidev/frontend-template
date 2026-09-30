@@ -16,14 +16,6 @@ interface IUrlTabs {
   defaultValue: string;
   /** Chave do search param na URL. Default: `'tab'`. */
   searchKey?: string;
-  /**
-   * Chamado antes de trocar de aba (clique ou teclado), com a aba pedida e a
-   * troca em si. Sem ele, a aba troca na hora; com ele, só quando `change` é
-   * chamado — é por aqui que a tela pede confirmação antes de descartar uma
-   * edição não salva. Abrir a aba em nova guia do navegador não passa por
-   * aqui: a aba atual fica como está.
-   */
-  onBeforeChange?: (next: string, change: () => void) => void;
   listClassName?: string;
   contentClassName?: string;
 }
@@ -39,14 +31,15 @@ interface IUrlTabs {
  * - **Nova aba do navegador**: clique do meio (scroll) ou Ctrl/Cmd/Shift+clique
  *   numa aba abrem a URL correspondente (`?tab=...`) em nova guia, como um link,
  *   sem trocar a aba atual.
- * - **Confirmar a troca**: `onBeforeChange` recebe a troca e decide quando
- *   (e se) ela acontece.
+ * - **Edição não salva**: trocar de aba é uma navegação do roteador (`?tab=`),
+ *   então passa pelo guard de edição não salva da tela
+ *   (`useUnsavedChangesGuard` com `searchKey`), que pergunta antes de trocar
+ *   quando a aba leva um formulário alterado; a nova guia não passa por ele.
  */
 export function UrlTabs({
   items,
   defaultValue,
   searchKey = 'tab',
-  onBeforeChange,
   listClassName,
   contentClassName,
 }: IUrlTabs) {
@@ -74,11 +67,6 @@ export function UrlTabs({
     void navigate({ to: '.', search: tabSearch(next), replace: true });
   };
 
-  const requestTab = (next: string) => {
-    if (onBeforeChange) onBeforeChange(next, () => setTab(next));
-    else setTab(next);
-  };
-
   const hrefForTab = (next: string) =>
     router.buildLocation({ to: '.', search: tabSearch(next) }).href;
 
@@ -87,7 +75,7 @@ export function UrlTabs({
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={requestTab}>
+    <Tabs value={activeTab} onValueChange={setTab}>
       {/* Container rolável: mantém as abas acessíveis por scroll lateral em
           telas estreitas. O `pb-2`/`-mb-2` reserva espaço para o sublinhado da
           aba ativa não ser cortado pelo overflow, sem alterar o ritmo vertical. */}

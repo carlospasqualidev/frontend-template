@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/sidebar';
 import { ToggleTheme } from '@/components/global/layout/toggleTheme';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { confirmLeaveIfDirty } from '@/hooks/useUnsavedChangesGuard';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -26,6 +27,9 @@ export function NavUser() {
   const navigate = useNavigate();
 
   async function handleSignOut() {
+    // Com edição não salva, pergunta antes de encerrar a sessão: perguntar
+    // depois deixaria "Continuar editando" numa tela sem sessão.
+    if (!(await confirmLeaveIfDirty())) return;
     try {
       await signOut();
     } catch {
@@ -34,7 +38,9 @@ export function NavUser() {
       // store já limpou o estado local. Sem este `catch`, a rejeição sobe por
       // um `void handleSignOut()` e vira unhandled rejection no console.
     } finally {
-      await navigate({ to: '/login', replace: true });
+      // A edição já foi descartada acima (ou não havia): a saída não passa
+      // pelo guard de novo.
+      await navigate({ to: '/login', replace: true, ignoreBlocker: true });
     }
   }
 

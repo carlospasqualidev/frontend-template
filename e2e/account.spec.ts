@@ -183,7 +183,7 @@ test.describe('Minha conta', () => {
   });
 
   // A aba inativa desmonta: trocar de aba com o perfil alterado pergunta
-  // antes de descartar. Nada é gravado aqui.
+  // antes de descartar, pelo mesmo guard de sair da tela. Nada é gravado aqui.
   test('Perfil: trocar de aba com edição não salva pede confirmação', async ({
     page,
   }) => {
@@ -193,7 +193,7 @@ test.describe('Minha conta', () => {
 
     const securityTab = page.getByRole('tab', { name: 'Segurança' });
     const dialog = page.getByRole('alertdialog', {
-      name: 'Descartar as alterações do perfil?',
+      name: 'Descartar as alterações?',
     });
     await securityTab.click();
     await expect(dialog).toBeVisible();

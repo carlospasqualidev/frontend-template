@@ -21,6 +21,7 @@ import { Link } from '@/components/global/link/link';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import { hasPermission } from '@/lib/permissions';
 import { ActivityTab } from '@/screens/users/details/activityTab';
@@ -42,6 +43,7 @@ import {
 import {
   handleUserFormError,
   handleUserMutationError,
+  invalidateRoleMembers,
   invalidateRoleMemberships,
   storeSavedUser,
   useDeleteUser,
@@ -216,6 +218,10 @@ function UserDetails({
     defaultValues: userToFormValues(user),
   });
 
+  // O formulário fica acima das abas: trocar de aba não sai da edição, só
+  // sair da tela pergunta.
+  useUnsavedChangesGuard(!readOnly && isDirty);
+
   // Uma referência só, o usuário do cache: é com ele que o "Salvar" compara, é
   // a ele que o "Descartar" volta e é contra ele que a alteração pendente
   // aparece. Quando o cache muda (a resposta de uma gravação, o "Bloquear", uma
@@ -240,12 +246,16 @@ function UserDetails({
   }, [user, getValues, reset, setValue]);
 
   // Cada gravação põe no cache o usuário que o servidor devolveu, e o
-  // formulário passa a partir dele. A falha que não é HTTP (a resposta 200
-  // fora do contrato: o servidor pode ter gravado) relê o usuário; se a
-  // releitura falhar, a alteração inteira continua pendente.
+  // formulário passa a partir dele. O cadastro aparece também nos usuários de
+  // cada cargo, que são relidos. A falha que não é HTTP (a resposta 200 fora
+  // do contrato: o servidor pode ter gravado) relê o usuário; se a releitura
+  // falhar, a alteração inteira continua pendente.
   const profileMutation = useMutation({
     mutationFn: (body: UpdateUserBody) => updateUser(user.id, body),
-    onSuccess: ({ user: saved }) => storeSavedUser(queryClient, saved),
+    onSuccess: ({ user: saved }) => {
+      storeSavedUser(queryClient, saved);
+      invalidateRoleMembers(queryClient);
+    },
     onError: (error) =>
       handleUserFormError(error, {
         queryClient,

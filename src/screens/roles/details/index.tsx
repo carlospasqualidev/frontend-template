@@ -19,6 +19,7 @@ import { Link } from '@/components/global/link/link';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import { hasPermission } from '@/lib/permissions';
 import { OverviewTab } from '@/screens/roles/details/overviewTab';
@@ -293,6 +294,10 @@ function RoleDetails({
     schema: roleFormSchema,
     defaultValues: roleToFormValues(reference),
   });
+
+  // O formulário fica acima das abas: trocar de aba não sai da edição, só
+  // sair da tela pergunta.
+  useUnsavedChangesGuard(!readOnly && isDirty);
 
   // Uma referência só, o cargo e os usuários do cache: é com eles que o
   // "Salvar" compara, é a eles que o "Descartar" volta e é contra eles que a

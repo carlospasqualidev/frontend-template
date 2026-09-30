@@ -56,6 +56,16 @@ export function invalidateRoleMemberships(queryClient: QueryClient): void {
 }
 
 /**
+ * O cadastro ou o status de alguém mudou (editar, bloquear, desbloquear): os
+ * usuários de cada cargo são relidos, porque a aba "Usuários" do cargo mostra
+ * o nome, o e-mail, a foto e o status de cada um. Os cargos, as contagens e as
+ * permissões não mudam e ficam como estão.
+ */
+export function invalidateRoleMembers(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: roleKeys.allMembers() });
+}
+
+/**
  * Falha de uma mutação de usuário. Erro HTTP já teve o toast do interceptor (ou
  * a resposta própria de quem chamou) e não ganha outro. Qualquer outra falha é
  * inesperada: a resposta 200 fora do contrato recusada pelo `.parse` (o
@@ -111,14 +121,20 @@ export function handleUserFormError(
   issues.forEach(({ field, message }) => markField(field, message));
 }
 
-/** Bloqueia ou desbloqueia; o toast de sucesso é o `message` do servidor. */
+/**
+ * Bloqueia ou desbloqueia; o toast de sucesso é o `message` do servidor. O
+ * status aparece também nos usuários de cada cargo, que são relidos.
+ */
 export function useSetUserActive() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
       setUserActive(userId, isActive),
-    onSuccess: ({ user }) => storeSavedUser(queryClient, user),
+    onSuccess: ({ user }) => {
+      storeSavedUser(queryClient, user);
+      invalidateRoleMembers(queryClient);
+    },
     onError: (error) => handleUserMutationError(error, queryClient),
   });
 }

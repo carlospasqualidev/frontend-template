@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -175,9 +175,11 @@ describe('UserCreatePage — gravação', () => {
       image: null,
       idleTimeoutMinutes: 30,
     });
+    // Criado, o digitado está gravado: abrir o detalhe não pergunta.
     expect(await screen.findByText('Detalhe do usuário')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/users/u-novo');
     expect(router.state.location.search).toEqual({ tab: 'roles' });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   // Vazio é "sem telefone" e "herda o tempo da empresa": `null` no corpo.
@@ -242,5 +244,75 @@ describe('UserCreatePage — gravação', () => {
 
     expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/users');
+  });
+
+  // "Cancelar" é o descartar da criação: volta sem perguntar.
+  it('"Cancelar" com algo preenchido volta para a lista sem perguntar', async () => {
+    const user = userEvent.setup();
+    const { router } = renderCreate();
+
+    await user.type(await screen.findByLabelText('Nome'), 'Bruno');
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+// Sair da tela por outro caminho (o menu, o voltar do navegador) com o
+// formulário preenchido pergunta antes, pelo guard global.
+describe('UserCreatePage — edição não salva', () => {
+  it('com algo preenchido, sair pergunta; "Continuar editando" fica com o digitado', async () => {
+    const user = userEvent.setup();
+    const { router } = renderCreate();
+
+    await user.type(await screen.findByLabelText('Nome'), 'Bruno');
+    await act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Continuar editando' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    expect(router.state.location.pathname).toBe('/users/create');
+    expect(screen.getByLabelText('Nome')).toHaveValue('Bruno');
+  });
+
+  it('"Descartar alterações" sai sem criar', async () => {
+    const user = userEvent.setup();
+    const { router } = renderCreate();
+
+    await user.type(await screen.findByLabelText('Nome'), 'Bruno');
+    await act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Descartar alterações' })
+    );
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it('sem nada preenchido, sai sem perguntar', async () => {
+    const { router } = renderCreate();
+
+    await screen.findByLabelText('Nome');
+    await act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });

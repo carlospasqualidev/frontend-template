@@ -11,6 +11,7 @@ import { InputField } from '@/components/global/form/inputField';
 import { NumberField } from '@/components/global/form/numberField';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import {
   changedProfileFields,
@@ -31,6 +32,7 @@ import {
 } from '@/services/account/accountApi';
 import { accountKeys } from '@/services/account/queryKeys';
 import { catchHandler, sendErrorMessage } from '@/services/api/errorHandlers';
+import { roleKeys } from '@/services/roles/queryKeys';
 import { userKeys } from '@/services/users/queryKeys';
 
 const FORM_ID = 'account-profile-form';
@@ -38,21 +40,12 @@ const FORM_ID = 'account-profile-form';
 const UNEXPECTED_ERROR_MESSAGE =
   'Não foi possível concluir agora. Tente novamente em instantes.';
 
-interface IProfileTab {
-  /**
-   * Avisa quando passa a ter (ou deixa de ter) edição não salva: a página
-   * pede confirmação antes de trocar de aba, porque a aba inativa desmonta e
-   * a edição se perde.
-   */
-  onDirtyChange: (dirty: boolean) => void;
-}
-
 /**
  * Aba "Perfil": o próprio cadastro, pré-preenchido pelo perfil gravado
  * (`GET /client/users/me/profile`) e salvo por `PATCH /client/users/me`. A
  * casca espera o perfil; o formulário só monta com ele pronto.
  */
-export function ProfileTab({ onDirtyChange }: IProfileTab) {
+export function ProfileTab() {
   const {
     data: profile,
     isPending,
@@ -81,7 +74,7 @@ export function ProfileTab({ onDirtyChange }: IProfileTab) {
     );
   }
 
-  return <ProfileForm profile={profile} onDirtyChange={onDirtyChange} />;
+  return <ProfileForm profile={profile} />;
 }
 
 /**
@@ -90,10 +83,7 @@ export function ProfileTab({ onDirtyChange }: IProfileTab) {
  * traz o usuário da sessão, que substitui o do store (nome, foto e o tempo de
  * inatividade resolvido passam a valer na hora).
  */
-function ProfileForm({
-  profile,
-  onDirtyChange,
-}: IProfileTab & { profile: AccountProfile }) {
+function ProfileForm({ profile }: { profile: AccountProfile }) {
   const queryClient = useQueryClient();
   const setSessionUser = useSessionStore((state) => state.setUser);
 
@@ -110,12 +100,9 @@ function ProfileForm({
     defaultValues: profileToFormValues(profile),
   });
 
-  // O mesmo sinal do "Salvar alterações" do topo; desmontar (trocar de aba)
-  // descarta a edição, e a página deixa de ter o que confirmar.
-  useEffect(() => {
-    onDirtyChange(isDirty);
-    return () => onDirtyChange(false);
-  }, [isDirty, onDirtyChange]);
+  // A aba inativa desmonta e leva a edição junto: trocar de aba (`?tab=`)
+  // pergunta como sair da tela.
+  useUnsavedChangesGuard(isDirty, { searchKey: 'tab' });
 
   // Uma referência só, o perfil do cache: é com ele que o "Salvar" compara, é
   // a ele que o "Descartar" volta e é contra ele que a alteração pendente
@@ -178,8 +165,9 @@ function ProfileForm({
         (previous) => previous && profileAfterSave(previous, body, user)
       );
       // O próprio cadastro aparece também na gestão de usuários (lista e
-      // detalhe), que relê quando for aberta.
+      // detalhe) e nos usuários de cada cargo, que releem quando abertos.
       void queryClient.invalidateQueries({ queryKey: userKeys.all });
+      void queryClient.invalidateQueries({ queryKey: roleKeys.allMembers() });
     },
     onError: handleError,
   });

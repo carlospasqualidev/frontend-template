@@ -5,6 +5,7 @@ import { Check, X } from 'lucide-react';
 import { Button } from '@/components/global/button/button';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { useReturnToList } from '@/hooks/useReturnToList';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import {
   createUserFormSchema,
@@ -48,7 +49,11 @@ export function UserCreatePage() {
     defaultValues: EMPTY_USER_FORM_VALUES,
   });
 
+  // "Cancelar" volta à lista sem perguntar (é o descartar da criação).
+  useUnsavedChangesGuard(isDirty);
+
   // O toast de sucesso é o `message` da resposta (interceptor do `api`).
+  // Criado, o que foi digitado está gravado: abrir o detalhe não pergunta.
   const mutation = useMutation({
     mutationFn: createUser,
     onSuccess: ({ user }) => {
@@ -61,6 +66,7 @@ export function UserCreatePage() {
         params: { userId: user.id },
         search: { tab: 'roles' },
         replace: true,
+        ignoreBlocker: true,
       });
     },
     onError: (error) => {

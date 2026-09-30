@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +33,7 @@ function renderAccount(tab: string) {
         component: AccountPage,
         validateSearch: (value) => ({ tab: value.tab }),
       },
+      { path: '/', component: () => <p>Início</p> },
     ],
   });
 }
@@ -126,7 +127,8 @@ describe('Minha conta — abas de demonstração', () => {
 });
 
 // Cada aba tem o seu formulário e a inativa desmonta: a edição do perfil não
-// salva não se perde sem a pessoa confirmar.
+// salva não se perde sem a pessoa confirmar. A troca de aba passa pelo mesmo
+// guard de edição não salva de sair da tela.
 describe('Minha conta — trocar de aba com o perfil alterado', () => {
   beforeEach(() => {
     vi.mocked(fetchAccountProfile).mockResolvedValue({
@@ -163,7 +165,7 @@ describe('Minha conta — trocar de aba com o perfil alterado', () => {
     await user.click(screen.getByRole('tab', { name: 'Segurança' }));
 
     const dialog = await screen.findByRole('alertdialog', {
-      name: 'Descartar as alterações do perfil?',
+      name: 'Descartar as alterações?',
     });
     await user.click(
       within(dialog).getByRole('button', { name: 'Continuar editando' })
@@ -179,10 +181,9 @@ describe('Minha conta — trocar de aba com o perfil alterado', () => {
     expect(
       screen.getByRole('button', { name: 'Salvar alterações' })
     ).toBeInTheDocument();
-    // O dialog não tem trigger: o foco volta à aba "Perfil", não ao `body`.
-    await waitFor(() =>
-      expect(screen.getByRole('tab', { name: 'Perfil' })).toHaveFocus()
-    );
+    // O foco volta para onde estava quando a troca foi pedida (o campo que a
+    // pessoa editava), não ao `body` nem à aba clicada.
+    await waitFor(() => expect(screen.getByLabelText('Nome')).toHaveFocus());
   });
 
   it('pelo teclado, sem alteração, a seta troca de aba na hora', async () => {
@@ -210,7 +211,7 @@ describe('Minha conta — trocar de aba com o perfil alterado', () => {
 
     // O foco abre no "Continuar editando" (destrutivo: o cancelar primeiro).
     const dialog = await screen.findByRole('alertdialog', {
-      name: 'Descartar as alterações do perfil?',
+      name: 'Descartar as alterações?',
     });
     const keepEditing = within(dialog).getByRole('button', {
       name: 'Continuar editando',
@@ -280,4 +281,52 @@ describe('Minha conta — trocar de aba com o perfil alterado', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(router.state.location.search).toEqual({ tab: 'billing' });
   });
+
+  it('com alteração, sair da tela pergunta pelo mesmo guard', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAccount('profile');
+
+    await editName(user);
+    await act(async () => {
+      void router.navigate({ to: '/' });
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Descartar alterações' })
+    );
+
+    expect(await screen.findByText('Início')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+  });
+
+  // Nova guia não é navegação desta aba: a edição continua e nada pergunta.
+  it.each([
+    ['Control', 'Ctrl+clique'],
+    ['Shift', 'Shift+clique'],
+    ['Meta', 'Cmd+clique'],
+  ])(
+    'com alteração, %s abre a aba em nova guia sem perguntar (%s)',
+    async (modifier) => {
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+      const user = userEvent.setup();
+      const { router } = renderAccount('profile');
+
+      await editName(user);
+      await user.keyboard(`{${modifier}>}`);
+      await user.click(screen.getByRole('tab', { name: 'Segurança' }));
+      await user.keyboard(`{/${modifier}}`);
+
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tab=security'),
+        '_blank',
+        'noopener,noreferrer'
+      );
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(router.state.location.search).toEqual({ tab: 'profile' });
+      expect(screen.getByLabelText('Nome')).toHaveValue('Outro nome');
+      openSpy.mockRestore();
+    }
+  );
 });

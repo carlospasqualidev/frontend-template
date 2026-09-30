@@ -6,6 +6,7 @@ import { IdleTimeout } from '@/components/global/layout/idleTimeout';
 import { rememberSearch } from '@/lib/navigation/searchMemory';
 import { PageActionsSlot } from '@/components/global/layout/pageActions';
 import { SuspenseFallback } from '@/components/global/layout/suspenseFallback';
+import { UnsavedChangesDialog } from '@/components/global/layout/unsavedChangesDialog';
 import { AppSidebar } from '@/components/global/sidebar/appSidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <IdleTimeout />
+      <UnsavedChangesDialog />
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         {/* Camada `--z-header`: ACIMA do conteúdo da página e do sidebar, ABAIXO

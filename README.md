@@ -292,9 +292,12 @@ cópia recusada pelo anti-escalonamento e o gestor editando o próprio cargo, co
 a tela seguindo as permissões novas sem recarregar), Minha conta (editar o
 próprio perfil, o tempo acima do limite da empresa recusado no campo, a
 confirmação ao trocar de aba com o perfil alterado, trocar a senha e voltar à
-original) e a home (números e atividade reais, blocos que
-somem sem a permissão); em todas, o aviso de demonstração nas partes que o
-servidor não atende. O empilhamento
+original), a home (números e atividade reais, blocos que
+somem sem a permissão) e a edição não salva (sair pelo menu e pelo voltar do
+navegador pede confirmação, uma só com dois voltar seguidos, "Sair" pergunta
+antes de encerrar a sessão, a nova guia não pede, fechar a aba pede o aviso
+nativo, e depois de salvar nada pergunta); em todas, o aviso de demonstração
+nas partes que o servidor não atende. O empilhamento
 (`npm run test:layers`) roda contra o Storybook, sem backend.
 
 Suba o server antes, na pasta dele:

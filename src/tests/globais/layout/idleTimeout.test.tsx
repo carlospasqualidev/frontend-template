@@ -61,7 +61,11 @@ describe('useIdleLogout — logout por inatividade', () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(signOutSpy).toHaveBeenCalledTimes(1);
-    expect(navigateSpy).toHaveBeenCalledWith({ to: '/login' });
+    // A sessão acabou: a saída não passa pelo guard de edição não salva.
+    expect(navigateSpy).toHaveBeenCalledWith({
+      to: '/login',
+      ignoreBlocker: true,
+    });
   });
 
   it('"continuar" cancela o logout e reinicia o cronômetro', async () => {

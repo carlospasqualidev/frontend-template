@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -192,6 +192,8 @@ describe('RoleCreatePage — gravação', () => {
     expect(queryClient.getQueryData(roleKeys.detail('role-novo'))).toEqual(
       role
     );
+    // Criado, o digitado está gravado: abrir o detalhe não pergunta.
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('sem a leitura de usuários, abre o detalhe na aba padrão', async () => {
@@ -303,5 +305,33 @@ describe('RoleCreatePage — gravação', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/roles'));
+  });
+
+  // "Cancelar" é o descartar da criação; sair por outro caminho pergunta.
+  it('com algo preenchido, "Cancelar" volta sem perguntar e sair por outro caminho pergunta', async () => {
+    const user = userEvent.setup();
+    const { router } = renderCreate();
+
+    await user.type(await screen.findByLabelText('Nome'), 'Suporte');
+    await act(async () => {
+      void router.navigate({ to: '/roles' });
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Continuar editando' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    expect(router.state.location.pathname).toBe('/roles/create');
+    expect(screen.getByLabelText('Nome')).toHaveValue('Suporte');
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByText('Lista de cargos')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(createRole).not.toHaveBeenCalled();
   });
 });

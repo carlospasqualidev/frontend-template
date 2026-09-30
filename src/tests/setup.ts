@@ -2,6 +2,8 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
+import { dropLeaveRequest } from '@/hooks/useUnsavedChangesGuard';
+
 // O jsdom não implementa ResizeObserver, usado por componentes Radix (ex.: ScrollArea).
 // Polyfill no-op é suficiente para os testes — eles não medem layout.
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -40,7 +42,9 @@ if (typeof Element.prototype.scrollIntoView === 'undefined') {
   Element.prototype.scrollIntoView = () => {};
 }
 
-// Limpa o DOM renderizado após cada teste.
+// Limpa o DOM renderizado após cada teste, e a pergunta do guard de edição não
+// salva que um teste deixou aberta não passa para o seguinte.
 afterEach(() => {
   cleanup();
+  dropLeaveRequest();
 });

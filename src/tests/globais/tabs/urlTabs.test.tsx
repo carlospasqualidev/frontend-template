@@ -6,16 +6,13 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 
-function setupRouter(
-  initialPath: string,
-  onBeforeChange?: (next: string, change: () => void) => void
-) {
+function setupRouter(initialPath: string) {
   const rootRoute = createRootRoute({ component: () => <Outlet /> });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -23,7 +20,6 @@ function setupRouter(
     component: () => (
       <UrlTabs
         defaultValue="profile"
-        onBeforeChange={onBeforeChange}
         items={[
           {
             value: 'profile',
@@ -104,48 +100,6 @@ describe('UrlTabs', () => {
     expect(router.state.location.search).toEqual({});
   });
 
-  it('com `onBeforeChange`, só troca quando a tela chama `change`', async () => {
-    let pendingChange: (() => void) | undefined;
-    const onBeforeChange = vi.fn((_next: string, change: () => void) => {
-      pendingChange = change;
-    });
-    const router = setupRouter('/', onBeforeChange);
-    render(<RouterProvider router={router} />);
-    const user = userEvent.setup();
-
-    await user.click(await screen.findByRole('tab', { name: 'Pagamento' }));
-
-    expect(onBeforeChange).toHaveBeenCalledWith(
-      'billing',
-      expect.any(Function)
-    );
-    expect(router.state.location.search).toEqual({});
-    expect(screen.getByRole('tab', { name: 'Perfil' })).toHaveAttribute(
-      'data-state',
-      'active'
-    );
-
-    await act(async () => pendingChange?.());
-
-    expect(router.state.location.search).toEqual({ tab: 'billing' });
-    expect(await screen.findByText('conteudo-billing')).toBeVisible();
-  });
-
-  it('abrir em nova guia não passa pelo `onBeforeChange`', async () => {
-    vi.spyOn(window, 'open').mockReturnValue(null);
-    const onBeforeChange = vi.fn();
-    const router = setupRouter('/', onBeforeChange);
-    render(<RouterProvider router={router} />);
-    const user = userEvent.setup();
-
-    await user.keyboard('{Control>}');
-    await user.click(await screen.findByRole('tab', { name: 'Segurança' }));
-    await user.keyboard('{/Control}');
-
-    expect(onBeforeChange).not.toHaveBeenCalled();
-    expect(window.open).toHaveBeenCalled();
-  });
-
   it('abre a aba em nova guia no clique do meio sem trocar a aba ativa', async () => {
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     const router = setupRouter('/');
@@ -211,32 +165,12 @@ describe('UrlTabs', () => {
         'active'
       );
     });
-
-    it(`${gesture} não passa pelo \`onBeforeChange\``, async () => {
-      const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-      const onBeforeChange = vi.fn();
-      const router = setupRouter('/', onBeforeChange);
-      render(<RouterProvider router={router} />);
-      const user = userEvent.setup();
-
-      await user.keyboard(`{${modifier}>}`);
-      await user.click(await screen.findByRole('tab', { name: 'Segurança' }));
-      await user.keyboard(`{/${modifier}}`);
-
-      expect(onBeforeChange).not.toHaveBeenCalled();
-      expect(openSpy).toHaveBeenCalledWith(
-        expect.stringContaining('tab=security'),
-        '_blank',
-        'noopener,noreferrer'
-      );
-      expect(router.state.location.search).toEqual({});
-    });
   });
 
-  // A ativação é automática: a seta leva o foco e pede a troca; Enter e
-  // Espaço na aba focada pedem de novo. Tudo passa pelo `onBeforeChange`.
+  // A ativação é automática: a seta leva o foco e troca de aba. Com edição
+  // não salva, a troca passa pelo guard da tela (`useUnsavedChangesGuard`).
   describe('teclado', () => {
-    it('sem `onBeforeChange`, as setas trocam de aba', async () => {
+    it('as setas trocam de aba', async () => {
       const router = setupRouter('/');
       render(<RouterProvider router={router} />);
       const user = userEvent.setup();
@@ -253,55 +187,6 @@ describe('UrlTabs', () => {
 
       await waitFor(() => expect(router.state.location.search).toEqual({}));
       expect(screen.getByRole('tab', { name: 'Perfil' })).toHaveFocus();
-    });
-
-    it('setas, Enter e Espaço passam pelo `onBeforeChange`; só troca com `change`', async () => {
-      let pendingChange: (() => void) | undefined;
-      const onBeforeChange = vi.fn((_next: string, change: () => void) => {
-        pendingChange = change;
-      });
-      const router = setupRouter('/', onBeforeChange);
-      render(<RouterProvider router={router} />);
-      const user = userEvent.setup();
-
-      await user.click(await screen.findByRole('tab', { name: 'Perfil' }));
-      expect(onBeforeChange).not.toHaveBeenCalled();
-
-      await user.keyboard('{ArrowRight}');
-
-      const security = screen.getByRole('tab', { name: 'Segurança' });
-      await waitFor(() => expect(security).toHaveFocus());
-      expect(onBeforeChange).toHaveBeenCalledTimes(1);
-      expect(onBeforeChange).toHaveBeenLastCalledWith(
-        'security',
-        expect.any(Function)
-      );
-      expect(security).toHaveAttribute('data-state', 'inactive');
-      expect(router.state.location.search).toEqual({});
-
-      await user.keyboard('{Enter}');
-      expect(onBeforeChange).toHaveBeenCalledTimes(2);
-      expect(onBeforeChange).toHaveBeenLastCalledWith(
-        'security',
-        expect.any(Function)
-      );
-
-      await user.keyboard(' ');
-      expect(onBeforeChange).toHaveBeenCalledTimes(3);
-      expect(onBeforeChange).toHaveBeenLastCalledWith(
-        'security',
-        expect.any(Function)
-      );
-      expect(router.state.location.search).toEqual({});
-      expect(screen.getByRole('tab', { name: 'Perfil' })).toHaveAttribute(
-        'data-state',
-        'active'
-      );
-
-      await act(async () => pendingChange?.());
-
-      expect(router.state.location.search).toEqual({ tab: 'security' });
-      expect(await screen.findByText('conteudo-security')).toBeVisible();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Activity,
   Bell,
@@ -21,10 +21,11 @@ import {
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { Card } from '@/components/global/card/card';
-import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
 import { Switch } from '@/components/global/form/switch';
+import { UnsavedChangesDialog } from '@/components/global/layout/unsavedChangesDialog';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 import { Typography } from '@/components/ui/typography';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 
 const meta = {
   title: 'Globais/UrlTabs',
@@ -241,40 +242,37 @@ export const Vitrine: Story = {
   },
 };
 
-function ConfirmBeforeChangeDemo() {
+// O conteúdo da aba desmonta ao trocar: a "edição" some junto, como o
+// formulário do perfil em `screens/account`.
+function DirtyTabContent() {
   const [dirty, setDirty] = useState(true);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const pendingChange = useRef<() => void>(undefined);
+  useUnsavedChangesGuard(dirty, { searchKey: 'tab' });
 
+  return (
+    <Switch
+      id="story-url-tabs-dirty"
+      label="Edição não salva"
+      description="Ligado, trocar de aba pede confirmação."
+      checked={dirty}
+      onCheckedChange={setDirty}
+    />
+  );
+}
+
+function ConfirmBeforeChangeDemo() {
   return (
     <Card
       title="Confirmação antes de trocar"
-      description="Com `onBeforeChange`, a troca só acontece quando a tela chama `change` — aqui, depois do `ConfirmDialog`, enquanto há edição não salva. Padrão de `screens/account` (o perfil alterado)."
+      description="A troca de aba é uma navegação do roteador (`?tab=`): com edição não salva na aba, o guard da tela (`useUnsavedChangesGuard` com `searchKey: 'tab'`) abre a confirmação global antes. Padrão de `screens/account` (o perfil alterado)."
     >
       <UrlTabs
         defaultValue="profile"
-        onBeforeChange={(_next, change) => {
-          if (!dirty) {
-            change();
-            return;
-          }
-          pendingChange.current = change;
-          setConfirmOpen(true);
-        }}
         items={[
           {
             value: 'profile',
             icon: <UserCog />,
             label: 'Perfil',
-            content: (
-              <Switch
-                id="story-url-tabs-dirty"
-                label="Edição não salva"
-                description="Ligado, trocar de aba pede confirmação."
-                checked={dirty}
-                onCheckedChange={setDirty}
-              />
-            ),
+            content: <DirtyTabContent />,
           },
           {
             value: 'security',
@@ -288,19 +286,7 @@ function ConfirmBeforeChangeDemo() {
           },
         ]}
       />
-      <ConfirmDialog
-        open={confirmOpen}
-        setOpen={setConfirmOpen}
-        title="Descartar as alterações do perfil?"
-        description="O que você mudou no perfil ainda não foi salvo. Trocar de aba descarta essas alterações."
-        confirmLabel="Descartar alterações"
-        cancelLabel="Continuar editando"
-        destructive
-        onConfirm={() => {
-          setDirty(false);
-          pendingChange.current?.();
-        }}
-      />
+      <UnsavedChangesDialog />
     </Card>
   );
 }

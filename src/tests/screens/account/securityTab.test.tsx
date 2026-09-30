@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -52,6 +52,7 @@ function renderAccount(tab: string) {
         component: AccountPage,
         validateSearch: (value) => ({ tab: value.tab }),
       },
+      { path: '/', component: () => <p>Início</p> },
     ],
   });
 }
@@ -278,6 +279,50 @@ describe('Minha conta — Segurança: troca de senha', () => {
 
     const reopened = await openPasswordModal(user);
     expect(within(reopened).getByLabelText('Senha atual')).toHaveValue('');
+  });
+
+  // Fechar o modal é o cancelar dele (sem pergunta, acima); sair da tela com
+  // algo digitado passa pelo guard de edição não salva.
+  it('com algo digitado, sair da tela pergunta; "Continuar editando" mantém o modal e o digitado', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAccount('security');
+
+    const dialog = await openPasswordModal(user);
+    const current = within(dialog).getByLabelText('Senha atual');
+    await user.type(current, 'senha-de-hoje');
+    await act(async () => {
+      void router.navigate({ to: '/' });
+    });
+
+    const confirm = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    await user.click(
+      within(confirm).getByRole('button', { name: 'Continuar editando' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    expect(router.state.location.pathname).toBe('/account');
+    expect(
+      screen.getByRole('dialog', { name: 'Alterar senha' })
+    ).toBeInTheDocument();
+    expect(current).toHaveValue('senha-de-hoje');
+    await waitFor(() => expect(current).toHaveFocus());
+  });
+
+  it('sem nada digitado, sair da tela não pergunta', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAccount('security');
+
+    await openPasswordModal(user);
+    await act(async () => {
+      void router.navigate({ to: '/' });
+    });
+
+    expect(await screen.findByText('Início')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });
 

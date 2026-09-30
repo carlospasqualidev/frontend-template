@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/global/button/button';
 import { InputField } from '@/components/global/form/inputField';
 import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import {
   EMPTY_PASSWORD_FORM,
@@ -60,6 +61,10 @@ function ChangePasswordForm({ onChanged }: { onChanged: () => void }) {
     schema: passwordFormSchema,
     defaultValues: EMPTY_PASSWORD_FORM,
   });
+
+  // Fechar o modal descarta o digitado sem perguntar (é o cancelar dele);
+  // sair da tela ou da aba com algo digitado pergunta.
+  useUnsavedChangesGuard(isDirty, { searchKey: 'tab' });
 
   // O toast de sucesso é o `message` da resposta ("Senha alterada.").
   const mutation = useMutation({

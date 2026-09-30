@@ -48,7 +48,9 @@ export function useIdleLogout(idleMinutes: number, enabled: boolean) {
     warningRef.current = false;
     setWarning(false);
     await signOut();
-    navigate({ to: '/login' });
+    // A sessão acabou: uma edição não salva não tem mais onde ser salva, e a
+    // saída não passa pelo guard de edição não salva.
+    navigate({ to: '/login', ignoreBlocker: true });
     toast.info('Sessão encerrada por inatividade.');
   }, [clearAll, signOut, navigate]);
 

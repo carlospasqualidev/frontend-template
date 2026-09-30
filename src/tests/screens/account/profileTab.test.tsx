@@ -12,6 +12,8 @@ import {
   type AccountProfile,
 } from '@/services/account/accountApi';
 import { uploadFile } from '@/services/api/upload';
+import { roleKeys } from '@/services/roles/queryKeys';
+import { userKeys } from '@/services/users/queryKeys';
 import {
   makeTestQueryClient,
   renderRoutes,
@@ -186,6 +188,30 @@ describe('Minha conta — Perfil: salvar', () => {
     expect(screen.getByLabelText('Nome')).toHaveValue('Camila Souza');
     // O toast é o do servidor (interceptor), não um da tela.
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  // O próprio nome e a foto aparecem na aba "Usuários" dos cargos da pessoa.
+  it('salvar relê os usuários da gestão e dos cargos', async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateAccountProfile).mockResolvedValue({
+      message: 'Perfil atualizado.',
+      user: { ...SESSION_USER, name: 'Camila Souza' },
+    });
+    const members = roleKeys.members('r-auditoria');
+    const users = userKeys.detail(SESSION_USER.id);
+    queryClient.setQueryData(members, { users: [], count: 0 });
+    queryClient.setQueryData(users, { user: null });
+    renderAccount();
+
+    const name = await screen.findByLabelText('Nome');
+    await user.clear(name);
+    await user.type(name, 'Camila Souza');
+    await user.click(saveButton());
+
+    await waitFor(() =>
+      expect(queryClient.getQueryState(members)?.isInvalidated).toBe(true)
+    );
+    expect(queryClient.getQueryState(users)?.isInvalidated).toBe(true);
   });
 
   // O administrador pode ter gravado um tempo acima do limite da empresa: ele

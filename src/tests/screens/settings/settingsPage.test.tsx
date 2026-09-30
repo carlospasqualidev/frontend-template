@@ -1,12 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient } from '@tanstack/react-query';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ZodError } from 'zod';
 
-import { PageActionsSlot } from '@/components/global/layout/pageActions';
 import { SettingsPage } from '@/screens/settings';
 import { sendErrorMessage } from '@/services/api/errorHandlers';
 import {
@@ -14,6 +13,7 @@ import {
   updateSystemConfigs,
   type SystemConfig,
 } from '@/services/systemConfigs/systemConfigsApi';
+import { renderRoutes } from '@/tests/helpers/renderRoutes';
 
 vi.mock('@/services/api/errorHandlers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/api/errorHandlers')>()),
@@ -71,13 +71,17 @@ const CONFIGS: SystemConfig[] = [
 
 let queryClient: QueryClient;
 
+// A tela com o roteador, o slot das ações do topo e a confirmação do guard de
+// edição não salva; `/users` é outra tela, para onde se sai.
 function renderSettings() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <PageActionsSlot />
-      <SettingsPage />
-    </QueryClientProvider>
-  );
+  return renderRoutes({
+    queryClient,
+    initialUrl: '/settings',
+    routes: [
+      { path: '/settings', component: SettingsPage },
+      { path: '/users', component: () => <p>Lista de usuários</p> },
+    ],
+  });
 }
 
 beforeEach(() => {
@@ -99,12 +103,13 @@ describe('SettingsPage — carregando', () => {
   // O skeleton segue o formato esperado da tela (`SETTINGS_OUTLINE`), sem
   // depender da leitura: um card por grupo, com a descrição da tela, e uma
   // linha por chave. Cada linha tem três blocos (rótulo, descrição, campo).
-  it('reserva os três grupos e as seis chaves do catálogo', () => {
+  it('reserva os três grupos e as seis chaves do catálogo', async () => {
     vi.mocked(fetchSystemConfigs).mockReturnValue(new Promise(() => {}));
-    const { container } = renderSettings();
+    renderSettings();
+    await screen.findByText('Nome da aplicação e e-mail de suporte.');
 
     const titles = [
-      ...container.querySelectorAll('[data-slot="card-title"]'),
+      ...document.querySelectorAll('[data-slot="card-title"]'),
     ].map((title) => title.textContent);
     expect(titles).toEqual(['Geral', 'Segurança', 'Notificações']);
 
@@ -214,6 +219,115 @@ describe('SettingsPage — gravação em lote', () => {
     expect(
       screen.queryByRole('button', { name: 'Salvar alterações' })
     ).not.toBeInTheDocument();
+  });
+});
+
+// Sair da tela (um link do menu, o voltar do navegador) com a edição não salva
+// pergunta antes, pelo guard global; salvar e "Descartar" liberam a saída.
+describe('SettingsPage — edição não salva', () => {
+  async function editName(user: ReturnType<typeof userEvent.setup>) {
+    const name = await screen.findByLabelText('Nome da aplicação');
+    await user.clear(name);
+    await user.type(name, 'Produto Renomeado');
+    return name;
+  }
+
+  function leaveToUsers(router: ReturnType<typeof renderSettings>['router']) {
+    return act(async () => {
+      void router.navigate({ to: '/users' });
+    });
+  }
+
+  it('sem alteração, sai da tela sem perguntar', async () => {
+    const { router } = renderSettings();
+    await screen.findByLabelText('Nome da aplicação');
+
+    await leaveToUsers(router);
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('com alteração, pergunta; "Continuar editando" fica com a edição e devolve o foco ao campo', async () => {
+    const user = userEvent.setup();
+    const { router } = renderSettings();
+    const name = await editName(user);
+
+    await leaveToUsers(router);
+
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Descartar as alterações?',
+    });
+    expect(dialog).toHaveTextContent(
+      'O que você alterou ainda não foi salvo. Sair agora descarta essas alterações.'
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Continuar editando' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    expect(router.state.location.pathname).toBe('/settings');
+    expect(name).toHaveValue('Produto Renomeado');
+    expect(
+      screen.getByRole('button', { name: 'Salvar alterações' })
+    ).toBeInTheDocument();
+    await waitFor(() => expect(name).toHaveFocus());
+  });
+
+  it('"Descartar alterações" sai da tela', async () => {
+    const user = userEvent.setup();
+    const { router } = renderSettings();
+    await editName(user);
+
+    await leaveToUsers(router);
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Descartar alterações' })
+    );
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(updateSystemConfigs).not.toHaveBeenCalled();
+  });
+
+  it('depois de salvar, sai sem perguntar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateSystemConfigs).mockResolvedValue({
+      message: 'Configurações atualizadas.',
+      systemConfigs: CONFIGS.map((config) =>
+        config.key === 'app.name'
+          ? { ...config, value: 'Produto Renomeado' }
+          : config
+      ),
+    });
+    const { router } = renderSettings();
+    await editName(user);
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Salvar alterações' })
+      ).not.toBeInTheDocument()
+    );
+
+    await leaveToUsers(router);
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('depois de "Descartar", sai sem perguntar', async () => {
+    const user = userEvent.setup();
+    const { router } = renderSettings();
+    await editName(user);
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+
+    await leaveToUsers(router);
+
+    expect(await screen.findByText('Lista de usuários')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });
 

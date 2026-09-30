@@ -6,6 +6,7 @@ import { Button } from '@/components/global/button/button';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import { hasPermission } from '@/lib/permissions';
 import {
@@ -52,7 +53,11 @@ export function RoleCreatePage() {
     defaultValues: EMPTY_ROLE_FORM_VALUES,
   });
 
+  // "Cancelar" volta à lista sem perguntar (é o descartar da criação).
+  useUnsavedChangesGuard(isDirty);
+
   // O toast de sucesso é o `message` da resposta (interceptor do `api`).
+  // Criado, o que foi digitado está gravado: abrir o detalhe não pergunta.
   const mutation = useMutation({
     mutationFn: (body: SaveRoleBody) => createRole(body),
     onSuccess: ({ role }) => {
@@ -62,6 +67,7 @@ export function RoleCreatePage() {
         params: { roleId: role.id },
         search: canReadUsers ? { tab: 'users' } : {},
         replace: true,
+        ignoreBlocker: true,
       });
     },
     onError: (error) =>

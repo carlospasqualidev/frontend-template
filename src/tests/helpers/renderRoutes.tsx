@@ -12,6 +12,7 @@ import {
 import { render } from '@testing-library/react';
 
 import { PageActionsSlot } from '@/components/global/layout/pageActions';
+import { UnsavedChangesDialog } from '@/components/global/layout/unsavedChangesDialog';
 
 export interface TestRoute {
   path: string;
@@ -20,8 +21,9 @@ export interface TestRoute {
 }
 
 /**
- * Monta telas com o roteador em memória, o `QueryClient` do teste e o slot do
- * `PageActions` (as ações do topo), abrindo em `initialUrl`. Devolve o roteador
+ * Monta telas com o roteador em memória, o `QueryClient` do teste, o slot do
+ * `PageActions` (as ações do topo) e a confirmação do guard de edição não
+ * salva (os dois são do `Layout` no app), abrindo em `initialUrl`. Devolve o roteador
  * para conferir a navegação (`router.state.location`).
  */
 export function renderRoutes({
@@ -37,6 +39,7 @@ export function renderRoutes({
     component: () => (
       <>
         <PageActionsSlot />
+        <UnsavedChangesDialog />
         <Outlet />
       </>
     ),

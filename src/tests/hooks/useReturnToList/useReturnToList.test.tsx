@@ -24,6 +24,7 @@ describe('useReturnToList', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/users',
       search: { filters: 'status:active', page: 2 },
+      ignoreBlocker: true,
     });
   });
 
@@ -33,7 +34,11 @@ describe('useReturnToList', () => {
     const { result } = renderHook(() => useReturnToList('/audit-logs'));
     result.current();
 
-    expect(navigate).toHaveBeenCalledWith({ to: '/audit-logs', search: {} });
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/audit-logs',
+      search: {},
+      ignoreBlocker: true,
+    });
   });
 
   // O search é lido no MOMENTO do retorno, não na renderização do hook: entre
@@ -48,6 +53,7 @@ describe('useReturnToList', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/users',
       search: { page: 5 },
+      ignoreBlocker: true,
     });
   });
 
@@ -60,7 +66,19 @@ describe('useReturnToList', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/settings/',
       search: { tab: 'geral' },
+      ignoreBlocker: true,
     });
+  });
+
+  // O retorno é uma saída que a tela pediu (salvou, criou, excluiu, cancelou):
+  // não passa pelo guard de edição não salva.
+  it('não passa pelo guard de edição não salva', () => {
+    const { result } = renderHook(() => useReturnToList('/roles'));
+    result.current();
+
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({ to: '/roles', ignoreBlocker: true })
+    );
   });
 
   it('mantém a identidade do callback entre renders (não invalida memo do consumidor)', () => {

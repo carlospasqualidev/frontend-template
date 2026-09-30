@@ -45,6 +45,31 @@ test.describe('Configurações', () => {
     await expect(inatividade).toHaveValue('30');
   });
 
+  // Regra entre as chaves de retenção da auditoria: apagar só depois de
+  // anonimizar. Só o prazo para apagar muda, então a regra é conferida contra o
+  // prazo para anonimizar já gravado: o lote é recusado inteiro (toast com o
+  // `message` do 400) e a alteração continua pendente no formulário.
+  test('recusa apagar a auditoria antes de anonimizá-la, sem gravar', async ({
+    page,
+  }) => {
+    const apagar = page.getByLabel('Prazo para apagar a auditoria (meses)');
+    await expect(apagar).toHaveValue('60');
+    await expect(
+      page.getByLabel('Prazo para anonimizar a auditoria (meses)')
+    ).toHaveValue('12');
+
+    await apagar.fill('12');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+
+    await expect(
+      page.getByText(
+        'Prazo para apagar a auditoria (meses): Informe um valor maior que o prazo para anonimizar.'
+      )
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Salvar alterações' })).toBeVisible();
+    await expect(apagar).toHaveValue('12');
+  });
+
   test('descartar reverte a alteração', async ({ page }) => {
     const nome = page.getByLabel('Nome da aplicação');
     const original = await nome.inputValue();

@@ -57,7 +57,7 @@ function moduleRank(module: string): number {
 function moduleDescription(module: string): string {
   switch (module) {
     case 'SECURITY':
-      return 'Autenticação, sessão e política de acesso.';
+      return 'Autenticação, sessão, política de acesso e retenção da auditoria.';
     case 'NOTIFICATIONS':
       return 'Como e quando o sistema avisa os usuários.';
     case 'INTEGRATIONS':

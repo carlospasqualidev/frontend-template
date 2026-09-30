@@ -39,22 +39,6 @@ export const USER_STATUS_OPTIONS = Array.from(
   ([value, label]) => ({ value, label })
 );
 
-export type UserActivityType =
-  | 'login'
-  | 'invite-accepted'
-  | 'role-change'
-  | 'password-changed'
-  | 'profile-updated'
-  | 'session-revoked';
-
-export interface UserActivityEvent {
-  id: string;
-  type: UserActivityType;
-  message: string;
-  /** Data ISO (`aaaa-mm-dd`). */
-  occurredAt: string;
-}
-
 export interface UserPermission {
   id: string;
   label: string;

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   fetchSystemConfigs,
+  findMockSystemConfig,
   systemConfigModuleLabel,
   updateSystemConfigs,
   type SystemConfigUpdateItem,
@@ -11,6 +12,10 @@ import {
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
+
+// Texto do servidor para a regra entre os prazos de retenção da auditoria.
+const RETENTION_ORDER_MESSAGE =
+  'Prazo para apagar a auditoria (meses): Informe um valor maior que o prazo para anonimizar.';
 
 describe('systemConfigModuleLabel', () => {
   it('traduz cada módulo conhecido para o rótulo pt-BR', () => {
@@ -53,6 +58,51 @@ describe('fetchSystemConfigs', () => {
     expect(
       systemConfigs.some((config) => config.key === 'security.sessionTimeout')
     ).toBe(false);
+  });
+
+  it('inclui os prazos de retenção da auditoria com os textos e os padrões do backend', async () => {
+    const { systemConfigs } = await fetchSystemConfigs();
+
+    expect(
+      systemConfigs.filter((config) => config.key.startsWith('audit.'))
+    ).toEqual([
+      {
+        key: 'audit.anonymizeAfterMonths',
+        module: 'SECURITY',
+        label: 'Prazo para anonimizar a auditoria (meses)',
+        description:
+          'Meses até cada evento da auditoria perder o autor, o IP, o navegador e os dados pessoais registrados. O que foi feito continua no histórico.',
+        valueType: 'int',
+        value: '12',
+      },
+      {
+        key: 'audit.deleteAfterMonths',
+        module: 'SECURITY',
+        label: 'Prazo para apagar a auditoria (meses)',
+        description:
+          'Meses até cada evento da auditoria ser apagado de vez. Precisa ser maior que o prazo para anonimizar.',
+        valueType: 'int',
+        value: '60',
+      },
+    ]);
+  });
+});
+
+// Lido pelo mock da auditoria para a frase e o tipo do `value`.
+describe('findMockSystemConfig', () => {
+  it('devolve o rótulo e o tipo da chave', () => {
+    expect(findMockSystemConfig('notifications.email')).toEqual({
+      label: 'Notificações por e-mail',
+      valueType: 'boolean',
+    });
+    expect(findMockSystemConfig('audit.deleteAfterMonths')).toEqual({
+      label: 'Prazo para apagar a auditoria (meses)',
+      valueType: 'int',
+    });
+  });
+
+  it('devolve undefined para chave fora do mock', () => {
+    expect(findMockSystemConfig('app.inexistente')).toBeUndefined();
   });
 });
 
@@ -145,6 +195,143 @@ describe('updateSystemConfigs', () => {
     expect(systemConfigs.map(({ key, value }) => ({ key, value }))).toEqual(
       originals
     );
+  });
+
+  // Regra entre chaves da retenção, com as duas no lote: recusa de validação,
+  // apontando o item do prazo para apagar, como o schema do servidor.
+  it('recusa o lote em que o prazo para apagar não é maior que o para anonimizar, apontando o item', async () => {
+    vi.mocked(toast.error).mockClear();
+
+    await expect(
+      updateSystemConfigs([
+        { key: 'app.name', value: 'Não grava' },
+        { key: 'audit.anonymizeAfterMonths', value: '24' },
+        { key: 'audit.deleteAfterMonths', value: '24' },
+      ])
+    ).rejects.toMatchObject({
+      response: {
+        status: 400,
+        data: {
+          message: `items.2.value: ${RETENTION_ORDER_MESSAGE}`,
+          issues: [{ path: 'items.2.value', message: RETENTION_ORDER_MESSAGE }],
+        },
+      },
+    });
+
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.success).not.toHaveBeenCalled();
+    const { systemConfigs } = await fetchSystemConfigs();
+    expect(systemConfigs.map(({ key, value }) => ({ key, value }))).toEqual(
+      originals
+    );
+  });
+
+  // Com uma chave só no lote, o servidor confere contra o gravado e responde
+  // só com `message`, sem `issues`.
+  it('confere a regra contra o valor já gravado quando o lote traz só uma das chaves', async () => {
+    vi.mocked(toast.error).mockClear();
+
+    // Gravado: anonimizar em 12 meses, apagar em 60. Igual não vale.
+    const onlyDelete: unknown = await updateSystemConfigs([
+      { key: 'audit.deleteAfterMonths', value: '12' },
+    ]).catch((error: unknown) => error);
+    expect(onlyDelete).toMatchObject({
+      response: { status: 400, data: { message: RETENTION_ORDER_MESSAGE } },
+    });
+    expect(onlyDelete).not.toHaveProperty('response.data.issues');
+    expect(toast.error).toHaveBeenCalledWith(RETENTION_ORDER_MESSAGE, {
+      id: 'errorToastId',
+    });
+
+    await expect(
+      updateSystemConfigs([{ key: 'audit.anonymizeAfterMonths', value: '60' }])
+    ).rejects.toMatchObject({
+      response: { status: 400, data: { message: RETENTION_ORDER_MESSAGE } },
+    });
+
+    const response = await updateSystemConfigs([
+      { key: 'audit.anonymizeAfterMonths', value: '59' },
+    ]);
+    expect(
+      response.systemConfigs.find(
+        (config) => config.key === 'audit.anonymizeAfterMonths'
+      )?.value
+    ).toBe('59');
+  });
+
+  it('aceita os dois prazos juntos quando a exclusão fica depois da anonimização', async () => {
+    const response = await updateSystemConfigs([
+      { key: 'audit.anonymizeAfterMonths', value: '90' },
+      { key: 'audit.deleteAfterMonths', value: '120' },
+    ]);
+
+    expect(
+      response.systemConfigs
+        .filter((config) => config.key.startsWith('audit.'))
+        .map(({ key, value }) => ({ key, value }))
+    ).toEqual([
+      { key: 'audit.anonymizeAfterMonths', value: '90' },
+      { key: 'audit.deleteAfterMonths', value: '120' },
+    ]);
+  });
+
+  it('recusa prazo de retenção fora da faixa, com o rótulo na mensagem', async () => {
+    await expect(
+      updateSystemConfigs([{ key: 'audit.anonymizeAfterMonths', value: '0' }])
+    ).rejects.toMatchObject({
+      response: {
+        status: 400,
+        data: {
+          message:
+            'items.0.value: Prazo para anonimizar a auditoria (meses): Informe um valor de 1 a 120 meses.',
+          issues: [
+            {
+              path: 'items.0.value',
+              message:
+                'Prazo para anonimizar a auditoria (meses): Informe um valor de 1 a 120 meses.',
+            },
+          ],
+        },
+      },
+    });
+
+    await expect(
+      updateSystemConfigs([{ key: 'audit.deleteAfterMonths', value: '241' }])
+    ).rejects.toMatchObject({
+      response: {
+        data: {
+          issues: [
+            {
+              path: 'items.0.value',
+              message:
+                'Prazo para apagar a auditoria (meses): Informe um valor de 2 a 240 meses.',
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it('recusa prazo de retenção que não é inteiro', async () => {
+    await expect(
+      updateSystemConfigs([
+        { key: 'audit.anonymizeAfterMonths', value: '12' },
+        { key: 'audit.deleteAfterMonths', value: '24.5' },
+      ])
+    ).rejects.toMatchObject({
+      response: {
+        status: 400,
+        data: {
+          issues: [
+            {
+              path: 'items.1.value',
+              message:
+                'Prazo para apagar a auditoria (meses): Informe um número inteiro.',
+            },
+          ],
+        },
+      },
+    });
   });
 
   it('recusa o lote vazio', async () => {

@@ -30,6 +30,8 @@ export const usersListRoute = createRoute({
 
 interface UserDetailsSearch {
   tab?: string;
+  /** Página (0-based) da linha do tempo da aba "Atividade". */
+  activityPage?: number;
 }
 
 function validateUserDetailsSearch(
@@ -37,6 +39,10 @@ function validateUserDetailsSearch(
 ): UserDetailsSearch {
   return {
     tab: typeof search.tab === 'string' ? search.tab : undefined,
+    activityPage:
+      Number.isInteger(search.activityPage) && Number(search.activityPage) > 0
+        ? Number(search.activityPage)
+        : undefined,
   };
 }
 

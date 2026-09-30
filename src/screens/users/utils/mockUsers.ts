@@ -6,7 +6,6 @@ import {
 } from '@/components/global/dataTable/filters';
 import {
   type ManagedUser,
-  type UserActivityEvent,
   type UserPermission,
   type UserSession,
 } from '@/screens/users/utils/types';
@@ -500,50 +499,6 @@ function addDays(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-/**
- * Devolve um histórico mockado coerente com as datas do usuário. Mantém um
- * conjunto fixo de eventos para que a aba "Atividade" tenha sempre dados,
- * mesmo em telas onde a API real ainda não está disponível.
- */
-export function getUserActivity(user: ManagedUser): UserActivityEvent[] {
-  const lastLogin = user.lastLoginAt ?? user.createdAt;
-
-  const events: UserActivityEvent[] = [
-    {
-      id: `${user.id}_act_login`,
-      type: 'login',
-      message: 'Login realizado com sucesso.',
-      occurredAt: lastLogin,
-    },
-    {
-      id: `${user.id}_act_profile`,
-      type: 'profile-updated',
-      message: 'Atualizou nome e foto do perfil.',
-      occurredAt: addDays(lastLogin, -14),
-    },
-    {
-      id: `${user.id}_act_password`,
-      type: 'password-changed',
-      message: 'Senha redefinida pelo próprio usuário.',
-      occurredAt: addDays(lastLogin, -45),
-    },
-    {
-      id: `${user.id}_act_role`,
-      type: 'role-change',
-      message: `Papel alterado para ${user.role}.`,
-      occurredAt: addDays(user.createdAt, 30),
-    },
-    {
-      id: `${user.id}_act_invite`,
-      type: 'invite-accepted',
-      message: `Convite aceito (${user.email}).`,
-      occurredAt: user.createdAt,
-    },
-  ];
-
-  return events.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
 // Ids no formato do catálogo do backend (`modulo.entidade.acao`), os mesmos

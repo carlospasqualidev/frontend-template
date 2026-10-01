@@ -45,6 +45,7 @@ import {
   resolveDateInMonth,
   type TimeParts,
 } from '@/lib/dateTime/dateTimeFieldUtils';
+import { getCalendarMonthBounds } from '@/lib/dateTime/utils';
 
 type CalendarProps = Omit<
   React.ComponentProps<typeof Calendar>,
@@ -405,6 +406,7 @@ function DateTimeFieldBase({
     return `${normalized.hour}:${normalized.minute}`;
   }, [timeDraft.hour, timeDraft.minute]);
   const hasValue = displayValue.trim().length > 0;
+  const calendarMonthBounds = getCalendarMonthBounds();
 
   return (
     <BaseField data-invalid={invalid}>
@@ -490,6 +492,8 @@ function DateTimeFieldBase({
             onSelect={handleCalendarSelect}
             onMonthChange={handleCalendarMonthChange}
             captionLayout="dropdown"
+            startMonth={calendarMonthBounds.startMonth}
+            endMonth={calendarMonthBounds.endMonth}
             {...calendarProps}
           />
 

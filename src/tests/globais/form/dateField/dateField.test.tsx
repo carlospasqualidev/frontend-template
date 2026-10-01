@@ -163,6 +163,52 @@ describe('DateField (global) — valor entregue ao consumidor', () => {
   });
 });
 
+describe('DateField — seletor de ano do calendário', () => {
+  it('lista de 100 anos atrás a 50 anos à frente do ano atual', async () => {
+    const user = userEvent.setup();
+    const currentYear = new Date().getFullYear();
+    render(<DateField id="fabricacao" label="Data de fabricação" />);
+
+    await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
+    await user.click(
+      await screen.findByRole('combobox', { name: 'Escolha o ano' })
+    );
+
+    const yearOptions = await screen.findAllByRole('option');
+
+    expect(yearOptions).toHaveLength(151);
+    expect(yearOptions.at(0)).toHaveTextContent(String(currentYear - 100));
+    expect(yearOptions.at(-1)).toHaveTextContent(String(currentYear + 50));
+  });
+
+  it('respeita startMonth/endMonth passados em calendarProps', async () => {
+    const user = userEvent.setup();
+    render(
+      <DateField
+        id="fabricacao"
+        label="Data de fabricação"
+        calendarProps={{
+          startMonth: new Date(2020, 0, 1),
+          endMonth: new Date(2022, 11, 1),
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
+    await user.click(
+      await screen.findByRole('combobox', { name: 'Escolha o ano' })
+    );
+
+    const yearOptions = await screen.findAllByRole('option');
+
+    expect(yearOptions.map((option) => option.textContent)).toEqual([
+      '2020',
+      '2021',
+      '2022',
+    ]);
+  });
+});
+
 describe('DateField — camadas e portal dentro de Modal', () => {
   /**
    * Regressão do "o calendário abriu ATRÁS da modal". São duas garantias

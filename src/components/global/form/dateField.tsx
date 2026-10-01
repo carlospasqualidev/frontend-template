@@ -39,6 +39,7 @@ import {
   parseDisplayValueToFormValue,
   resolveDateInMonth,
 } from '@/lib/dateTime/dateFieldUtils';
+import { getCalendarMonthBounds } from '@/lib/dateTime/utils';
 
 type CalendarProps = Omit<
   React.ComponentProps<typeof Calendar>,
@@ -216,6 +217,7 @@ function DateFieldBase({
     onBlur?.();
   }, [commitValue, displayValue, onBlur]);
   const hasValue = displayValue.trim().length > 0;
+  const calendarMonthBounds = getCalendarMonthBounds();
 
   return (
     <BaseField data-invalid={invalid}>
@@ -289,6 +291,8 @@ function DateFieldBase({
             onSelect={handleCalendarSelect}
             onMonthChange={handleCalendarMonthChange}
             captionLayout="dropdown"
+            startMonth={calendarMonthBounds.startMonth}
+            endMonth={calendarMonthBounds.endMonth}
             {...calendarProps}
           />
         </PopoverContent>

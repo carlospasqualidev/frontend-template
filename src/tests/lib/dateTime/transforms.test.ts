@@ -4,6 +4,26 @@ import { dateFormatter } from '@/lib/dateTime/dateFormatter';
 import { transformIntoDatabaseDate } from '@/lib/dateTime/transformIntoDatabaseDate';
 import { transformIntoDatabaseQueryDate } from '@/lib/dateTime/transformIntoDatabaseQueryDate';
 import { transformIntoInputDate } from '@/lib/dateTime/transformIntoInputDate';
+import { getCalendarMonthBounds } from '@/lib/dateTime/utils';
+
+describe('getCalendarMonthBounds', () => {
+  it('vai de janeiro de 100 anos atrás a dezembro de 50 anos à frente do ano de hoje', () => {
+    const { startMonth, endMonth } = getCalendarMonthBounds(
+      new Date(2026, 9, 1)
+    );
+
+    expect(startMonth).toEqual(new Date(1926, 0, 1));
+    expect(endMonth).toEqual(new Date(2076, 11, 1));
+  });
+
+  it('acompanha o ano corrente quando não recebe data', () => {
+    const currentYear = new Date().getFullYear();
+    const { startMonth, endMonth } = getCalendarMonthBounds();
+
+    expect(startMonth.getFullYear()).toBe(currentYear - 100);
+    expect(endMonth.getFullYear()).toBe(currentYear + 50);
+  });
+});
 
 describe('dateFormatter', () => {
   it('retorna "-" para data vazia', () => {

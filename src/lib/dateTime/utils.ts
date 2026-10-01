@@ -47,3 +47,26 @@ export function parseUtcDate(date: string) {
   const [year, month, day] = getIsoDateParts(date);
   return new Date(Date.UTC(year, month - 1, day));
 }
+
+const CALENDAR_YEARS_BEFORE = 100;
+const CALENDAR_YEARS_AFTER = 50;
+
+export interface CalendarMonthBounds {
+  startMonth: Date;
+  endMonth: Date;
+}
+
+/**
+ * Faixa navegável do calendário dos campos de data: de janeiro de 100 anos atrás até dezembro de
+ * 50 anos à frente do ano de `today`. É ela que monta as opções do seletor de ano.
+ */
+export function getCalendarMonthBounds(
+  today: Date = new Date()
+): CalendarMonthBounds {
+  const currentYear = today.getFullYear();
+
+  return {
+    startMonth: new Date(currentYear - CALENDAR_YEARS_BEFORE, 0, 1),
+    endMonth: new Date(currentYear + CALENDAR_YEARS_AFTER, 11, 1),
+  };
+}

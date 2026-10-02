@@ -9,6 +9,7 @@ import {
 
 import { assertServesThisFrontend } from './helpers/frontend';
 import {
+  assertLocalServerApiUrl,
   createUserWithoutRole,
   deleteLeftoverPreparedUsers,
   deleteUser,
@@ -189,7 +190,9 @@ async function openSessions(): Promise<string> {
 
 /*
  * Pré-condições dos E2E, conferidas uma vez antes dos specs (o `webServer` já
- * subiu, ou reaproveitou, o Vite na porta dos E2E): a porta serve este
+ * subiu, ou reaproveitou, o Vite na porta dos E2E): antes de qualquer
+ * requisição, a `VITE_API_URL` aponta para um host local (trava de host, sem
+ * flag de escape: a suíte cria e exclui dado pela API); a porta serve este
  * frontend apontando para `VITE_API_URL`; o server responde ali com o banco no
  * ar; o admin do seed entra e sobram logins para o resto da suíte no limite do
  * server (se não sobrarem, o setup espera a janela reiniciar). Abre as sessões
@@ -199,6 +202,8 @@ async function openSessions(): Promise<string> {
 export default async function globalSetup(
   config: FullConfig
 ): Promise<() => Promise<void>> {
+  assertLocalServerApiUrl();
+
   await assertServesThisFrontend(
     config.configFile ? path.dirname(config.configFile) : process.cwd()
   );

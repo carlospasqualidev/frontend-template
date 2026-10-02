@@ -5,6 +5,7 @@ import {
   type Response,
 } from '@playwright/test';
 
+import { assertLocalApiUrl } from './apiHost';
 import type { LoginCredentials } from './session';
 import { ADMIN_STORAGE_STATE } from './storageState';
 
@@ -32,6 +33,16 @@ export const SEED_BLOCKED: LoginCredentials = {
   email: 'blocked@admin.com',
   password: '123123123',
 };
+
+/**
+ * Trava de host: os E2E criam e excluem usuários, cargos e configuração pela
+ * API, então só rodam contra um server local. Recusa, antes de qualquer
+ * requisição, a `VITE_API_URL` cujo host não seja `localhost`, `127.0.0.1` ou
+ * `::1` (regra em `apiHost.ts`). Não há flag de escape.
+ */
+export function assertLocalServerApiUrl(): void {
+  assertLocalApiUrl(SERVER_API_URL);
+}
 
 export function serverApiUrl(path: string): string {
   return `${SERVER_API_URL.replace(/\/+$/, '')}${path}`;

@@ -11,8 +11,8 @@ const RECOVERED_TEXT = 'Tela recuperada pelo e2e';
  * (`/src/screens/settings/index.tsx`, `/src/screens/session/login.tsx`), é
  * trocado por um que lança no render até o teste chamar `recoverScreen`.
  * Depois disso ele desenha só um texto, que é o que "Tentar novamente" precisa
- * mostrar. Só serve para módulo sem outro importador além da rota (ver E2E no
- * CLAUDE.md).
+ * mostrar. Só serve para módulo sem outro importador além da rota (ver E2E em
+ * docs/testing-guide.md).
  */
 async function breakScreen(
   page: Page,

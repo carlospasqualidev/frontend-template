@@ -64,8 +64,18 @@ function Snapshot({
         <dl className="space-y-1 rounded-lg border border-border/70 p-3 text-sm">
           {Object.entries(data).map(([key, value]) => (
             <div key={key} className="flex flex-wrap gap-x-2">
-              <dt className={changed.includes(key) ? 'font-semibold' : 'text-muted-foreground'}>{key}:</dt>
-              <dd className="break-all">{value === null ? '—' : String(value)}</dd>
+              <dt
+                className={
+                  changed.includes(key)
+                    ? 'font-semibold'
+                    : 'text-muted-foreground'
+                }
+              >
+                {key}:
+              </dt>
+              <dd className="break-all">
+                {value === null ? '—' : String(value)}
+              </dd>
             </div>
           ))}
         </dl>
@@ -94,7 +104,11 @@ function RawSnapshots({ log }: { log: AuditLogDetail }) {
   );
 }
 
-export function AuditLogDetailModal({ logId, open, setOpen }: AuditLogDetailModalProps) {
+export function AuditLogDetailModal({
+  logId,
+  open,
+  setOpen,
+}: AuditLogDetailModalProps) {
   const { moduleLabel, actionLabel, entityLabel } = useAuditOptions();
 
   const { data, isError } = useQuery({
@@ -108,11 +122,17 @@ export function AuditLogDetailModal({ logId, open, setOpen }: AuditLogDetailModa
   const fields: DetailField[] = [
     {
       label: 'Data/hora',
-      render: ({ createdAt }) => dateFormatter({ date: createdAt, hasTimeStamp: true, showHours: true }),
+      render: ({ createdAt }) =>
+        dateFormatter({ date: createdAt, hasTimeStamp: true, showHours: true }),
     },
     { label: 'Autor', render: ({ user }) => user?.name ?? 'Sistema' },
     { label: 'Módulo', render: ({ module }) => moduleLabel(module) },
-    { label: 'Ação', render: ({ action }) => <Badge variant="secondary">{actionLabel(action)}</Badge> },
+    {
+      label: 'Ação',
+      render: ({ action }) => (
+        <Badge variant="secondary">{actionLabel(action)}</Badge>
+      ),
+    },
     { label: 'Entidade', render: ({ entity }) => entityLabel(entity) },
     { label: 'ID da entidade', render: ({ entityId }) => entityId ?? '—' },
   ];
@@ -126,7 +146,9 @@ export function AuditLogDetailModal({ logId, open, setOpen }: AuditLogDetailModa
       description="Quem fez o quê, quando, e o que mudou no registro."
     >
       {isError ? (
-        <Typography variant="muted">Não foi possível carregar este registro de auditoria.</Typography>
+        <Typography variant="muted">
+          Não foi possível carregar este registro de auditoria.
+        </Typography>
       ) : (
         <div className="space-y-4">
           <dl className="grid gap-4 sm:grid-cols-2">
@@ -136,7 +158,11 @@ export function AuditLogDetailModal({ logId, open, setOpen }: AuditLogDetailModa
               </Field>
             ))}
             <Field label="Resumo" className="sm:col-span-2">
-              {log ? (log.description ?? '—') : <SkeletonText className="w-2/3" />}
+              {log ? (
+                (log.description ?? '—')
+              ) : (
+                <SkeletonText className="w-2/3" />
+              )}
             </Field>
           </dl>
 
@@ -144,7 +170,11 @@ export function AuditLogDetailModal({ logId, open, setOpen }: AuditLogDetailModa
             <Typography as="h3" variant="small">
               O que mudou
             </Typography>
-            {log ? <FieldChanges changes={log.fieldChanges} /> : <SkeletonText className="w-1/2" />}
+            {log ? (
+              <FieldChanges changes={log.fieldChanges} />
+            ) : (
+              <SkeletonText className="w-1/2" />
+            )}
           </section>
 
           {log && <RawSnapshots key={log.id} log={log} />}

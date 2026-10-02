@@ -279,7 +279,10 @@ function MultiSelect({
         )}
 
         <ScrollArea viewportClassName="max-h-72">
-          <div role="group" aria-busy={serverSearch && loading ? true : undefined}>
+          <div
+            role="group"
+            aria-busy={serverSearch && loading ? true : undefined}
+          >
             {filteredOptions.length === 0 ? (
               <p className="px-1.5 py-6 text-center text-sm text-muted-foreground">
                 {serverSearch && loading ? 'Buscando...' : emptyText}

@@ -17,10 +17,7 @@ export function PageActionsSlot({ className }: { className?: string }) {
   return (
     <div
       id={PAGE_ACTIONS_SLOT_ID}
-      className={cn(
-        'ml-auto flex shrink-0 items-center gap-2 px-4',
-        className
-      )}
+      className={cn('ml-auto flex shrink-0 items-center gap-2 px-4', className)}
     />
   );
 }

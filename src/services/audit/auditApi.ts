@@ -14,7 +14,10 @@ import { api } from '@/services/api';
 
 // As opções (com rótulos pt-BR) vêm do backend, para que uma entidade nova
 // auditada apareça sem o frontend precisar conhecê-la.
-const auditFilterOptionSchema = z.object({ value: z.string(), label: z.string() });
+const auditFilterOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
 
 const auditFilterOptionsSchema = z.object({
   modules: z.array(auditFilterOptionSchema),
@@ -62,20 +65,33 @@ const auditListResponseSchema = z.object({
 export type AuditListResponse = z.infer<typeof auditListResponseSchema>;
 
 // `before`/`after` só com valores primitivos, dados pessoais inclusive.
-const auditValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const auditValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
 
-export const auditLogDetailSchema = auditLogListItemSchema.omit({ userName: true }).extend({
-  before: z.record(z.string(), auditValueSchema).nullable(),
-  after: z.record(z.string(), auditValueSchema).nullable(),
-  user: z.object({ id: z.string(), name: z.string(), email: z.string() }).nullable(),
-  fieldChanges: z.array(auditFieldChangeSchema),
-});
+export const auditLogDetailSchema = auditLogListItemSchema
+  .omit({ userName: true })
+  .extend({
+    before: z.record(z.string(), auditValueSchema).nullable(),
+    after: z.record(z.string(), auditValueSchema).nullable(),
+    user: z
+      .object({ id: z.string(), name: z.string(), email: z.string() })
+      .nullable(),
+    fieldChanges: z.array(auditFieldChangeSchema),
+  });
 
 export type AuditLogDetail = z.infer<typeof auditLogDetailSchema>;
 
-const auditLogDetailResponseSchema = z.object({ auditLog: auditLogDetailSchema });
+const auditLogDetailResponseSchema = z.object({
+  auditLog: auditLogDetailSchema,
+});
 
-export type AuditLogDetailResponse = z.infer<typeof auditLogDetailResponseSchema>;
+export type AuditLogDetailResponse = z.infer<
+  typeof auditLogDetailResponseSchema
+>;
 
 /** Item da linha do tempo: o da listagem mais o de→para (sem `before`/`after`). */
 export const entityAuditLogSchema = auditLogListItemSchema.extend({
@@ -89,7 +105,9 @@ const entityAuditLogsResponseSchema = z.object({
   count: z.number(),
 });
 
-export type EntityAuditLogsResponse = z.infer<typeof entityAuditLogsResponseSchema>;
+export type EntityAuditLogsResponse = z.infer<
+  typeof entityAuditLogsResponseSchema
+>;
 
 /** Entidades com linha do tempo (`entity` da rota; os `value` de `options.entities`). */
 export type AuditEntity = 'User' | 'Role' | 'SystemConfig';
@@ -105,7 +123,8 @@ export interface EntityAuditLogsParams {
 }
 
 // Campos ordenáveis (allowlist espelhada no backend).
-export type AuditListOrderBy = 'createdAt' | 'module' | 'entity' | 'action' | 'description';
+export type AuditListOrderBy =
+  'createdAt' | 'module' | 'entity' | 'action' | 'description';
 
 export interface AuditListParams {
   /** 0-based, como a DataTable e o backend (`GET /client/audit-logs`). */
@@ -135,7 +154,9 @@ function toOrderBy(columnId: string): AuditListOrderBy | undefined {
   }
 }
 
-function resolveSort(sort: DataTableQuery['sort']): Pick<AuditListParams, 'orderBy' | 'order'> {
+function resolveSort(
+  sort: DataTableQuery['sort']
+): Pick<AuditListParams, 'orderBy' | 'order'> {
   const first = sort[0];
   if (!first) return {};
 
@@ -173,14 +194,20 @@ export async function fetchAuditFilterOptions(): Promise<AuditFilterOptions> {
 }
 
 /** `GET /client/audit-logs` → `{ logs, count }` (sem `fieldChanges`, que vêm no detalhe). */
-export async function fetchAuditLogs(params: AuditListParams): Promise<AuditListResponse> {
+export async function fetchAuditLogs(
+  params: AuditListParams
+): Promise<AuditListResponse> {
   const response = await api.get<unknown>(AUDIT_LOGS_PATH, { params });
   return auditListResponseSchema.parse(response);
 }
 
 /** `GET /client/audit-logs/:auditLogId` → `{ auditLog }`, com `before`/`after` crus e `fieldChanges`. */
-export async function fetchAuditLogDetail(id: string): Promise<AuditLogDetailResponse> {
-  const response = await api.get<unknown>(`${AUDIT_LOGS_PATH}/${encodeURIComponent(id)}`);
+export async function fetchAuditLogDetail(
+  id: string
+): Promise<AuditLogDetailResponse> {
+  const response = await api.get<unknown>(
+    `${AUDIT_LOGS_PATH}/${encodeURIComponent(id)}`
+  );
   return auditLogDetailResponseSchema.parse(response);
 }
 
@@ -204,8 +231,10 @@ export async function fetchEntityAuditLogs({
 
 export const auditKeys = {
   all: ['audit-logs'] as const,
-  list: (params: AuditListParams) => [...auditKeys.all, 'list', params] as const,
+  list: (params: AuditListParams) =>
+    [...auditKeys.all, 'list', params] as const,
   detail: (id: string) => [...auditKeys.all, id] as const,
-  entity: (params: EntityAuditLogsParams) => [...auditKeys.all, 'entity', params] as const,
+  entity: (params: EntityAuditLogsParams) =>
+    [...auditKeys.all, 'entity', params] as const,
   options: ['audit-logs', 'options'] as const,
 };

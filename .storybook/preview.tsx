@@ -26,7 +26,16 @@ const preview: Preview = {
         order: [
           'Introdução',
           'Globais',
-          ['Button', 'Card', 'Empty', 'Modal', 'ConfirmDialog', 'PageHeader', 'Skeleton', 'SocialIcons'],
+          [
+            'Button',
+            'Card',
+            'Empty',
+            'Modal',
+            'ConfirmDialog',
+            'PageHeader',
+            'Skeleton',
+            'SocialIcons',
+          ],
           'Formulário',
           'DataTable',
           'Padrões',

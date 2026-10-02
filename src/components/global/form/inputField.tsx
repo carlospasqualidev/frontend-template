@@ -54,8 +54,7 @@ type InputFieldProps<
   TFieldValues extends FieldValues,
   TName extends FieldPathByValue<TFieldValues, string>,
 > =
-  | ControlledInputFieldProps<TFieldValues, TName>
-  | UncontrolledInputFieldProps;
+  ControlledInputFieldProps<TFieldValues, TName> | UncontrolledInputFieldProps;
 
 function InputFieldBase({
   label,
@@ -74,7 +73,10 @@ function InputFieldBase({
   return (
     <BaseField data-invalid={invalid}>
       {label && (
-        <FieldLabel htmlFor={id} className={srOnlyLabel ? 'sr-only' : undefined}>
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
           {label}
         </FieldLabel>
       )}

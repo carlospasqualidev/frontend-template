@@ -499,7 +499,9 @@ describe('useUnsavedChangesGuard — navegador', () => {
       act(() => window.history.back());
       // O segundo voltar chega à terceira tela, e o navegador volta para
       // onde a pergunta o deixou, sem trocar a pergunta.
-      await waitFor(() => expect(visited).toEqual(['/other', '/third', '/other']));
+      await waitFor(() =>
+        expect(visited).toEqual(['/other', '/third', '/other'])
+      );
       expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
       return router;
     }

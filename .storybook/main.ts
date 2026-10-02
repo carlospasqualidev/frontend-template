@@ -6,10 +6,7 @@ import type { StorybookConfig } from '@storybook/tanstack-react';
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  stories: [
-    '../src/stories/**/*.mdx',
-    '../src/stories/**/*.stories.@(ts|tsx)',
-  ],
+  stories: ['../src/stories/**/*.mdx', '../src/stories/**/*.stories.@(ts|tsx)'],
   addons: [
     '@storybook/addon-a11y',
     '@storybook/addon-themes',

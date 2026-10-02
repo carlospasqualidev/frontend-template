@@ -22,9 +22,15 @@ export function useAuditOptions() {
   });
 
   const options = data ?? EMPTY;
-  const moduleMap = new Map(options.modules.map((option) => [option.value, option.label]));
-  const actionMap = new Map(options.actions.map((option) => [option.value, option.label]));
-  const entityMap = new Map(options.entities.map((option) => [option.value, option.label]));
+  const moduleMap = new Map(
+    options.modules.map((option) => [option.value, option.label])
+  );
+  const actionMap = new Map(
+    options.actions.map((option) => [option.value, option.label])
+  );
+  const entityMap = new Map(
+    options.entities.map((option) => [option.value, option.label])
+  );
 
   return {
     options,

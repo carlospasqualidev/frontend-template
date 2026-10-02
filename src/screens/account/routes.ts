@@ -6,9 +6,7 @@ interface AccountSearch {
   tab?: string;
 }
 
-function validateAccountSearch(
-  search: Record<string, unknown>
-): AccountSearch {
+function validateAccountSearch(search: Record<string, unknown>): AccountSearch {
   return {
     tab: typeof search.tab === 'string' ? search.tab : undefined,
   };

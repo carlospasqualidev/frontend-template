@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { SortableHeader } from '@/components/global/dataTable/columnHelpers';
-import type {
-  DataTableColumnDef,
-} from '@/components/global/dataTable/tableFeatures';
+import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateRangeFilter,
@@ -59,7 +57,9 @@ export function AuditLogsPage() {
 
   // As opções do filtro "Usuário" vêm da busca na listagem de usuários, que
   // exige `backoffice.users.read`: sem ela, o filtro não aparece.
-  const canReadUsers = useSessionStore((state) => hasPermission(state.user, 'backoffice.users.read'));
+  const canReadUsers = useSessionStore((state) =>
+    hasPermission(state.user, 'backoffice.users.read')
+  );
 
   const listParams = buildAuditListParams(query);
   const userFilter = useAuditUserFilter({
@@ -69,7 +69,11 @@ export function AuditLogsPage() {
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
-      textFilter({ key: 'search', label: 'Buscar no conteúdo', placeholder: 'Nome, registro, valor...' }),
+      textFilter({
+        key: 'search',
+        label: 'Buscar no conteúdo',
+        placeholder: 'Nome, registro, valor...',
+      }),
       multiSelectFilter({
         key: 'module',
         label: 'Módulo',
@@ -106,12 +110,20 @@ export function AuditLogsPage() {
         : []),
       dateRangeFilter({ key: 'createdAt', label: 'Período' }),
     ],
-    [canReadUsers, userFilter.options, userFilter.onSearchChange, userFilter.loading, options]
+    [
+      canReadUsers,
+      userFilter.options,
+      userFilter.onSearchChange,
+      userFilter.loading,
+      options,
+    ]
   );
 
   // Sem o filtro "Usuário" na tela, um `userId` que ficou na URL não filtra a
   // lista: a pessoa não teria como ver nem limpar esse filtro.
-  const params = canReadUsers ? listParams : { ...listParams, userId: undefined };
+  const params = canReadUsers
+    ? listParams
+    : { ...listParams, userId: undefined };
 
   const { data, isPending } = useQuery({
     queryKey: auditKeys.list(params),
@@ -123,25 +135,38 @@ export function AuditLogsPage() {
   const columns: DataTableColumnDef<AuditLogListItem>[] = [
     {
       accessorKey: 'createdAt',
-      header: ({ column }) => <SortableHeader column={column}>Data/hora</SortableHeader>,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Data/hora</SortableHeader>
+      ),
       meta: { label: 'Data/hora', className: 'min-w-[150px]' },
-      cell: ({ row }) => dateFormatter({ date: row.original.createdAt, hasTimeStamp: true, showHours: true }),
+      cell: ({ row }) =>
+        dateFormatter({
+          date: row.original.createdAt,
+          hasTimeStamp: true,
+          showHours: true,
+        }),
     },
     {
       accessorKey: 'module',
-      header: ({ column }) => <SortableHeader column={column}>Módulo</SortableHeader>,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Módulo</SortableHeader>
+      ),
       meta: { label: 'Módulo' },
       cell: ({ row }) => moduleLabel(row.original.module),
     },
     {
       accessorKey: 'entity',
-      header: ({ column }) => <SortableHeader column={column}>Entidade</SortableHeader>,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Entidade</SortableHeader>
+      ),
       meta: { label: 'Entidade' },
       cell: ({ row }) => entityLabel(row.original.entity),
     },
     {
       accessorKey: 'action',
-      header: ({ column }) => <SortableHeader column={column}>Ação</SortableHeader>,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Ação</SortableHeader>
+      ),
       meta: { label: 'Ação' },
       cell: ({ row }) => (
         <Badge variant={ACTION_VARIANT.get(row.original.action) ?? 'secondary'}>
@@ -157,7 +182,9 @@ export function AuditLogsPage() {
     },
     {
       accessorKey: 'description',
-      header: ({ column }) => <SortableHeader column={column}>Resumo</SortableHeader>,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Resumo</SortableHeader>
+      ),
       meta: { label: 'Resumo', className: 'max-w-[420px]' },
       cell: ({ row }) => row.original.description ?? <EmptyValue />,
     },

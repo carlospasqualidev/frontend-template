@@ -16,7 +16,10 @@ function Table({
       // deste container (cresce e a página rola), então esconder o Y não corta
       // conteúdo. Para scroll interno (altura limitada + cabeçalho sticky), passe
       // `containerClassName` (ex.: `max-h-96 overflow-y-auto`).
-      className={cn('relative w-full overflow-x-auto overflow-y-hidden', containerClassName)}
+      className={cn(
+        'relative w-full overflow-x-auto overflow-y-hidden',
+        containerClassName
+      )}
     >
       <table
         data-slot="table"

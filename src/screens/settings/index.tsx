@@ -36,7 +36,8 @@ import {
 
 const FORM_ID = 'settings-form';
 
-const UNEXPECTED_SAVE_ERROR_MESSAGE = 'Não foi possível salvar agora. Tente novamente em instantes.';
+const UNEXPECTED_SAVE_ERROR_MESSAGE =
+  'Não foi possível salvar agora. Tente novamente em instantes.';
 
 const settingsFormSchema = z.object({ values: z.array(z.string()) });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -49,7 +50,9 @@ interface ConfigItem {
 }
 
 // Agrupa as configurações por módulo preservando o índice plano de cada uma.
-function groupConfigsByModule(configs: SystemConfig[]): ModuleGroup<ConfigItem>[] {
+function groupConfigsByModule(
+  configs: SystemConfig[]
+): ModuleGroup<ConfigItem>[] {
   return groupByModule(
     configs.map((config, index) => ({ config, index })),
     ({ config }) => config.module
@@ -80,9 +83,15 @@ export function SettingsPage() {
 }
 
 // Só os itens alterados, na ordem da tela: é o lote que vai ao servidor.
-function changedItems(configs: SystemConfig[], formValues: SettingsFormValues): SystemConfigUpdateItem[] {
+function changedItems(
+  configs: SystemConfig[],
+  formValues: SettingsFormValues
+): SystemConfigUpdateItem[] {
   return configs
-    .map((config, index) => ({ config, value: formValues.values.at(index) ?? config.value }))
+    .map((config, index) => ({
+      config,
+      value: formValues.values.at(index) ?? config.value,
+    }))
     .filter(({ config, value }) => value !== config.value)
     .map(({ config, value }) => ({ key: config.key, value }));
 }
@@ -109,7 +118,9 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
   // tem. Se não vier, a alteração continua pendente.
   const reloadFromServer = async () => {
     await queryClient.invalidateQueries({ queryKey: systemConfigKeys.list });
-    const state = queryClient.getQueryState<SystemConfigsResponse>(systemConfigKeys.list);
+    const state = queryClient.getQueryState<SystemConfigsResponse>(
+      systemConfigKeys.list
+    );
     if (state?.status === 'success' && state.data) {
       reset({ values: state.data.systemConfigs.map((config) => config.value) });
     }
@@ -122,7 +133,9 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
     onSuccess: ({ systemConfigs }) => {
       // A resposta já traz a lista completa (com o valor normalizado pelo
       // backend): popula o cache e volta o form a pristine com esses valores.
-      queryClient.setQueryData<SystemConfigsResponse>(systemConfigKeys.list, { systemConfigs });
+      queryClient.setQueryData<SystemConfigsResponse>(systemConfigKeys.list, {
+        systemConfigs,
+      });
       reset({ values: systemConfigs.map((config) => config.value) });
     },
     // O 400 volta sem toast (`updateSystemConfigs`): a recusa que aponta um
@@ -150,18 +163,27 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
 
       issues.forEach(({ key, message }) => {
         const index = configs.findIndex((config) => config.key === key);
-        if (index !== -1) setError(`values.${index}`, { type: 'server', message });
+        if (index !== -1)
+          setError(`values.${index}`, { type: 'server', message });
       });
     },
   });
 
-  const onSubmit = handleSubmit((formValues) => mutation.mutate(changedItems(configs, formValues)));
+  const onSubmit = handleSubmit((formValues) =>
+    mutation.mutate(changedItems(configs, formValues))
+  );
 
   return (
     <>
       {isDirty && (
         <PageActions>
-          <Button key="discard-action" variant="outline" type="button" aria-label="Descartar" onClick={() => reset()}>
+          <Button
+            key="discard-action"
+            variant="outline"
+            type="button"
+            aria-label="Descartar"
+            onClick={() => reset()}
+          >
             <X />
             <span className="hidden sm:inline">Descartar</span>
           </Button>
@@ -180,10 +202,19 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
 
       <form id={FORM_ID} onSubmit={onSubmit} className="space-y-4" noValidate>
         {groupConfigsByModule(configs).map(({ module, items }) => (
-          <Card key={module} title={systemConfigModuleLabel(module)} description={moduleDescription(module)}>
+          <Card
+            key={module}
+            title={systemConfigModuleLabel(module)}
+            description={moduleDescription(module)}
+          >
             <div>
               {items.map(({ config, index }) => (
-                <ConfigField key={config.key} config={config} index={index} control={control} />
+                <ConfigField
+                  key={config.key}
+                  config={config}
+                  index={index}
+                  control={control}
+                />
               ))}
             </div>
           </Card>
@@ -214,7 +245,9 @@ function ConfigField({
           <label htmlFor={fieldId} className="text-sm font-medium">
             {config.label}
           </label>
-          {config.description && <Typography variant="muted">{config.description}</Typography>}
+          {config.description && (
+            <Typography variant="muted">{config.description}</Typography>
+          )}
         </div>
         <Controller
           control={control}
@@ -223,7 +256,9 @@ function ConfigField({
             <Switch
               id={fieldId}
               checked={field.value === 'true'}
-              onCheckedChange={(checked) => field.onChange(checked ? 'true' : 'false')}
+              onCheckedChange={(checked) =>
+                field.onChange(checked ? 'true' : 'false')
+              }
             />
           )}
         />
@@ -247,7 +282,11 @@ function ConfigField({
           id={fieldId}
           label={config.label}
           description={config.description}
-          type={config.valueType === 'int' || config.valueType === 'float' ? 'number' : 'text'}
+          type={
+            config.valueType === 'int' || config.valueType === 'float'
+              ? 'number'
+              : 'text'
+          }
           control={control}
           name={fieldName}
         />

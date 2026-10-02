@@ -41,7 +41,7 @@ export function InfoTooltip({
             <Info className="size-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent className="whitespace-pre-line text-left">
+        <TooltipContent className="text-left whitespace-pre-line">
           {label}
         </TooltipContent>
       </Tooltip>

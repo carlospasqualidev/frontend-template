@@ -14,7 +14,7 @@ function getIsoDateParts(date: string): [number, number, number] {
 
   if (!match) {
     throw new Error(
-      `Data em formato inesperado: "${date}". Esperado ISO (YYYY-MM-DD); formatos locais como dd/mm/aaaa não são aceitos.`,
+      `Data em formato inesperado: "${date}". Esperado ISO (YYYY-MM-DD); formatos locais como dd/mm/aaaa não são aceitos.`
     );
   }
 

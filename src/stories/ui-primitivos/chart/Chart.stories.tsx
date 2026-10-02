@@ -29,7 +29,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Wrapper do recharts com tooltip/legenda no tema do sistema. A cor de cada série vem do `ChartConfig` — e o token depende do TIPO de gráfico: séries diferentes usam a paleta **categórica** (`--series-1..5`, hues distintos, sempre na ordem dos slots); uma medida em intensidades usa a paleta **sequencial** da marca (`--chart-1..5`). Ver "Cor da marca e tema" no CLAUDE.md.',
+          'Wrapper do recharts com tooltip/legenda no tema do sistema. A cor de cada série vem do `ChartConfig` — e o token depende do TIPO de gráfico: séries diferentes usam a paleta **categórica** (`--series-1..5`, hues distintos, sempre na ordem dos slots); uma medida em intensidades usa a paleta **sequencial** da marca (`--chart-1..5`). Ver "Cor da marca e tema" em docs/conventions/theme.md.',
       },
     },
   },

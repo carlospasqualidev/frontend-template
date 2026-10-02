@@ -241,7 +241,7 @@ export function Modal({
  * ação (Salvar/Criar) de QUALQUER modal do projeto, garantindo o mesmo padrão em
  * todos. A largura total vem do `flex flex-col` (align-items: stretch estica os
  * filhos). Em modais de edição, o botão de salvar deve renderizar apenas quando
- * o formulário está _dirty_ (ver CLAUDE.md).
+ * o formulário está _dirty_ (ver docs/conventions/screen-layout.md).
  */
 export function ModalFooter({
   className,

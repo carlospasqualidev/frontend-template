@@ -61,7 +61,7 @@ describe('Link (global)', () => {
   });
 });
 
-// Regra de hyperlink do CLAUDE.md: link é `<a href>`, nunca `<button onClick>`.
+// Regra de hyperlink de docs/conventions/routes-and-screens.md: link é `<a href>`, nunca `<button onClick>`.
 // Sem href o usuário perde Ctrl+clique, clique do meio e "abrir em nova aba" —
 // exatamente a navegação que se espera de qualquer link.
 describe('Link (global) — abrir em outra aba', () => {

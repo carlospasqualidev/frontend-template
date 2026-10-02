@@ -809,7 +809,7 @@ function CrudDemo() {
 }
 
 // ============================================================================
-// Optimistic update — padrão TanStack Query (documentado no CLAUDE.md)
+// Optimistic update — padrão TanStack Query (documentado em docs/conventions/http-and-state.md)
 // ============================================================================
 
 const FOLLOW_KEY = ['story-follow-status'];

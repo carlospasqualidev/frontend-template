@@ -290,7 +290,7 @@ interface RowActionsColumnOptions<TData> {
  * ```
  *
  * Use o `actionsColumn` (menu "⋯") nas demais listas do sistema — ver
- * `CLAUDE.md` → "Ações de item".
+ * `docs/conventions/screen-layout.md` → "Ações de item".
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function rowActionsColumn<TData extends RowData>({

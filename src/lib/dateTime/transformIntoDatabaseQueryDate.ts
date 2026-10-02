@@ -8,7 +8,7 @@ interface ITransformIntoDatabaseQueryDate extends IDateValueWithTimeStamp {
 
 /**
  * Converte a data vinda do input para ISO (UTC) usado em FILTROS/BUSCAS via query no backend.
- * Aplica o modelo "dia de calendário vs instante" do CLAUDE.md à montagem de intervalos:
+ * Aplica o modelo "dia de calendário vs instante" de docs/dates.md à montagem de intervalos:
  * o `type` ("start"/"end") define se a borda do intervalo é o início ou o fim do dia.
  *
  * A natureza do valor é decidida explicitamente por `hasTimeStamp` (obrigatório). Quem chama

@@ -46,10 +46,11 @@ ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 | `npm run preview`         | Pré-visualiza o build                                           |
 | `npm run lint`            | ESLint                                                          |
 | `npm run format`          | Prettier (escrita)                                              |
+| `npm run format:check`    | Prettier (só confere; entra no `check`)                         |
 | `npm run typecheck`       | Checagem de tipos (`tsc -b`)                                    |
 | `npm test`                | Executa a suíte de testes uma vez                               |
 | `npm run test:watch`      | Testes em modo watch                                            |
-| `npm run check`           | Roda `lint + typecheck + test` em sequência                     |
+| `npm run check`           | Roda `lint + format:check + typecheck + test` em sequência      |
 | `npm run test:e2e`        | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
 | `npm run test:layers`     | Empilhamento (z-index) contra o Storybook, sem backend          |
 | `npm run storybook`       | Storybook em modo dev (porta 6006)                              |
@@ -63,7 +64,7 @@ ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 - Husky tem dois hooks:
   - `pre-commit` (existente): roda `lint-staged` (ESLint + Prettier no que foi staged).
   - `pre-push` (novo): roda `npm run typecheck && npm test`. Erro de tipo ou teste quebrado para o push antes do servidor.
-- Antes de pushar manualmente: `npm run check` (lint + typecheck + test).
+- Antes de pushar manualmente: `npm run check` (lint + format:check + typecheck + test).
 - CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em **Node 22**.
 
 ## Variáveis de ambiente
@@ -328,6 +329,10 @@ npm run test:e2e
   frontend apontando para a mesma `VITE_API_URL`; outro app na porta (mesmo com
   o mesmo título) ou o `vite preview` deste frontend (que usa a mesma 4173)
   para a suíte antes dos specs, com a mensagem.
+- Antes de qualquer requisição, o `globalSetup` recusa uma `VITE_API_URL` cujo
+  host não seja `localhost`, `127.0.0.1` ou `::1`: a suíte cria e exclui dado
+  pela API e só roda contra um server local (sem flag de escape; ver
+  [`docs/testing-guide.md`](docs/testing-guide.md)).
 - Antes dos specs, o `globalSetup` confere a porta, `GET /health/ready` e o
   login do admin do seed; se faltar algo, para com a instrução. Depois, entra
   uma vez com o admin e com um gestor que ele mesmo cria (e exclui no fim da

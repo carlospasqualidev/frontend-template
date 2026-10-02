@@ -15,7 +15,7 @@ type LinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   replace?: boolean;
   /**
    * Ícone "abrir em nova aba" ao lado do texto. Ligado por padrão — ver a regra
-   * de hyperlink no CLAUDE.md. Desligue (`false`) apenas onde o ícone não faz
+   * de hyperlink em docs/conventions/routes-and-screens.md. Desligue (`false`) apenas onde o ícone não faz
    * sentido: navegação estrutural (sidebar, breadcrumb, abas), link dentro de
    * frase corrida e link que já aponta para fora (`target="_blank"`).
    */
@@ -46,7 +46,7 @@ function isExternalLink(href: string) {
 
 /**
  * Link da aplicação. **Todo hyperlink do sistema passa por aqui** — nunca use
- * `<button onClick={navigate}>` para navegar (ver CLAUDE.md).
+ * `<button onClick={navigate}>` para navegar (ver docs/conventions/routes-and-screens.md).
  *
  * Por que importa: um `<button>` não tem `href`, então Ctrl/Cmd+clique, clique do
  * meio, "abrir em nova aba" e arrastar para os favoritos simplesmente não

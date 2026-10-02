@@ -7,7 +7,7 @@ interface ITransformIntoDatabaseDate extends IDateValueWithTimeStamp {
 
 /**
  * Converte a data vinda do input para ISO (UTC) usado ao PERSISTIR via body no backend.
- * Contraparte de gravação do modelo "dia de calendário vs instante" do CLAUDE.md:
+ * Contraparte de gravação do modelo "dia de calendário vs instante" de docs/dates.md:
  * a mesma decisão tomada aqui é a que governa, depois, como exibir o valor (`dateFormatter`).
  *
  * A natureza do valor é decidida explicitamente por `hasTimeStamp` (obrigatório). Quem chama

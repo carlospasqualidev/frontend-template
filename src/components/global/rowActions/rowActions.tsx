@@ -20,12 +20,7 @@ import { cn } from '@/lib/utils';
  * o token em `index.css` e a entrada em `toneClasses` — nunca cor solta na tela.
  */
 export type RowActionTone =
-  | 'neutral'
-  | 'brand'
-  | 'info'
-  | 'success'
-  | 'warning'
-  | 'destructive';
+  'neutral' | 'brand' | 'info' | 'success' | 'warning' | 'destructive';
 
 export interface RowAction {
   /** Chave estável da ação (usada como `key` da lista). */
@@ -181,7 +176,7 @@ interface RowActionsProps {
  * Ações de uma linha de tabela como **botões-ícone visíveis**, um por ação — para
  * fluxos operacionais, onde o usuário executa as etapas dezenas de vezes por dia e
  * um menu "⋯" custaria um clique a mais em cada uma. Nas demais listagens, prefira
- * o `actionsColumn` (menu "⋯") — ver `CLAUDE.md` → "Ações de item".
+ * o `actionsColumn` (menu "⋯") — ver `docs/conventions/screen-layout.md` → "Ações de item".
  *
  * Cada ação tem seu ícone e seu tom; o rótulo em pt-BR vira tooltip + nome
  * acessível. Ações indisponíveis ficam **visíveis e desabilitadas** (a posição

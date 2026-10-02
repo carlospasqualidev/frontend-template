@@ -1,11 +1,11 @@
-import type { IDateFormatterValue } from "./types";
+import type { IDateFormatterValue } from './types';
 
 /**
  * Formata datas para EXIBIÇÃO, escolhendo o tratamento de fuso conforme a
- * natureza do valor persistido (ver "Manipulação de Datas" no CLAUDE.md).
+ * natureza do valor persistido (ver "Manipulação de Datas" em docs/dates.md).
  *
  * Esta é a única função de exibição da pasta. Ela cobre, via flags, os três
- * casos que o CLAUDE.md descreve separadamente:
+ * casos que o docs/dates.md descreve separadamente:
  * - `hasTimeStamp: false`                  → equivale a `dateFormatter`           (dia de calendário, sem fuso)
  * - `hasTimeStamp: true, showHours: false` → equivale a `localDateFormatter`      (instante, só data, fuso local)
  * - `hasTimeStamp: true, showHours: true`  → equivale a `localDateTimeFormatter`  (instante, data + hora, fuso local)
@@ -70,8 +70,12 @@ import type { IDateFormatterValue } from "./types";
  * });
  * // → "-"
  */
-export function dateFormatter({ date, hasTimeStamp, showHours }: IDateFormatterValue) {
-  if (!date) return "-";
+export function dateFormatter({
+  date,
+  hasTimeStamp,
+  showHours,
+}: IDateFormatterValue) {
+  if (!date) return '-';
 
   const d = new Date(date);
 
@@ -79,25 +83,25 @@ export function dateFormatter({ date, hasTimeStamp, showHours }: IDateFormatterV
   if (hasTimeStamp) {
     if (!showHours) {
       return d.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
       });
     }
 
     return d.toLocaleString(undefined, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 
   return d.toLocaleDateString(undefined, {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }

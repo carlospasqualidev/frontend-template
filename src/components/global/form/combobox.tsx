@@ -200,7 +200,7 @@ interface ComboboxBaseProps {
   disabled?: boolean;
   /**
    * Escape hatch: força o portal do popover. **Não passe** — o `PopoverContent`
-   * resolve pelo contexto (`InModalContext`). Ver `CLAUDE.md` → "Camadas
+   * resolve pelo contexto (`InModalContext`). Ver `docs/conventions/components.md` → "Camadas
    * (z-index) e portais".
    */
   portal?: boolean;
@@ -298,8 +298,7 @@ function isControlled<
   TName extends FieldPathByValue<TFieldValues, string>,
 >(
   props:
-    | ControlledComboboxProps<TFieldValues, TName>
-    | UncontrolledComboboxProps
+    ControlledComboboxProps<TFieldValues, TName> | UncontrolledComboboxProps
 ): props is ControlledComboboxProps<TFieldValues, TName> {
   return 'control' in props;
 }
@@ -315,8 +314,7 @@ export function Combobox<
   TName extends FieldPathByValue<TFieldValues, string>,
 >(
   props:
-    | ControlledComboboxProps<TFieldValues, TName>
-    | UncontrolledComboboxProps
+    ControlledComboboxProps<TFieldValues, TName> | UncontrolledComboboxProps
 ) {
   if (isControlled(props)) {
     return <ControlledCombobox {...props} />;

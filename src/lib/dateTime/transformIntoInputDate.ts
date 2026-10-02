@@ -4,7 +4,7 @@ import type { IDateValueWithTimeStamp } from './types';
  * Converte uma data vinda do backend para o formato aceito por inputs
  * `date` (`YYYY-MM-DD`) ou `datetime-local` (`YYYY-MM-DDTHH:mm`).
  *
- * Segue o modelo "dia de calendário vs instante" do CLAUDE.md, agora no sentido
+ * Segue o modelo "dia de calendário vs instante" de docs/dates.md, agora no sentido
  * de preencher o formulário (a escolha aqui deve casar com a de gravação/exibição):
  * - **Instante** (`hasTimeStamp: true`): converte o timestamp para o fuso local antes de fatiar
  *   ano/mês/dia/hora, para o input mostrar a hora que o usuário espera ver.
@@ -36,7 +36,10 @@ import type { IDateValueWithTimeStamp } from './types';
  * });
  * // → ""
  */
-export function transformIntoInputDate({ date, hasTimeStamp }: IDateValueWithTimeStamp) {
+export function transformIntoInputDate({
+  date,
+  hasTimeStamp,
+}: IDateValueWithTimeStamp) {
   if (!date) return ''; // Retorna string para deixar o input vazio;
 
   if (hasTimeStamp) {

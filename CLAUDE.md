@@ -8,9 +8,7 @@ Guia para o Claude trabalhar neste frontend. Este arquivo traz as regras gerais,
 
 ## Stack
 
-React 19 + Vite 7 + TypeScript • TanStack Router (code-based) + TanStack Query • Zustand • React Hook Form + Zod • Tailwind v4 + shadcn/ui (Radix) • Axios • Sonner • Vitest + Testing Library • ESLint + Prettier + Husky + lint-staged.
-
-> Verificar: possivelmente desatualizado — `package.json:87` traz `vite` 8.3.1, não Vite 7; a linha também omite Playwright (`package.json:58`) e Storybook (`package.json:83`).
+React 19 + Vite 8 + TypeScript • TanStack Router (code-based) + TanStack Query • Zustand • React Hook Form + Zod • Tailwind v4 + shadcn/ui (Radix) • Axios • Sonner • Vitest + Testing Library • Playwright • Storybook • ESLint + Prettier + Husky + lint-staged.
 
 Sessão por cookie HTTP-only (gravado e validado pelo template de backend em `../server-template`).
 
@@ -140,6 +138,7 @@ Regras de JSX e Tailwind: reuse abstrações globais, não empilhe wrappers de l
 - Nunca confie em dado vindo do servidor sem tipá-lo — defina o shape esperado.
 - Não logue dados sensíveis (senhas, tokens, dados pessoais) — nem em `console.log` durante desenvolvimento.
 - Não armazene tokens em `localStorage`/`sessionStorage` — a sessão é por cookie HTTP-only.
+- **Permissão só ajusta a UI:** `hasPermission` serve **apenas para ajustar a UI** (esconder item de menu, botão ou coluna de ação); o backend continua sendo a autoridade — nunca trate o gate de UI como segurança — detalhe em `docs/conventions/http-and-state.md`.
 
 ### Object injection — nunca indexe objeto/array com variável
 
@@ -163,8 +162,7 @@ PII (identificadores pessoais como nome completo e CPF, contato, credenciais e s
 - Um commit, uma mudança lógica.
 - Mensagens em inglês, modo imperativo: `add user session validation` (não `added`/`adding`).
 - PRs pequenos e revisáveis. Se não dá para revisar em 30 min, está grande demais.
-- Husky + lint-staged rodam ESLint e Prettier no `pre-commit`. O `pre-push` roda `typecheck + test`. Não pule hooks (`--no-verify`) — se um teste/typecheck quebra, conserte; não bypasse.
-  > Verificar: possivelmente desatualizado — `.husky/pre-commit:1` roda `npx lint-staged`, e o `package.json:94-101` passa `eslint --fix` em ts/tsx/js/jsx e `prettier --write` só em json/css/md; `.ts`/`.tsx` não passam pelo Prettier no commit (só no `format:check`).
+- Husky + lint-staged rodam no `pre-commit` `eslint --fix` em ts/tsx/js/jsx e Prettier em json/css/md (o Prettier de ts/tsx fica no `format:check`). O `pre-push` roda `typecheck + test`. Não pule hooks (`--no-verify`) — se um teste/typecheck quebra, conserte; não bypasse.
 - Antes de empurrar manualmente, rode `npm run check` (lint + format:check + typecheck + test).
 
 ## Texto de interface (UI)

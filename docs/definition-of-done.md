@@ -28,7 +28,7 @@ inexistente.
   de arquivo. Espelhe a estrutura das páginas existentes (seções numeradas,
   tabela de "Erros possíveis"). Se houver nota de versão/changelog voltado ao
   usuário, registre lá a mudança visível (com módulo e impacto).
-- **Convenção que vai se repetir → registre no `CLAUDE.md` (regra geral) ou no guia de `docs/` do assunto.** Ao introduzir um
+- **Convenção que vai se repetir → registre conforme [Onde registrar convenção nova](../CLAUDE.md#onde-registrar-convenção-nova), no `CLAUDE.md`.** Ao introduzir um
   padrão novo (organização de pasta, slot global, regra de UX), documente-o lá
   para a próxima sessão (humana ou Claude) já chegar alinhada.
 - Só é dispensável quando a mudança **não afeta o uso** (refactor interno, teste,

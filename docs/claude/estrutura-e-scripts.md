@@ -11,16 +11,16 @@ src/
 │   ├── global/          # abstrações da aplicação (card, modal, empty, skeleton, button, form/, layout/, sidebar/, dataTable/)
 │   └── ui/              # primitivos shadcn/ui (gerados via CLI — kebab-case)
 ├── hooks/               # hooks reutilizáveis (tema, sessão, mobile...)
-├── lib/                 # utilidades puras (env, datas, forms, queryClient, cn)
+├── lib/                 # utilidades puras (constants/, dateTime/, env, forms/, getInitials, ids, listQueryParams, masks/, navigation/, permissions, queryClient, utils com cn)
 ├── screens/             # telas; cada uma com seu routes.ts co-localizado
 ├── services/            # camada de acesso a dados (api, session...)
+├── stories/             # stories do Storybook
+├── tests/               # testes Vitest (setup.ts e uma pasta por componente/módulo)
 ├── types/               # tipos de domínio compartilhados
 ├── index.css            # tokens de design (cor da marca, dark mode, paleta)
 ├── routes.tsx           # árvore de rotas raiz
 └── main.tsx             # entrypoint (providers globais)
 ```
-
-> Verificar: possivelmente desatualizado — `src/lib/` não tem `datas/` (tem `dateTime/`, `masks/`, `navigation/`, `permissions.ts`, `ids.ts`, `listQueryParams.ts`, e o `cn` está em `src/lib/utils.ts:4`), e a árvore não cita `src/stories/`, `src/tests/` (`src/tests/setup.ts`) nem `e2e/`.
 
 ## Scripts
 

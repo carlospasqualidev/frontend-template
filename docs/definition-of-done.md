@@ -9,9 +9,10 @@ Escopado no que a mudança tocou. Tudo verde antes de passar adiante; erro que n
 1. **Typecheck**: `npm run typecheck` (`tsc -b`, cobre o projeto inteiro).
 2. **Lint** dos arquivos tocados: `npx eslint <arquivos ou pastas>` (ex.: `npx eslint src/components/global/button`). O `npm run lint` roda o projeto todo.
 3. **Formato** dos arquivos tocados: `npx prettier --write <arquivos>` (o `pre-commit` já faz isso pelo `lint-staged`; o `check` do fechamento confere com `format:check`).
-4. **Testes Vitest da área tocada**: `npx vitest run <caminho>` filtra por arquivo ou pasta de teste (ex.: `npx vitest run src/tests/globais/button`); `npx vitest run -t "<nome do teste>"` filtra por nome. Lógica não-trivial e abstração global alteradas ganham ou atualizam teste junto (ver [`testing-guide.md`](testing-guide.md)).
+4. **Testes Vitest da área tocada**: `npm run test:related` é o padrão: roda só os testes afetados pelas mudanças não commitadas e inclui os testes de quem importa o arquivo alterado. O script é `vitest run --changed`, que sobe o grafo de imports a partir dos arquivos alterados no git (ver [`testing-guide.md`](testing-guide.md)). 0 arquivos de teste ou "No test files found" não é verde: depois do commit, use `npx vitest related --run <arquivos>`; mudança em `vitest.config.ts`, `src/tests/setup.ts` ou `package.json` roda a suíte inteira; em mudança sem código (só documentação), reporte `test:related 0/0 (só docs)`. Alternativas para iterar: `npx vitest run <caminho>` filtra por arquivo ou pasta de teste (ex.: `npx vitest run src/tests/globais/button`), `npx vitest run -t "<nome do teste>"` filtra por nome, e `npx vitest related --run <arquivos>` pega os afetados por arquivos já commitados. Lógica não-trivial e abstração global alteradas ganham ou atualizam teste junto (ver [`testing-guide.md`](testing-guide.md)).
 5. **Documentação acompanha a mudança** (abaixo).
-6. **E2E relevante da tarefa** que mexe em tela, fluxo ou CRUD (abaixo). Exceção à cadência do loop: roda uma vez, ao concluir a tarefa, e de novo só se uma rodada de correção tocar o fluxo que ele cobre; não a cada mudança. O e2e completo é do **Fechamento**.
+
+O e2e **não** roda no loop por tarefa: roda no **Fechamento** e, dentro da esteira, com o tester. Exceção única: a tarefa que **criou ou alterou** um spec em `e2e/` roda esse spec uma vez antes de se declarar pronta (abaixo).
 
 ### Documentação acompanha a mudança
 
@@ -33,15 +34,13 @@ inexistente.
 - Só é dispensável quando a mudança **não afeta o uso** (refactor interno, teste,
   tooling).
 
-### E2E relevante da tarefa que mexe em tela, fluxo ou CRUD
+### E2E da tarefa que mexe em tela, fluxo ou CRUD
 
-Roda o spec do fluxo que a tarefa tocou (`npx playwright test e2e/<feature>.spec.ts`), uma vez ao concluir a tarefa e de novo só quando uma rodada de correção mexe nesse fluxo. A suíte e2e inteira roda no **Fechamento**.
+**Regra:** toda feature entregue vem com um teste Playwright que exercita o fluxo no app real. Vale para **tela nova, modificação de tela/fluxo e novo CRUD/criação**. Se a mudança altera um fluxo já coberto, **atualize o spec existente** em vez de criar outro. O spec é escrito ou atualizado **na tarefa**; a execução da suíte é do **Fechamento** (e, dentro da esteira, do tester), não do loop: subir o server inteiro a cada tarefa não entra no loop.
 
-**Regra:** toda feature entregue vem com um teste Playwright que exercita o fluxo no app real **e é executado antes de considerar a tarefa concluída**. Vale para **tela nova, modificação de tela/fluxo e novo CRUD/criação**. Se a mudança altera um fluxo já coberto, **atualize o spec existente** em vez de criar outro.
+**Exceção: a tarefa criou ou alterou um spec em `e2e/`.** Então ela roda **esse spec, uma vez**, antes de se declarar pronta, e de novo só se uma rodada de correção mexer no próprio spec ou no fluxo que ele cobre. Os E2E rodam **contra o server real** (`../server-template`, ver **Modo híbrido** em **Contrato com o backend**, [`conventions/http-and-state.md`](conventions/http-and-state.md)): suba-o antes (`npm run db:up`, `npm run db:deploy`, `npm run db:seed` e `npm run dev` lá dentro) e rode `npx playwright test e2e/<feature>.spec.ts` na raiz do frontend. O `webServer` do [`playwright.config.ts`](../playwright.config.ts) **sobe o Vite sozinho** na porta dos E2E (`4173`) apontando para `VITE_API_URL`. Se falhar, corrija e rode de novo até passar; reporte `e2e X/X`. Só pule a execução se o ambiente comprovadamente não puder subir o server ou o Vite na sessão, e aí diga que o spec foi escrito ou atualizado mas **falta rodar**.
 
-**Passo de encerramento (automático e obrigatório):** ao terminar QUALQUER tarefa que se encaixe (mexeu em tela/fluxo/CRUD do app), **rode o Playwright você mesmo** como último passo — não entregue "no papel". Os E2E rodam **contra o server real** (`../server-template`, ver **Modo híbrido** em **Contrato com o backend**, [`conventions/http-and-state.md`](conventions/http-and-state.md)): suba-o antes (`npm run db:up`, `npm run db:deploy`, `npm run db:seed` e `npm run dev` lá dentro) e rode o e2e da feature, `npx playwright test e2e/<feature>.spec.ts`, na raiz do frontend (a suíte inteira, `npm run test:e2e`, é do **Fechamento**). O `webServer` do [`playwright.config.ts`](../playwright.config.ts) **sobe o Vite sozinho** na porta dos E2E (`4173`) apontando para `VITE_API_URL`. A tarefa só está **efetivada** com o e2e relevante **verde**; se falhar, corrija e rode de novo até passar. Reporte o resultado (ex.: "e2e X/X verde"). Só pule a execução se o ambiente comprovadamente não puder subir o server ou o Vite na sessão — e aí sinalize explicitamente que o spec foi escrito/atualizado mas **falta rodar**.
-
-- **DoD:** a tarefa **não está concluída** sem o e2e relevante **executado e verde** (ver "Passo de encerramento" acima). Escrever o spec não basta — tem que rodar.
+Tarefa que mexe em tela sem tocar spec em `e2e/` não roda e2e no loop: o fluxo dela é coberto pela suíte inteira no **Fechamento**.
 
 ## Fechamento
 
@@ -57,7 +56,7 @@ Placar medido, não estimado, no formato curto:
 
 - `check N/N`: testes Vitest passando sobre o total da linha `Tests` do `npm run check`, com lint, formato e typecheck verdes (ex.: `check 855/855`).
 - `build ok`, ou o erro em uma linha.
-- `e2e X/X`: specs passando sobre specs rodados, contra o server local com seed; ou `e2e não rodou` com o motivo (ex.: o server não sobe na sessão; o spec foi escrito e falta rodar).
-- No loop, dizer qual filtro rodou (`npx vitest run <caminho>`, `npx eslint <arquivos>`).
+- `e2e X/X`: specs passando sobre specs rodados, contra o server local com seed; ou `e2e não rodou` com o motivo (ex.: o server não sobe na sessão; o spec foi escrito e falta rodar). No loop, só quando a tarefa criou ou alterou um spec em `e2e/`.
+- No loop, dizer qual filtro rodou (`npm run test:related`, `npx vitest related --run <arquivos>`, `npx vitest run <caminho>`, `npx eslint <arquivos>`) e o placar N/N da linha `Tests` dele, inclusive do `npm run test:related` (ex.: `test:related 54/54`); um `0/0` ou "No test files found" aparece no relatório e não conta como verde (só documentação: `test:related 0/0 (só docs)`).
 - O que foi verificado à mão (a tela no navegador, temas claro e escuro, largura de celular quando a tarefa mexe em layout), em uma linha.
 - Falha que ficou: o erro em uma linha, como pendência.

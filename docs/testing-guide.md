@@ -8,6 +8,16 @@ Duas camadas: **unit/componente** com Vitest (abaixo) e **fluxo no app real** co
 - Todos os testes vivem em [`src/tests/`](../src/tests), organizados em pastas — uma pasta por componente/módulo, com o arquivo `<name>.test.ts(x)` dentro. Espelha o agrupamento usado nas stories.
 - Setup global em [`src/tests/setup.ts`](../src/tests/setup.ts) (referenciado em [`vitest.config.ts`](../vitest.config.ts)).
 - O componente/módulo é importado via alias `@/...`, nunca por caminho relativo.
+- `pool: 'threads'` com isolamento por arquivo (o padrão): cada arquivo de teste começa com módulos, stores e mocks novos. Não use `isolate: false` para ganhar tempo; o estado vazaria entre arquivos.
+
+### Rodar só o que a mudança afeta
+
+`npm run test:related` (`vitest run --changed`) é o padrão do loop por tarefa ([`definition-of-done.md`](definition-of-done.md)): roda só os testes afetados pelas mudanças não commitadas e inclui os testes de quem importa o arquivo alterado. O Vitest pega no git os arquivos alterados (inclusive os novos, ainda não adicionados) e sobe o grafo de imports até os testes: mexer em `src/components/global/fieldChanges/fieldChanges.tsx` roda o teste do componente e os das telas que o usam (auditoria, aba de atividade e detalhe do usuário, tela de erro por rota), em vez da suíte inteira. Funciona igual no PowerShell e no Git Bash.
+
+- **Árvore limpa ou só documentação: `No test files found, exiting with code 0`.** Sai com código 0, mas não testou nada. Depois do commit, rode `npx vitest related --run <arquivos alterados>` (mesmo grafo, com a lista explícita). Mudança só de documentação se reporta `test:related 0/0 (só docs)`.
+- **Config e setup rodam tudo:** mudança em `vitest.config.ts`, `src/tests/setup.ts` ou `package.json` faz o `test:related` rodar a suíte inteira, porque valem para todo teste.
+- **Para iterar num ponto só:** `npx vitest run <caminho>` (arquivo ou pasta de teste) ou `npx vitest run -t "<nome do teste>"`.
+- A suíte inteira (`npm test`) é do `npm run check`, no fechamento e antes do push.
 
 ```
 src/tests/
@@ -70,7 +80,7 @@ Use `waitFor` apenas para asserções que não são "elemento apareceu" (ex.: `e
 
 ## E2E (Playwright)
 
-Toda feature entregue vem com um spec Playwright, executado antes de considerar a entrega concluída: a regra, o passo de encerramento e o placar ("e2e X/X") estão em [`definition-of-done.md`](definition-of-done.md). Aqui fica como os specs funcionam.
+Toda feature entregue vem com um spec Playwright, escrito ou atualizado na tarefa e executado antes de considerar a entrega concluída. O e2e não roda no loop por tarefa: roda no fechamento da entrega e, na esteira, com o tester; a exceção é a tarefa que criou ou alterou um spec em `e2e/`, que roda esse spec uma vez. A regra, a exceção e o placar ("e2e X/X") estão em [`definition-of-done.md`](definition-of-done.md). Aqui fica como os specs funcionam.
 
 - **Banco e trava de host:** os E2E usam o banco de desenvolvimento do `../server-template` (o mesmo do `npm run dev` dele, com o seed), sem banco próprio, por isso todo spec desfaz o que cria. Antes de qualquer requisição, o `globalSetup` recusa uma `VITE_API_URL` cujo host não seja `localhost`, `127.0.0.1` ou `::1` (`assertLocalApiUrl`, em [`e2e/helpers/apiHost.ts`](../e2e/helpers/apiHost.ts), testada em [`src/tests/e2e/apiHost/apiHost.test.ts`](../src/tests/e2e/apiHost/apiHost.test.ts)) e a suíte para sem rodar nada: ela cria e exclui usuários, cargos e configuração pela API, e nunca roda contra homologação ou produção. Não há flag de escape.
 - **Camadas (não confundir):** correção isolada de componente global (`components/global/`) continua coberta por **Vitest + story** (contrato do componente) — não escreva e2e para um primitivo isolado; ele é exercitado transitivamente pelo e2e da tela que o usa. O Playwright cobre o que o **usuário faz na aplicação rodando** (navegação, formulários, ações, filtros). O Storybook e o `npm run test:layers` (empilhamento, [`playwright.storybook.config.ts`](../playwright.storybook.config.ts)) seguem **sem backend**.

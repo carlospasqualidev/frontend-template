@@ -439,6 +439,7 @@ src/
 | `npm run format:check` | Prettier (só confere; entra no `check`)                 |
 | `npm run typecheck`    | `tsc -b`                                                |
 | `npm test`             | Vitest run                                              |
+| `npm run test:related` | Vitest só nos testes afetados pelo não commitado        |
 | `npm run test:watch`   | Vitest watch                                            |
 | `npm run check`        | Lint + format:check + typecheck + test                  |
 | `npm run test:e2e`     | E2E (Playwright) contra o `../server-template` no ar    |

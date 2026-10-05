@@ -49,6 +49,7 @@ ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 | `npm run format:check`    | Prettier (só confere; entra no `check`)                         |
 | `npm run typecheck`       | Checagem de tipos (`tsc -b`)                                    |
 | `npm test`                | Executa a suíte de testes uma vez                               |
+| `npm run test:related`    | Só os testes afetados pelas mudanças não commitadas             |
 | `npm run test:watch`      | Testes em modo watch                                            |
 | `npm run check`           | Roda `lint + format:check + typecheck + test` em sequência      |
 | `npm run test:e2e`        | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
@@ -270,8 +271,9 @@ de data e transforms ISO ↔ display) vêm com testes que documentam o
 comportamento esperado — use-os como ponto de partida ao estender.
 
 ```bash
-npm test           # roda uma vez
-npm run test:watch # modo watch
+npm test             # roda uma vez
+npm run test:related # só os afetados pelas mudanças não commitadas
+npm run test:watch   # modo watch
 ```
 
 ### E2E

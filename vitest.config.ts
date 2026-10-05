@@ -15,6 +15,16 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.ts'],
+    // `pool: 'threads'` (worker_threads) no lugar do padrão `forks` (um processo
+    // filho por worker): medido em 2026-10-05 (TPL-31), em 6 pares intercalados
+    // a mediana da suíte inteira caiu de ~58 s para ~53 s, verde e com o mesmo
+    // número de testes (um arquivo filtrado fica igual, ~6 s). O isolamento
+    // por arquivo continua (`isolate` no padrão): NÃO usar `isolate: false`, que
+    // vaza estado de módulo (stores, mocks) entre arquivos.
+    pool: 'threads',
+    // `css: true` mantido de propósito: nenhum teste importa CSS pelo grafo de
+    // módulos (`layers.test.ts` lê `src/index.css` via `fs`), então `css: false`
+    // não mudou o tempo de forma reproduzível nas medições do TPL-31.
     css: true,
     // `src/lib/env.ts` valida as envs no import e lança se faltar alguma —
     // qualquer teste cuja cadeia de imports passe por ele (api, sidebar, telas)

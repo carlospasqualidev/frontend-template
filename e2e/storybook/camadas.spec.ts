@@ -91,6 +91,14 @@ const FLOATING_CASES: FloatingCase[] = [
     locksScroll: true,
   },
   {
+    label: 'InfoTooltip (clique)',
+    open: (bench) =>
+      bench.getByRole('button', { name: 'Ajuda da bancada' }).click(),
+    content: (page) => page.locator('[data-slot="popover-content"]'),
+    // Popover não modal: dica fixada não pode prender a página.
+    locksScroll: false,
+  },
+  {
     label: 'HoverCard',
     open: (bench) => bench.getByRole('button', { name: 'HoverCard' }).hover(),
     content: (page) => page.locator('[data-slot="hover-card-content"]'),

@@ -42,6 +42,8 @@ inexistente.
 
 Tarefa que mexe em tela sem tocar spec em `e2e/` não roda e2e no loop: o fluxo dela é coberto pela suíte inteira no **Fechamento**.
 
+**Mudou texto, `aria-label`, `tooltip` ou papel de um controle (botão, aba, badge, mensagem)?** Procure o texto antigo em `e2e/` (`git grep -n "<texto antigo>" e2e`) e atualize os specs **na mesma entrega**, rodando os que o usam. Spec que procura o nome antigo falha, ou pior, passa sem provar nada (`toHaveCount(0)` de um nome que não existe mais). Controle repetido em vários specs ganha helper em `e2e/helpers/`: mude lá, uma vez.
+
 ## Fechamento
 
 Uma vez por entrega, depois da última tarefa, não por tarefa nem por correção. Bloqueia o "pronto": `npm run check`, `npm run build` ou e2e com falha; teste pulado ou focado (`test.skip`/`only`, `describe.only`, `it.skip`) deixado no código, ou regra, lint ou teste desligado para ficar verde (ver [`guardrails.md`](guardrails.md)); feature de tela, fluxo ou CRUD sem o spec Playwright escrito e executado; mudança de uso sem a documentação correspondente.

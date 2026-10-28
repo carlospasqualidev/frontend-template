@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Ícone de informação que revela um tooltip ao passar o mouse ou focar (acessível por teclado). Traz o próprio `TooltipProvider`.',
+          'Ícone de informação que revela um tooltip ao passar o mouse ou focar e, ao clicar, fixa o mesmo conteúdo num popover (fecha com Escape ou clique fora). Traz o próprio `TooltipProvider`.',
       },
     },
   },
@@ -40,5 +40,16 @@ export const Vitrine: Story = {
         </span>
       </Card>
     </div>
+  ),
+};
+
+export const ClicarFixaADica: Story = {
+  render: () => (
+    <Card title="Clique" description="Clique no ícone para fixar a dica.">
+      <span className="inline-flex items-center gap-1.5 text-sm">
+        Prazo de retenção
+        <InfoTooltip label="Dica fixada num popover até Escape ou clique fora." />
+      </span>
+    </Card>
   ),
 };

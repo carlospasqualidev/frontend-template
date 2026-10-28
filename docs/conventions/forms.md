@@ -75,6 +75,10 @@ Sintomas e causas:
 - **Memoize a linha (`React.memo`) com callbacks ESTÁVEIS** — para adicionar/remover um item montar só a linha nova. Handlers recebem o índice por parâmetro e são `useCallback` estáveis; `options` memoizadas. Sem isso, `React.memo` não segura (props com identidade nova a cada render).
 - **Regras de hooks:** todos os `useWatch` da linha vêm ANTES de qualquer `return` condicional.
 
+### Envio duplo: o `handleSubmit` do `useZodForm` já ignora
+
+O `handleSubmit` devolvido pelo `useZodForm` ignora um segundo envio enquanto o primeiro ainda valida ou antes de o botão entrar em `loading` (clique duplo), e solta a trava quando termina, inclusive se a validação reprova ou o callback lança. Ninguém precisa travar o botão por conta própria. Formulário que não usa o `useZodForm` não tem essa proteção.
+
 ### Cobertura obrigatória com Zod
 
 **Todo formulário precisa ter cada campo coberto por um schema Zod — sem exceção.** A validação acontece **antes** do submit e antes de qualquer chamada à API. O schema é a fonte de verdade do shape e das regras do formulário; nada de validação ad-hoc dentro do `onSubmit` ou em `useState`.

@@ -15,7 +15,7 @@ import { SERVER_API_URL } from './e2e/helpers/serverApi';
 export default defineConfig({
   testDir: './e2e',
   // Os specs de EMPILHAMENTO rodam contra o Storybook, com config própria
-  // (`playwright.storybook.config.ts` / `npm run test:layers`), sem backend.
+  // (`playwright.storybook.config.ts` / `pnpm run test:layers`), sem backend.
   testIgnore: ['**/storybook/**'],
   globalSetup: './e2e/globalSetup.ts',
   // Falha se um `test.only` for commitado por engano.
@@ -43,7 +43,7 @@ export default defineConfig({
   // `globalSetup` confere, antes de qualquer spec, que ele é este frontend
   // apontando para a mesma API; se não for, para com a mensagem.
   webServer: {
-    command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+    command: `pnpm run dev -- --port ${FRONTEND_PORT} --strictPort`,
     env: { VITE_API_URL: SERVER_API_URL },
     url: FRONTEND_URL,
     reuseExistingServer: true,

@@ -7,7 +7,7 @@ import { SERVER_API_URL } from './serverApi';
 
 /*
  * O Vite dos E2E: porta própria (4173 por padrão, que está no `CORS_ORIGINS`
- * padrão do server e não disputa a 5173 do `npm run dev`). Outra porta:
+ * padrão do server e não disputa a 5173 do `pnpm run dev`). Outra porta:
  * `E2E_PORT=<porta>` aqui e a origem `http://localhost:<porta>` no
  * `CORS_ORIGINS` do server.
  */

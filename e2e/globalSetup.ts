@@ -25,7 +25,7 @@ import {
 } from './helpers/storageState';
 
 const SERVER_SETUP_HINT =
-  'Suba o ../server-template antes: `npm run db:up`, `npm run db:deploy`, `npm run db:seed` e `npm run dev` lá dentro.';
+  'Suba o ../server-template antes: `pnpm run db:up`, `pnpm run db:deploy`, `pnpm run db:seed` e `pnpm run dev` lá dentro.';
 
 /**
  * Logins que os specs fazem depois dos 2 deste setup (o admin e o gestor).

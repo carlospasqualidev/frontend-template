@@ -28,35 +28,35 @@ fetching, testes, lint e hooks de commit).
 ## Começando
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env   # ajuste as variáveis
-npm run dev
+pnpm run dev
 ```
 
 O app fala com o backend `../server-template` (suba-o com
-`npm run db:up && npm run dev` lá dentro; `VITE_API_URL` aponta para ele): sem
+`pnpm run db:up && pnpm run dev` lá dentro; `VITE_API_URL` aponta para ele): sem
 ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 
 ## Scripts
 
-| Script                    | Descrição                                                       |
-| ------------------------- | --------------------------------------------------------------- |
-| `npm run dev`             | Servidor de desenvolvimento                                     |
-| `npm run build`           | Typecheck + build de produção                                   |
-| `npm run preview`         | Pré-visualiza o build                                           |
-| `npm run lint`            | ESLint                                                          |
-| `npm run format`          | Prettier (escrita)                                              |
-| `npm run format:check`    | Prettier (só confere; entra no `check`)                         |
-| `npm run typecheck`       | Checagem de tipos (`tsc -b`)                                    |
-| `npm test`                | Executa a suíte de testes uma vez                               |
-| `npm run test:related`    | Só os testes afetados pelas mudanças não commitadas             |
-| `npm run test:watch`      | Testes em modo watch                                            |
-| `npm run check`           | Roda `lint + format:check + typecheck + test` em sequência      |
-| `npm run test:e2e`        | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
-| `npm run test:layers`     | Empilhamento (z-index) contra o Storybook, sem backend          |
-| `npm run storybook`       | Storybook em modo dev (porta 6006)                              |
-| `npm run build-storybook` | Build estático do Storybook em `storybook-static/`              |
-| `npm run clean`           | Limpa `dist/` e caches (`node_modules/.tmp`, `.vite`, `.cache`) |
+| Script                     | Descrição                                                       |
+| -------------------------- | --------------------------------------------------------------- |
+| `pnpm run dev`             | Servidor de desenvolvimento                                     |
+| `pnpm run build`           | Typecheck + build de produção                                   |
+| `pnpm run preview`         | Pré-visualiza o build                                           |
+| `pnpm run lint`            | ESLint                                                          |
+| `pnpm run format`          | Prettier (escrita)                                              |
+| `pnpm run format:check`    | Prettier (só confere; entra no `check`)                         |
+| `pnpm run typecheck`       | Checagem de tipos (`tsc -b`)                                    |
+| `pnpm test`                | Executa a suíte de testes uma vez                               |
+| `pnpm run test:related`    | Só os testes afetados pelas mudanças não commitadas             |
+| `pnpm run test:watch`      | Testes em modo watch                                            |
+| `pnpm run check`           | Roda `lint + format:check + typecheck + test` em sequência      |
+| `pnpm run test:e2e`        | E2E contra o `../server-template` no ar (ver [E2E](#e2e))       |
+| `pnpm run test:layers`     | Empilhamento (z-index) contra o Storybook, sem backend          |
+| `pnpm run storybook`       | Storybook em modo dev (porta 6006)                              |
+| `pnpm run build-storybook` | Build estático do Storybook em `storybook-static/`              |
+| `pnpm run clean`           | Limpa `dist/` e caches (`node_modules/.tmp`, `.vite`, `.cache`) |
 
 ## Convenções de repositório
 
@@ -64,8 +64,8 @@ ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 - [`.gitattributes`](.gitattributes) força `eol=lf` em arquivos de texto — sem isso, clonar no Windows gera diffs de CRLF↔LF a cada PR.
 - Husky tem dois hooks:
   - `pre-commit` (existente): roda `lint-staged` (ESLint + Prettier no que foi staged).
-  - `pre-push` (novo): roda `npm run typecheck && npm test`. Erro de tipo ou teste quebrado para o push antes do servidor.
-- Antes de pushar manualmente: `npm run check` (lint + format:check + typecheck + test).
+  - `pre-push` (novo): roda `pnpm run typecheck && pnpm test`. Erro de tipo ou teste quebrado para o push antes do servidor.
+- Antes de pushar manualmente: `pnpm run check` (lint + format:check + typecheck + test).
 - CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em **Node 22**.
 
 ## Variáveis de ambiente
@@ -105,7 +105,7 @@ sessões ativas (da conta e do usuário), preferências de notificação, plano 
 cobrança, convites, pendências e as métricas da home sem rota. Os dados dessas
 partes ficam em arquivos `*Demo.ts`, e nada nelas é gravado.
 
-A suíte de unidade (`npm test`) e o Storybook não precisam do backend.
+A suíte de unidade (`pnpm test`) e o Storybook não precisam do backend.
 
 ## Estrutura de pastas
 
@@ -154,12 +154,12 @@ Wrappers sobre primitivos do shadcn que padronizam API, defaults visuais (inclui
 | Form fields        | [`global/form/`](src/components/global/form)                                                          | `InputField`, `Select`, `MultiSelect`, `Checkbox`, `Switch`, `TextArea`, `DateField`, `DateTimeField`, `FieldGroup`. Uncontrolled ou controlled via `control` + `name`. |
 | `DataTable`        | [`global/dataTable/`](src/components/global/dataTable)                                                | Tabela server-side com filtros declarativos, ordenação, paginação. Estado em memória (`useDataTableQuery`) ou na URL (`useDataTableUrlQuery`).                          |
 
-Veja todas em ação no Storybook (`npm run storybook`, porta 6006). Cada componente tem uma vitrine mostrando suas variações.
+Veja todas em ação no Storybook (`pnpm run storybook`, porta 6006). Cada componente tem uma vitrine mostrando suas variações.
 
 ### Adicionar um componente shadcn/ui
 
 ```bash
-npx shadcn@latest add button
+pnpm exec shadcn@latest add button
 ```
 
 Customize localmente quando precisar. Se criar um wrapper genérico em `components/global/`, siga o padrão: pasta `global/<nome>/<nome>.tsx`, interface prefixada com `I`, primitivo importado como `XPrimitive`.
@@ -271,14 +271,14 @@ de data e transforms ISO ↔ display) vêm com testes que documentam o
 comportamento esperado — use-os como ponto de partida ao estender.
 
 ```bash
-npm test             # roda uma vez
-npm run test:related # só os afetados pelas mudanças não commitadas
-npm run test:watch   # modo watch
+pnpm test             # roda uma vez
+pnpm run test:related # só os afetados pelas mudanças não commitadas
+pnpm run test:watch   # modo watch
 ```
 
 ### E2E
 
-Playwright, com os specs em [`e2e/`](e2e), numa suíte só: `npm run test:e2e`,
+Playwright, com os specs em [`e2e/`](e2e), numa suíte só: `pnpm run test:e2e`,
 contra o `../server-template` real. Cobre login e login recusado, sessão ao
 recarregar (cookie HTTP-only) e logout, menu por permissão, tempo de
 inatividade vindo da configuração da empresa, configurações (gravação em lote,
@@ -303,28 +303,28 @@ navegador pede confirmação, uma só com dois voltar seguidos, "Sair" pergunta
 antes de encerrar a sessão, a nova guia não pede, fechar a aba pede o aviso
 nativo, e depois de salvar nada pergunta); em todas, o aviso de demonstração
 nas partes que o servidor não atende. O empilhamento
-(`npm run test:layers`) roda contra o Storybook, sem backend.
+(`pnpm run test:layers`) roda contra o Storybook, sem backend.
 
 Suba o server antes, na pasta dele:
 
 ```bash
 cd ../server-template
-npm run db:up      # Postgres do docker compose
-npm run db:deploy  # migrations
-npm run db:seed    # admin@admin.com e blocked@admin.com, senha 123123123
-npm run dev        # http://localhost:8080
+pnpm run db:up      # Postgres do docker compose
+pnpm run db:deploy  # migrations
+pnpm run db:seed    # admin@admin.com e blocked@admin.com, senha 123123123
+pnpm run dev        # http://localhost:8080
 ```
 
 Depois, na raiz deste frontend:
 
 ```bash
-npm run test:e2e
+pnpm run test:e2e
 ```
 
 - O Vite sobe sozinho na porta **4173**, que já está no `CORS_ORIGINS` padrão
   do server, e aponta para `VITE_API_URL` do ambiente (padrão
   `http://localhost:8080/api`). Server em outra porta:
-  `VITE_API_URL=http://localhost:<porta>/api npm run test:e2e`. Vite em outra
+  `VITE_API_URL=http://localhost:<porta>/api pnpm run test:e2e`. Vite em outra
   porta: `E2E_PORT=<porta>` aqui e `CORS_ORIGINS` com
   `http://localhost:<porta>` ao subir o server.
 - Se a porta já tiver um servidor, ele é reaproveitado só se for o Vite deste

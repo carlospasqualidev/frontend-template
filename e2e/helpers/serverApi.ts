@@ -10,7 +10,7 @@ import type { LoginCredentials } from './session';
 import { ADMIN_STORAGE_STATE } from './storageState';
 
 /*
- * Preparo e limpeza de dado dos E2E contra o server real (`npm run test:e2e`).
+ * Preparo e limpeza de dado dos E2E contra o server real (`pnpm run test:e2e`).
  * Os specs dirigem o app como uma pessoa; só o preparo fala com a API direto,
  * por aqui, com a sessão do admin do seed aberta uma vez pelo
  * `e2e/globalSetup.ts` (`ADMIN_STORAGE_STATE`).
@@ -23,7 +23,7 @@ import { ADMIN_STORAGE_STATE } from './storageState';
 export const SERVER_API_URL =
   process.env.VITE_API_URL ?? 'http://localhost:8080/api';
 
-/** Usuários do seed do `../server-template` (`npm run db:seed`). */
+/** Usuários do seed do `../server-template` (`pnpm run db:seed`). */
 export const SEED_ADMIN: LoginCredentials = {
   email: 'admin@admin.com',
   password: '123123123',
@@ -88,7 +88,7 @@ export function readManager(): PreparedUser {
 
   if (!manager) {
     throw new Error(
-      'Gestor ausente: rode pelo `npm run test:e2e`, que o cria no globalSetup.'
+      'Gestor ausente: rode pelo `pnpm run test:e2e`, que o cria no globalSetup.'
     );
   }
 

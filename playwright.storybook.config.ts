@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Testes de EMPILHAMENTO (z-index) rodados contra o Storybook, não contra o app.
 // Ficam separados do `playwright.config.ts` de propósito: o e2e de fluxo sobe o
-// Vite (`npm run dev`) e não deve pagar o boot do Storybook a cada execução.
+// Vite (`pnpm run dev`) e não deve pagar o boot do Storybook a cada execução.
 //
-// Rode com `npm run test:layers`. Os specs vivem em `e2e/storybook/` e usam a
+// Rode com `pnpm run test:layers`. Os specs vivem em `e2e/storybook/` e usam a
 // bancada `src/stories/padroes/camadas/Camadas.stories.tsx`.
 const baseURL = process.env.STORYBOOK_BASE_URL ?? 'http://localhost:6006';
 
@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run storybook -- --no-open --quiet',
+    command: 'pnpm run storybook -- --no-open --quiet',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     // O primeiro boot do Storybook compila o bundle inteiro — bem mais lento

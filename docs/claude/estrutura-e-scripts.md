@@ -1,6 +1,6 @@
 # Estrutura de pastas e scripts
 
-Parte do [`CLAUDE.md`](../../CLAUDE.md), movida de lá sem reescrita: o texto é o mesmo, só alguns títulos mudaram de nível. Quando ler: antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `npm run check`. Os comandos do dia a dia ficam em **Ambiente**, no `CLAUDE.md`.
+Parte do [`CLAUDE.md`](../../CLAUDE.md), movida de lá sem reescrita: o texto é o mesmo, só alguns títulos mudaram de nível. Quando ler: antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `pnpm run check`. Os comandos do dia a dia ficam em **Ambiente**, no `CLAUDE.md`.
 
 ## Estrutura de pastas
 
@@ -24,19 +24,19 @@ src/
 
 ## Scripts
 
-| Script                 | O que faz                                               |
-| ---------------------- | ------------------------------------------------------- |
-| `npm run dev`          | Servidor de desenvolvimento (Vite)                      |
-| `npm run build`        | Typecheck + build de produção                           |
-| `npm run preview`      | Pré-visualiza o build                                   |
-| `npm run lint`         | ESLint                                                  |
-| `npm run format`       | Prettier (escrita)                                      |
-| `npm run format:check` | Prettier (só confere; entra no `check`)                 |
-| `npm run typecheck`    | `tsc -b`                                                |
-| `npm test`             | Vitest run                                              |
-| `npm run test:related` | Vitest só nos testes afetados pelo não commitado        |
-| `npm run test:watch`   | Vitest watch                                            |
-| `npm run check`        | Lint + format:check + typecheck + test                  |
-| `npm run test:e2e`     | E2E (Playwright) contra o `../server-template` no ar    |
-| `npm run test:layers`  | Empilhamento (z-index) no navegador, contra o Storybook |
-| `npm run clean`        | Remove `dist/` e caches                                 |
+| Script                  | O que faz                                               |
+| ----------------------- | ------------------------------------------------------- |
+| `pnpm run dev`          | Servidor de desenvolvimento (Vite)                      |
+| `pnpm run build`        | Typecheck + build de produção                           |
+| `pnpm run preview`      | Pré-visualiza o build                                   |
+| `pnpm run lint`         | ESLint                                                  |
+| `pnpm run format`       | Prettier (escrita)                                      |
+| `pnpm run format:check` | Prettier (só confere; entra no `check`)                 |
+| `pnpm run typecheck`    | `tsc -b`                                                |
+| `pnpm test`             | Vitest run                                              |
+| `pnpm run test:related` | Vitest só nos testes afetados pelo não commitado        |
+| `pnpm run test:watch`   | Vitest watch                                            |
+| `pnpm run check`        | Lint + format:check + typecheck + test                  |
+| `pnpm run test:e2e`     | E2E (Playwright) contra o `../server-template` no ar    |
+| `pnpm run test:layers`  | Empilhamento (z-index) no navegador, contra o Storybook |
+| `pnpm run clean`        | Remove `dist/` e caches                                 |

@@ -9,7 +9,7 @@ Parte das convenções do projeto, lida sob demanda (ver **Guias de referência*
 
 ## shadcn/ui
 
-- Adicione componentes via CLI: `npx shadcn@latest add <nome>`. **Não escreva à mão.**
+- Adicione componentes via CLI: `pnpm exec shadcn@latest add <nome>`. **Não escreva à mão.**
 - Customize `components/ui/<x>.tsx` localmente quando necessário; mas só edite o que foi gerado pelo shadcn.
 - **Componentes próprios (não-shadcn) ficam em `components/global/`, não em `components/ui/`.** Exemplo: o primitivo `MultiSelect` é escrito à mão e vive em [`global/form/multiSelectPrimitive.tsx`](../../src/components/global/form/multiSelectPrimitive.tsx), ao lado do wrapper integrado ao `react-hook-form`.
 - Wrappers genéricos só com ganho real (API simplificada, default visual do projeto, integração com `react-hook-form`). Quando criar um, siga o padrão em **Abstrações globais** abaixo.
@@ -123,7 +123,7 @@ Enquanto uma camada de **escolha** está aberta, a página **não rola** — o R
 
 `modal={false}` só numa camada **auxiliar**, onde o usuário precisa continuar interagindo com a tela com ela aberta (um painel de ajuda que fica ao lado do conteúdo, por exemplo). Se o popover serve para **escolher um valor e fechar**, ele é de escolha — mantenha o default.
 
-Verificado por navegador em `npm run test:layers` (campo `locksScroll` de cada caso em [`camadas.spec.ts`](../../e2e/storybook/camadas.spec.ts)). O `modal` também traz focus trap e `aria-modal`; está testado que o `Select` de mês/ano dentro do calendário, o `input type="time"` do `DateTimeField`, a busca do `Combobox` e a roda do mouse na lista continuam funcionando — em página, dentro de `Modal` e dentro de `Sheet`.
+Verificado por navegador em `pnpm run test:layers` (campo `locksScroll` de cada caso em [`camadas.spec.ts`](../../e2e/storybook/camadas.spec.ts)). O `modal` também traz focus trap e `aria-modal`; está testado que o `Select` de mês/ano dentro do calendário, o `input type="time"` do `DateTimeField`, a busca do `Combobox` e a roda do mouse na lista continuam funcionando — em página, dentro de `Modal` e dentro de `Sheet`.
 
 ### Camadas (z-index) e portais — token único, nunca número solto
 
@@ -149,7 +149,7 @@ A ordem e o uso dos tokens são travados por teste: [`src/tests/globais/layout/l
 
 **Armadilha do `*:w-full` do `Field` — já blindada, não desfaça.** Sem portal, o wrapper que o Floating UI cria fica na árvore como IRMÃO do gatilho; como o `Popover.Root` do Radix não emite DOM, num campo ele caía como filho **direto** do `Field`, e o `*:w-full` dele ([`ui/field.tsx`](../../src/components/ui/field.tsx)) acertava esse wrapper. Sendo `position: fixed`, o `width: 100%` resolve contra o **bloco de contenção** (a largura inteira do modal; a da viewport dentro de um `Sheet`) e o `shift` do Floating UI prendia o conteúdo no canto da tela. Dentro de um `Modal` isso ficava **mascarado por coincidência** quando o campo era o da coluna esquerda; num `Sheet` a lista ia para `x=0`. O [`PopoverContent`](../../src/components/ui/popover.tsx) resolve isso envolvendo o conteúdo não portalado num `<div className="contents">` — o div absorve o seletor `> *` e, sem gerar caixa, ignora a largura. Não remova esse wrapper e **não** "conserte" o sintoma com `w-auto!` no campo.
 
-**Bancada de verificação:** a story `Padrões/Camadas (z-index)` ([`Camadas.stories.tsx`](../../src/stories/padroes/camadas/Camadas.stories.tsx)) repete a MESMA bancada de flutuantes em página, dentro de `Modal` (Dialog e Drawer), dentro de `Sheet` e em empilhamento profundo. Ao tocar em popover/portal/z-index, abra-a (`npm run storybook`) e rode `npm run test:layers` — o spec [`e2e/storybook/camadas.spec.ts`](../../e2e/storybook/camadas.spec.ts) mede no navegador, por hit-test, se cada flutuante está no topo, se ancorou no campo e se o painel abraça o conteúdo. Campo novo com popover entra na bancada **e** na lista `FLOATING_CASES` do spec.
+**Bancada de verificação:** a story `Padrões/Camadas (z-index)` ([`Camadas.stories.tsx`](../../src/stories/padroes/camadas/Camadas.stories.tsx)) repete a MESMA bancada de flutuantes em página, dentro de `Modal` (Dialog e Drawer), dentro de `Sheet` e em empilhamento profundo. Ao tocar em popover/portal/z-index, abra-a (`pnpm run storybook`) e rode `pnpm run test:layers` — o spec [`e2e/storybook/camadas.spec.ts`](../../e2e/storybook/camadas.spec.ts) mede no navegador, por hit-test, se cada flutuante está no topo, se ancorou no campo e se o painel abraça o conteúdo. Campo novo com popover entra na bancada **e** na lista `FLOATING_CASES` do spec.
 
 **Padrão para criar uma nova abstração global:**
 
@@ -203,7 +203,7 @@ Use confirmação dupla apenas em ações irreversíveis ou que tenham alto impa
 
 ## Storybook (demos de componentes)
 
-Todas as stories vivem em [`src/stories/`](../../src/stories), organizadas em três pastas — uma pasta por componente, com o arquivo `<name>.stories.tsx` dentro. Cada componente tem uma "Vitrine" mostrando todas as variações em um só lugar. Rode com `npm run storybook` (porta 6006).
+Todas as stories vivem em [`src/stories/`](../../src/stories), organizadas em três pastas — uma pasta por componente, com o arquivo `<name>.stories.tsx` dentro. Cada componente tem uma "Vitrine" mostrando todas as variações em um só lugar. Rode com `pnpm run storybook` (porta 6006).
 
 ```
 src/stories/

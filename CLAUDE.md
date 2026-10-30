@@ -2,7 +2,7 @@
 
 Guia para o Claude trabalhar neste frontend. Este arquivo traz as regras gerais, que valem para toda tarefa, e os guias de `docs/` (ver **Guias de referência**) trazem as de cada área; juntos, são a fonte de verdade para convenções e comportamento esperado — leia o [`README.md`](README.md) para detalhes de stack, scripts e estrutura de pastas.
 
-> O diretório irmão `server-template/` é o template de backend que atende este frontend (Fastify + Prisma + Zod; sobe com `npm run db:up && npm run dev` lá dentro, em `http://localhost:8080`). Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito. O contrato HTTP dele está em `../server-template/docs/openapi.json` (ver **Contrato com o backend** em [`docs/conventions/http-and-state.md`](docs/conventions/http-and-state.md)).
+> O diretório irmão `server-template/` é o template de backend que atende este frontend (Fastify + Prisma + Zod; sobe com `pnpm run db:up && pnpm run dev` lá dentro, em `http://localhost:8080`). Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito. O contrato HTTP dele está em `../server-template/docs/openapi.json` (ver **Contrato com o backend** em [`docs/conventions/http-and-state.md`](docs/conventions/http-and-state.md)).
 
 ---
 
@@ -40,7 +40,7 @@ Se uma mudança ameaça introduzir instabilidade, inconsistência ou complexidad
 
 Para decisões de UX, layout ou organização de tela, siga esta ordem:
 
-1. **Procure primeiro no próprio projeto.** Antes de inventar, varra `src/screens/`, `src/components/global/` e o Storybook (`npm run storybook`) atrás de algo equivalente. Replique pasta, abstração e cadência visual que já existem (`PageActions`, `Card`, `Tabs` variant `line`, `DataTable`, organização em pastas por aba). Padronização interna **sempre** vence preferência individual — uma tela nova deve parecer parte do sistema, não um experimento isolado.
+1. **Procure primeiro no próprio projeto.** Antes de inventar, varra `src/screens/`, `src/components/global/` e o Storybook (`pnpm run storybook`) atrás de algo equivalente. Replique pasta, abstração e cadência visual que já existem (`PageActions`, `Card`, `Tabs` variant `line`, `DataTable`, organização em pastas por aba). Padronização interna **sempre** vence preferência individual — uma tela nova deve parecer parte do sistema, não um experimento isolado.
 2. **Quando não houver referência interna, inspire-se em sistemas consolidados** (GitHub, Linear, Vercel Dashboard, Stripe Dashboard, Notion). Use-os para preencher lacunas — _como_ eles organizam abas de settings, _onde_ eles colocam ações primárias, _como_ eles paginam. Adapte para as abstrações deste projeto; não copie estrutura paralela ("trouxe um header novo do GitHub" em vez de usar `PageActions` é regressão de padronização).
 3. **Se a decisão vai virar padrão para outras telas, documente.** Quando você introduz uma nova convenção que se repetirá (ex.: slot global de `PageActions`, organização em pasta por aba), registre brevemente onde manda **Onde registrar convenção nova** para que a próxima sessão (humana ou Claude) já chegue alinhada.
 
@@ -70,7 +70,7 @@ As regras que valem para toda tarefa ficam neste arquivo. As de cada área vivem
 | [`docs/claude/ui.md`](docs/claude/ui.md)                                           | Antes de escrever JSX, skeleton, carregamento, texto com acento, tabela larga, foco, ícone ou modal            |
 | [`docs/claude/erros-e-seguranca.md`](docs/claude/erros-e-seguranca.md)             | Ao indexar por variável, logar/reportar erro, pôr dado na URL ou filtro, ou PII em toast, mock, story ou form  |
 | [`docs/claude/dependencias.md`](docs/claude/dependencias.md)                       | Antes de atualizar `@tanstack/*` ou Storybook, ou mexer em `overrides` do `package.json`                       |
-| [`docs/claude/estrutura-e-scripts.md`](docs/claude/estrutura-e-scripts.md)         | Antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `npm run check`              |
+| [`docs/claude/estrutura-e-scripts.md`](docs/claude/estrutura-e-scripts.md)         | Antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `pnpm run check`             |
 
 ## Linguagem de código
 
@@ -163,7 +163,7 @@ PII (identificadores pessoais como nome completo e CPF, contato, credenciais e s
 - Mensagens em inglês, modo imperativo: `add user session validation` (não `added`/`adding`).
 - PRs pequenos e revisáveis. Se não dá para revisar em 30 min, está grande demais.
 - Husky + lint-staged rodam no `pre-commit` `eslint --fix` em ts/tsx/js/jsx e Prettier em json/css/md (o Prettier de ts/tsx fica no `format:check`). O `pre-push` roda `typecheck + test`. Não pule hooks (`--no-verify`) — se um teste/typecheck quebra, conserte; não bypasse.
-- Antes de empurrar manualmente, rode `npm run check` (lint + format:check + typecheck + test).
+- Antes de empurrar manualmente, rode `pnpm run check` (lint + format:check + typecheck + test).
 
 ## Texto de interface (UI)
 
@@ -208,8 +208,8 @@ Nada de spinner gigante nem skeleton genérico no lugar da tela: monte a estrutu
 - Windows (PowerShell). Em comandos shell use sintaxe PS (`$env:VAR`, `$null`, sem `&&` em PS 5.1).
 - Node >= 22 (versão fixa do template; CI roda em Node 22).
 - `npm` (lockfile `package-lock.json`).
-- Comandos do dia a dia: `npm run dev`: Servidor de desenvolvimento (Vite); `npm test`: Vitest run; `npm run test:related`: Vitest só nos testes afetados pelo não commitado; `npm run test:e2e`: E2E (Playwright) contra o `../server-template` no ar; `npm run lint`: ESLint; `npm run typecheck`: `tsc -b`; `npm run build`: Typecheck + build de produção; `npm run check`: Lint + format:check + typecheck + test — detalhe em `docs/claude/estrutura-e-scripts.md`.
-- **Pin do router:** `@tanstack/router-core` e `@tanstack/react-router` ficam fixos até o Storybook publicar a correção (sem o pin, toda story quebra); ao remover, confirme com `npm run test:layers` — detalhe em `docs/claude/dependencias.md`.
+- Comandos do dia a dia: `pnpm run dev`: Servidor de desenvolvimento (Vite); `pnpm test`: Vitest run; `pnpm run test:related`: Vitest só nos testes afetados pelo não commitado; `pnpm run test:e2e`: E2E (Playwright) contra o `../server-template` no ar; `pnpm run lint`: ESLint; `pnpm run typecheck`: `tsc -b`; `pnpm run build`: Typecheck + build de produção; `pnpm run check`: Lint + format:check + typecheck + test — detalhe em `docs/claude/estrutura-e-scripts.md`.
+- **Pin do router:** `@tanstack/router-core` e `@tanstack/react-router` ficam fixos até o Storybook publicar a correção (sem o pin, toda story quebra); ao remover, confirme com `pnpm run test:layers` — detalhe em `docs/claude/dependencias.md`.
 
 ## Onde registrar convenção nova
 

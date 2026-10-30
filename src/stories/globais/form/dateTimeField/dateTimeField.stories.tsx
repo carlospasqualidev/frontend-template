@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Campo combinado de data + hora com input mascarado e popover de calendário. Aceita digitação manual no formato dd/mm/aaaa hh:mm e sincroniza com o calendário.',
+          'Campo combinado de data + hora com input mascarado e popover de calendário. Aceita digitação manual no formato dd/mm/aaaa hh:mm e sincroniza com o calendário. O cabeçalho do calendário traz quatro setas (ano anterior, mês anterior, próximo mês, próximo ano) além dos seletores de mês e ano; as setas respeitam os limites do calendário (100 anos atrás, 50 à frente).',
       },
     },
   },

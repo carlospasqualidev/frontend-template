@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Campo de data com input mascarado e popover de calendário. Sempre controlled (`control` + `name`). Aceita digitação manual no formato dd/mm/aaaa e sincroniza com o calendário.',
+          'Campo de data com input mascarado e popover de calendário. Sempre controlled (`control` + `name`). Aceita digitação manual no formato dd/mm/aaaa e sincroniza com o calendário. O cabeçalho do calendário traz quatro setas (ano anterior, mês anterior, próximo mês, próximo ano) além dos seletores de mês e ano; as setas respeitam os limites do calendário (100 anos atrás, 50 à frente).',
       },
     },
   },
@@ -64,7 +64,7 @@ function VitrineDemo() {
     <div className="grid gap-6 lg:grid-cols-2">
       <Card
         title="Padrão"
-        description="Vazio; aceita digitação ou seleção no calendário."
+        description="Vazio; aceita digitação ou seleção no calendário (setas de mês e ano no cabeçalho)."
       >
         <DateField id="df-basic" name="basic" control={control} label="Data" />
       </Card>

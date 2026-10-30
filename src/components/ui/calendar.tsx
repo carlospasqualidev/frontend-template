@@ -3,6 +3,7 @@ import {
   DayPicker,
   type DropdownProps,
   getDefaultClassNames,
+  useDayPicker,
   type DayButton,
   type Locale,
 } from 'react-day-picker';
@@ -11,6 +12,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -81,11 +84,84 @@ function CalendarDropdown({
   );
 }
 
+/**
+ * Navegação do calendário com QUATRO botões, compartilhada por todos os date pickers:
+ * `«`/`‹` à esquerda recuam ano/mês, `›`/`»` à direita avançam mês/ano. O mês e o ano (dropdowns ou
+ * rótulo) ficam no centro. Substitui a navegação padrão (só mês) via `components.Nav`.
+ *
+ * O `className` que o DayPicker injeta já posiciona a barra (absoluta, `justify-between`); os botões
+ * são `pointer-events-auto` porque a barra em si é `pointer-events-none`. Mês usa os limites do próprio
+ * DayPicker (`previousMonth`/`nextMonth`, que respeitam `startMonth`/`endMonth`); ano desloca o mês atual.
+ */
+function CalendarNav({ className }: { className?: string }) {
+  const { months, previousMonth, nextMonth, goToMonth } = useDayPicker();
+  const currentMonth = months[0]?.date;
+
+  const irParaOutroAno = (delta: number) => {
+    if (!currentMonth) return;
+    const alvo = new Date(currentMonth);
+    alvo.setFullYear(alvo.getFullYear() + delta);
+    goToMonth(alvo);
+  };
+
+  const botaoClassName =
+    'pointer-events-auto size-(--cell-size) p-0 select-none';
+
+  return (
+    <div className={className}>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Ano anterior"
+          disabled={!currentMonth}
+          className={botaoClassName}
+          onClick={() => irParaOutroAno(-1)}
+        >
+          <ChevronsLeftIcon className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Mês anterior"
+          disabled={!previousMonth}
+          className={botaoClassName}
+          onClick={() => previousMonth && goToMonth(previousMonth)}
+        >
+          <ChevronLeftIcon className="size-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Próximo mês"
+          disabled={!nextMonth}
+          className={botaoClassName}
+          onClick={() => nextMonth && goToMonth(nextMonth)}
+        >
+          <ChevronRightIcon className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Próximo ano"
+          disabled={!currentMonth}
+          className={botaoClassName}
+          onClick={() => irParaOutroAno(1)}
+        >
+          <ChevronsRightIcon className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  hideNavigation = true,
+  hideNavigation = false,
   captionLayout = 'label',
   buttonVariant = 'ghost',
   locale,
@@ -121,9 +197,19 @@ function Calendar({
           'relative flex flex-col gap-4 md:flex-row',
           defaultClassNames.months
         ),
-        month: cn('flex w-full flex-col gap-4', defaultClassNames.month),
+        // Largura mínima para o cabeçalho caber sem sobreposição: os 4 botões de navegação (« ‹ › »)
+        // nas pontas + os dropdowns de mês/ano no centro não cabem na largura compacta do grid, e os
+        // botões colavam nos dropdowns.
+        month: cn(
+          'flex w-full min-w-[18rem] flex-col gap-4',
+          defaultClassNames.month
+        ),
         nav: cn(
-          'pointer-events-none absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1',
+          // `z-20` põe a barra ACIMA do `month_caption` (`z-10`): o caption é `w-full` e, com o padding
+          // que reserva espaço para os botões, cobriria a área deles e engoliria o clique. A barra é
+          // `pointer-events-none` e só os botões são `pointer-events-auto`, então o centro (dropdowns de
+          // mês/ano) segue recebendo clique por baixo.
+          'pointer-events-none absolute inset-x-0 top-0 z-20 flex w-full items-center justify-between gap-1',
           defaultClassNames.nav
         ),
         button_previous: cn(
@@ -137,7 +223,9 @@ function Calendar({
           defaultClassNames.button_next
         ),
         month_caption: cn(
-          'relative z-10 flex h-(--cell-size) w-full items-center justify-center px-(--cell-size)',
+          // `px` reserva o espaço dos DOIS botões de nav de cada lado (ano + mês) MAIS uma folga, para o
+          // mês/ano central não ficar embaixo nem colado neles.
+          'relative z-10 flex h-(--cell-size) w-full items-center justify-center px-[calc(var(--cell-size)*2+0.5rem)]',
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
@@ -207,6 +295,7 @@ function Calendar({
       }}
       components={{
         Dropdown: CalendarDropdown,
+        Nav: CalendarNav,
         Root: ({ className, rootRef, ...props }) => {
           return (
             <div

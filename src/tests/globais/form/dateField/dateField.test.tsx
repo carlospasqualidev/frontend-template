@@ -245,3 +245,34 @@ describe('DateField — camadas e portal dentro de Modal', () => {
     expect(await within(modal).findByRole('grid')).toBeInTheDocument();
   });
 });
+
+describe('DateField — navegação do calendário', () => {
+  it('mostra os 4 atalhos de navegação e "Próximo ano" avança 12 meses', async () => {
+    const user = userEvent.setup();
+    render(<ControlledHarness />);
+
+    const input = screen.getByLabelText<HTMLInputElement>(
+      'Data de fabricação (de)'
+    );
+    await user.type(input, '28072026');
+    await user.click(screen.getByLabelText('Abrir calendário'));
+
+    // Recuar/avançar ano e mês.
+    expect(
+      await screen.findByRole('button', { name: 'Ano anterior' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Mês anterior' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Próximo mês' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Próximo ano' })
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Próximo ano' }));
+
+    expect(await screen.findByText('valor:2027-07-28')).toBeInTheDocument();
+  });
+});

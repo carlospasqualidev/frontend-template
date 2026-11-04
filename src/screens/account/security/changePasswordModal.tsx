@@ -41,7 +41,7 @@ export function ChangePasswordModal({
   return (
     <Modal
       title="Alterar senha"
-      description="Informe a senha atual e a nova. A sessão continua aberta."
+      description="Esta sessão continua aberta."
       icon={<KeyRound />}
       open={open}
       setOpen={setOpen}

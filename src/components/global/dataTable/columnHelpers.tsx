@@ -303,10 +303,13 @@ export function rowActionsColumn<TData extends RowData>({
     enableHiding: false,
     enableSorting: false,
     header: () => header,
-    // Coluna encolhe até o conteúdo e fica colada na borda direita, como a do "⋯"
-    // (`max-w-none` porque a fileira de botões passa da largura máxima padrão das
-    // células do corpo).
-    meta: { className: 'w-px max-w-none whitespace-nowrap text-right' },
+    // Coluna encolhe até o conteúdo, com título e botões centralizados no mesmo
+    // eixo (`max-w-none` porque a fileira de botões passa da largura máxima padrão
+    // das células do corpo).
+    meta: {
+      className: 'w-px max-w-none whitespace-nowrap text-center',
+      isActions: true,
+    },
     cell: ({ row }) => (
       <RowActions
         actions={
@@ -374,10 +377,13 @@ export function actionsColumn<TData extends RowData>({
     id,
     enableHiding: false,
     enableSorting: false,
-    // Coluna encolhe até o conteúdo (`w-px` + `whitespace-nowrap`) e fica alinhada
-    // à direita — as demais colunas absorvem a largura restante, então o "⋯" fica
-    // sempre colado na borda direita, independente do nº de colunas da tabela.
-    meta: { className: 'w-px whitespace-nowrap text-right' },
+    header: () => 'Ações',
+    // Coluna encolhe até o conteúdo (`w-px` + `whitespace-nowrap`) e centraliza
+    // título e "⋯" no mesmo eixo — as demais colunas absorvem a largura restante.
+    meta: {
+      className: 'w-px whitespace-nowrap text-center',
+      isActions: true,
+    },
     cell: ({ row }) => {
       const items =
         typeof actions === 'function' ? actions(row.original) : actions;
@@ -386,14 +392,16 @@ export function actionsColumn<TData extends RowData>({
       // vazio, ex.: registros que a tela não permite excluir), mas reserva o mesmo
       // espaço do botão (`size-8`) para que a linha mantenha a MESMA altura das
       // que têm ⋯ (linhas de altura uniforme na tabela).
-      if (items.length === 0) return <div aria-hidden className="size-8" />;
+      if (items.length === 0) {
+        return <div aria-hidden className="mx-auto size-8" />;
+      }
 
       return (
         // Wrapper isola o clique do menu de ações do `onRowClick`/`getRowHref`
         // da DataTable — abrir o menu e selecionar uma ação não devem disparar a
         // navegação (nem abrir o detalhe em nova aba com o clique do meio).
         <div
-          className="flex justify-end"
+          className="flex justify-center"
           onClick={(event) => event.stopPropagation()}
           onAuxClick={(event) => event.stopPropagation()}
         >

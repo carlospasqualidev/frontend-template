@@ -21,7 +21,7 @@ export function BillingTab() {
     <div className="grid gap-4">
       <DemoNotice variant="banner" description={DEMO_DESCRIPTION} />
 
-      <Card title="Plano" description="Seu plano atual e próxima cobrança.">
+      <Card title="Plano">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -39,16 +39,13 @@ export function BillingTab() {
               Trocar de plano
             </Button>
             <Button variant="ghost" onClick={notifyDemoAction}>
-              Cancelar
+              Cancelar plano
             </Button>
           </div>
         </div>
       </Card>
 
-      <Card
-        title="Método de pagamento"
-        description="Cartão usado para cobranças automáticas."
-      >
+      <Card title="Método de pagamento">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <Typography as="span" variant="small">
@@ -64,7 +61,7 @@ export function BillingTab() {
         </div>
       </Card>
 
-      <Card title="Histórico" description="Faturas emitidas nos últimos meses.">
+      <Card title="Histórico">
         <ul className="divide-y divide-border/60">
           {DEMO_INVOICES.map((invoice) => (
             <li

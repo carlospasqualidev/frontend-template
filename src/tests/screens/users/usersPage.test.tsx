@@ -160,6 +160,7 @@ function notFound(): AxiosError {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   queryClient = makeTestQueryClient();
   signIn(ALL_PERMISSIONS);
   vi.mocked(fetchUsers)

@@ -83,6 +83,7 @@ function renderAuditLogs(filters: Record<string, unknown>) {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

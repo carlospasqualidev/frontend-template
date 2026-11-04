@@ -25,10 +25,7 @@ export function RoleIdentityCard({
   readOnly = false,
 }: RoleIdentityCardProps) {
   return (
-    <Card
-      title="Identificação"
-      description="Nome e descrição, como aparecem na escolha de cargos."
-    >
+    <Card title="Identificação">
       <div className="grid items-start gap-4">
         <InputField
           control={control}
@@ -88,8 +85,8 @@ export function RolePermissionsCard({
       title="Permissões"
       description={
         readOnly
-          ? 'O que o cargo permite.'
-          : 'O que o cargo permite. Marcar uma ação de escrita marca também a de visualizar do mesmo grupo.'
+          ? undefined
+          : 'Marcar uma ação de escrita marca também a de visualizar do mesmo grupo.'
       }
       className={className}
     >

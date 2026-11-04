@@ -141,11 +141,7 @@ export function UsersTab({
   return (
     <Card
       title="Quem tem o cargo"
-      description={
-        readOnly
-          ? 'As pessoas com este cargo.'
-          : 'Escolha quem tem este cargo. A troca vale depois de salvar.'
-      }
+      description={readOnly ? undefined : 'A troca vale depois de salvar.'}
     >
       <div className="space-y-4">
         {notice && (
@@ -189,9 +185,7 @@ export function UsersTab({
               <TableHead>E-mail</TableHead>
               <TableHead>Status</TableHead>
               {!readOnly && (
-                <TableHead className="w-px">
-                  <span className="sr-only">Ações</span>
-                </TableHead>
+                <TableHead className="w-px text-center">Ações</TableHead>
               )}
             </FormTableHeader>
             <TableBody>
@@ -210,7 +204,7 @@ export function UsersTab({
                     <UserStatusBadge isActive={user.isActive} />
                   </TableCell>
                   {!readOnly && (
-                    <TableCell className="text-right">
+                    <TableCell className="text-center">
                       <Button
                         type="button"
                         variant="ghost"

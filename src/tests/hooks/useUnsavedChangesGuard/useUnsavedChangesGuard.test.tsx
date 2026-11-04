@@ -176,6 +176,20 @@ describe('useUnsavedChangesGuard — navegação do app', () => {
     expect(router.state.location.pathname).toBe('/other');
   });
 
+  it('"Continuar editando" fica à esquerda de "Descartar alterações"', async () => {
+    const router = setup();
+    await screen.findByLabelText('Nome');
+
+    await go(router, { to: '/other' });
+
+    const dialog = await screen.findByRole('alertdialog');
+    const names = within(dialog)
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    expect(names).toEqual(['Continuar editando', 'Descartar alterações']);
+    await answer('Continuar editando');
+  });
+
   it('o Esc fecha a pergunta e fica na tela', async () => {
     const user = userEvent.setup();
     const router = setup();

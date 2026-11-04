@@ -33,8 +33,6 @@ interface ActivityTabProps {
 const PAGE_SIZE = 10;
 
 const TIMELINE_TITLE = 'Linha do tempo';
-const TIMELINE_DESCRIPTION =
-  'Eventos da trilha de auditoria deste usuário, do mais recente para o mais antigo.';
 
 // Ícone de cada ação da trilha (Map: sem indexar objeto por variável).
 const ACTION_ICON = new Map<string, LucideIcon>([
@@ -164,7 +162,7 @@ export function ActivityTab({ userId }: ActivityTabProps) {
   const firstIndex = page * PAGE_SIZE;
 
   return (
-    <Card title={TIMELINE_TITLE} description={TIMELINE_DESCRIPTION}>
+    <Card title={TIMELINE_TITLE}>
       {isPending ? (
         <ActivityTimelineSkeleton />
       ) : (

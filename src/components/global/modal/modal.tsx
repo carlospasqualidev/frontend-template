@@ -51,7 +51,11 @@ function sizeClassName(size: ModalSize): string {
 
 interface IModal {
   title: string;
-  description: string;
+  /**
+   * Opcional: sem ela o modal não renderiza elemento de descrição (nem espaço
+   * vazio). Só escreva quando houver regra ou risco que o título não revela.
+   */
+  description?: string;
   children: React.ReactNode;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -98,7 +102,7 @@ function ModalHeaderContent({
   Description,
 }: {
   title: string;
-  description: string;
+  description?: string;
   onBack?: () => void;
   backLabel?: string;
   icon?: React.ReactNode;
@@ -139,7 +143,7 @@ function ModalHeaderContent({
       {/* `min-w-0` deixa o título truncar em vez de empurrar o botão de fechar. */}
       <div className="flex min-w-0 flex-col gap-1">
         <Title className="truncate">{title}</Title>
-        <Description>{description}</Description>
+        {description ? <Description>{description}</Description> : null}
       </div>
     </div>
   );
@@ -157,6 +161,12 @@ export function Modal({
   icon,
 }: IModal) {
   const isMobile = useIsMobile();
+  // Defensivo: o Radix/vaul instalados não avisam nem ligam `aria-describedby`
+  // sem `Description`. Passar `undefined` explícito garante isso em versões que
+  // avisam (ou que apontam para um id inexistente).
+  const noDescriptionProps = description
+    ? {}
+    : { 'aria-describedby': undefined };
 
   // O "dentro de modal" NÃO é marcado aqui: quem provê o `InModalContext` é o
   // próprio `DialogContent`/`DrawerContent` (e `SheetContent`/`AlertDialogContent`),
@@ -168,7 +178,7 @@ export function Modal({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent>
+        <DrawerContent {...noDescriptionProps}>
           <DrawerHeader className={cn('mt-2', HEADER_BAND)}>
             <ModalHeaderContent
               title={title}
@@ -204,7 +214,10 @@ export function Modal({
         MultiSelect, DateField, DateTimeField) seria recortado.
         Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela.
       */}
-      <DialogContent className={cn('gap-0 p-0', sizeClassName(size))}>
+      <DialogContent
+        className={cn('gap-0 p-0', sizeClassName(size))}
+        {...noDescriptionProps}
+      >
         <DialogHeader className={cn(HEADER_BAND, 'rounded-t-xl pr-12')}>
           <ModalHeaderContent
             title={title}
@@ -236,12 +249,16 @@ export function Modal({
 }
 
 /**
- * Rodapé padrão de ações de um modal: o(s) botão(ões) ocupam 100% da largura do
- * modal (empilhados quando há mais de um). Use para agrupar o(s) botão(ões) de
- * ação (Salvar/Criar) de QUALQUER modal do projeto, garantindo o mesmo padrão em
- * todos. A largura total vem do `flex flex-col` (align-items: stretch estica os
- * filhos). Em modais de edição, o botão de salvar deve renderizar apenas quando
- * o formulário está _dirty_ (ver docs/conventions/screen-layout.md).
+ * Rodapé padrão de ações de um modal. Um botão ocupa 100% da largura; dois ou
+ * mais ficam centralizados, cada um com a largura do próprio texto, e quebram de
+ * linha se não couberem. Texto (`<p>`/`<span>`) ocupa a linha inteira,
+ * centralizado, e não conta como botão. A regra é CSS sobre o que foi renderizado
+ * (`only-of-type` de `button`), então `{cond && <Button />}` funciona sem
+ * tratamento. A regra olha a tag: o filho precisa renderizar `<button>`; um
+ * `Button asChild` que vira `<a>`/`Link` conta como texto (linha inteira).
+ * Use para agrupar os botões de ação de QUALQUER modal do projeto.
+ * Em modais de edição, o botão de salvar deve renderizar apenas quando o
+ * formulário está _dirty_ (ver docs/conventions/screen-layout.md).
  */
 export function ModalFooter({
   className,
@@ -250,5 +267,14 @@ export function ModalFooter({
   className?: string;
   children: React.ReactNode;
 }) {
-  return <div className={cn('flex flex-col gap-2', className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap justify-center gap-2 [&>:not(button)]:basis-full [&>:not(button)]:text-center [&>button:only-of-type]:basis-full',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }

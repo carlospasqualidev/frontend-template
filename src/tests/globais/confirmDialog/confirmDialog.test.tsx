@@ -256,3 +256,43 @@ describe('ConfirmDialog (global) — modo controlled', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('ConfirmDialog (global) — rodapé', () => {
+  it('Cancelar e Confirmar saem como <button> dentro do footer, nessa ordem', () => {
+    render(
+      <ConfirmDialog
+        open
+        setOpen={() => undefined}
+        title="Excluir?"
+        description="..."
+        confirmLabel="Excluir"
+        onConfirm={() => undefined}
+      />
+    );
+
+    const footer = document.querySelector('[data-slot="alert-dialog-footer"]');
+    const buttons = Array.from(footer?.querySelectorAll(':scope > *') ?? []);
+
+    expect(buttons.map((b) => b.tagName)).toEqual(['BUTTON', 'BUTTON']);
+    expect(buttons.map((b) => b.textContent)).toEqual(['Cancelar', 'Excluir']);
+  });
+
+  it('destrutivo também mantém a negativa antes da positiva', () => {
+    render(
+      <ConfirmDialog
+        open
+        setOpen={() => undefined}
+        title="Descartar?"
+        description="..."
+        confirmLabel="Descartar alterações"
+        cancelLabel="Continuar editando"
+        destructive
+        onConfirm={() => undefined}
+      />
+    );
+
+    const names = screen.getAllByRole('button').map((b) => b.textContent);
+
+    expect(names).toEqual(['Continuar editando', 'Descartar alterações']);
+  });
+});

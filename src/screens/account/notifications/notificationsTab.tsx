@@ -36,16 +36,10 @@ export function NotificationsTab() {
   return (
     <div className="grid gap-4">
       <DemoNotice variant="banner" description={DEMO_DESCRIPTION} />
-      <Card
-        title="Canais"
-        description="Onde você quer ser notificado sobre eventos do sistema."
-      >
+      <Card title="Canais">
         <SettingList settings={DEMO_NOTIFICATION_CHANNELS} />
       </Card>
-      <Card
-        title="Eventos"
-        description="Quais tipos de evento disparam uma notificação."
-      >
+      <Card title="Eventos">
         <SettingList settings={DEMO_NOTIFICATION_EVENTS} />
       </Card>
     </div>

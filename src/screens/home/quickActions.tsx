@@ -9,7 +9,7 @@ import { hasPermission } from '@/lib/permissions';
 interface QuickAction {
   id: string;
   label: string;
-  description: string;
+  description?: string;
   href: string;
   /** Sem `permission`, o atalho aparece para todo usuário logado. */
   permission?: string;
@@ -20,21 +20,18 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'qa-users',
     label: 'Gerenciar usuários',
-    description: 'Veja a lista completa e filtre por cargo e status.',
     href: '/users',
     permission: 'backoffice.users.read',
   },
   {
     id: 'qa-new-user',
     label: 'Novo usuário',
-    description: 'Cadastre uma pessoa e depois dê os cargos dela.',
     href: '/users/create',
     permission: 'backoffice.users.create',
   },
   {
     id: 'qa-audit',
     label: 'Abrir auditoria',
-    description: 'Histórico das ações feitas no sistema.',
     href: '/audit-logs',
     permission: 'backoffice.audit.read',
   },
@@ -48,7 +45,6 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'qa-account',
     label: 'Minha conta',
-    description: 'Seu perfil, sua foto e sua senha.',
     href: '/account',
   },
 ];
@@ -65,26 +61,24 @@ export function QuickActions({ className }: QuickActionsProps) {
   );
 
   return (
-    <Card
-      title="Acesso rápido"
-      description="Atalhos para as telas mais usadas."
-      className={className}
-    >
+    <Card title="Acesso rápido" className={className}>
       <ul className="grid gap-2 sm:grid-cols-2">
         {actions.map((action) => (
           <li key={action.id}>
             <Link
               href={action.href}
               newTabIcon={false}
-              className="group flex items-start gap-3 rounded-2xl border border-border/70 bg-background p-4 text-foreground no-underline transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="group flex h-full items-start gap-3 rounded-2xl border border-border/70 bg-background p-4 text-foreground no-underline transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <Typography as="span" variant="small" className="block">
                   {action.label}
                 </Typography>
-                <Typography variant="muted" className="text-xs">
-                  {action.description}
-                </Typography>
+                {action.description && (
+                  <Typography variant="muted" className="text-xs">
+                    {action.description}
+                  </Typography>
+                )}
               </div>
               <ArrowRight
                 aria-hidden

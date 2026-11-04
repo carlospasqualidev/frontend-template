@@ -41,7 +41,7 @@ export const Vitrine: Story = {
             <AvatarFallback>SC</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="/imagem-inexistente.png" alt="Ana Silva" />
+            <AvatarImage src="data:image/png;base64," alt="Ana Silva" />
             <AvatarFallback>AS</AvatarFallback>
           </Avatar>
           <Avatar>

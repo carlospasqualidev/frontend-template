@@ -69,7 +69,7 @@ As regras que valem para toda tarefa ficam neste arquivo. As de cada área vivem
 | [`docs/dates.md`](docs/dates.md)                                                   | Antes de exibir, preencher, gravar ou filtrar data                                                             |
 | [`docs/claude/ui.md`](docs/claude/ui.md)                                           | Antes de escrever JSX, skeleton, carregamento, texto com acento, tabela larga, foco, ícone ou modal            |
 | [`docs/claude/erros-e-seguranca.md`](docs/claude/erros-e-seguranca.md)             | Ao indexar por variável, logar/reportar erro, pôr dado na URL ou filtro, ou PII em toast, mock, story ou form  |
-| [`docs/claude/dependencias.md`](docs/claude/dependencias.md)                       | Antes de atualizar `@tanstack/*` ou Storybook, ou mexer em `overrides` do `package.json`                       |
+| [`docs/claude/dependencias.md`](docs/claude/dependencias.md)                       | Antes de atualizar `@tanstack/*` ou Storybook, ou mexer em `overrides` do `pnpm-workspace.yaml`                |
 | [`docs/claude/estrutura-e-scripts.md`](docs/claude/estrutura-e-scripts.md)         | Antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `pnpm run check`             |
 
 ## Linguagem de código
@@ -175,6 +175,13 @@ Todo texto exposto ao usuário em **português brasileiro (pt-BR)**.
   - Correto: `Falha ao salvar o registro. Tente novamente.`
   - Evite: `Unexpected persistence layer failure.`
 - **Nunca exponha referência interna ao usuário**: número de card/demanda, hash/código de merge, nome de branch, jargão de implementação. Não entra em label, placeholder, mensagem, toast nem em texto vindo do backend renderizado na tela. Se aparecer numa descrição/label (inclusive dado de seed), é bug — corrija na origem.
+- **Copy de tela: o padrão é sem descrição.** Modal, sheet, card e página não ganham subtítulo por reflexo (`description` é opcional no `Modal`, `Card` e `PageHeader`): só escreva quando ela trouxer algo que título e campos não dizem (regra que muda a decisão, risco, irreversibilidade, formato, unidade).
+  - **Não escreva:** subtítulo que repete o título ou lista o que a tela já mostra ("Escolha as colunas que vão na exportação"); aviso sob botão que narra o fluxo ("Salve o usuário para configurar…"); "Aqui você pode…", "Gerencie…", "Tudo o que você precisa…"; frase de efeito, travessão retórico, tom de marketing.
+  - **Mantém:** validação e erro, aviso de risco, regra de negócio que o rótulo não revela, empty state que orienta o próximo passo, texto de acessibilidade (a `DialogDescription` exigida pelo Radix vai `sr-only`). Na dúvida, corte o que só repete e pergunte pelo resto.
+
+### Ordem das ações
+
+Negativa (Cancelar, Voltar, Continuar editando, Não, "Descartar" que reverte o formulário nos `PageActions` de settings/perfil/usuário/cargo) à esquerda e positiva (Salvar, Confirmar, Excluir, "Descartar alterações" do guard de saída, que confirma a saída) à direita, inclusive a destrutiva, em qualquer grupo (modal, `ConfirmDialog`, guard de saída, sheet, rodapé, `PageActions`). A ordem visual é a do DOM: não use `flex-col-reverse`/`flex-row-reverse`/`order-*` para reordenar (o padrão do shadcn faz isso; aqui não), e ao quebrar linha a negativa fica em cima — detalhe em `docs/conventions/components.md`.
 
 ### Dado derivado, rótulos e mensagens vêm do backend
 
@@ -209,7 +216,7 @@ Nada de spinner gigante nem skeleton genérico no lugar da tela: monte a estrutu
 - Node >= 22 (versão fixa do template; CI roda em Node 22).
 - `npm` (lockfile `package-lock.json`).
 - Comandos do dia a dia: `pnpm run dev`: Servidor de desenvolvimento (Vite); `pnpm test`: Vitest run; `pnpm run test:related`: Vitest só nos testes afetados pelo não commitado; `pnpm run test:e2e`: E2E (Playwright) contra o `../server-template` no ar; `pnpm run lint`: ESLint; `pnpm run typecheck`: `tsc -b`; `pnpm run build`: Typecheck + build de produção; `pnpm run check`: Lint + format:check + typecheck + test — detalhe em `docs/claude/estrutura-e-scripts.md`.
-- **Pin do router:** `@tanstack/router-core` e `@tanstack/react-router` ficam fixos até o Storybook publicar a correção (sem o pin, toda story quebra); ao remover, confirme com `pnpm run test:layers` — detalhe em `docs/claude/dependencias.md`.
+- **Pin do router:** `@tanstack/router-core` fica fixo por ser dependência exata do `@tanstack/react-router`; os overrides (inclusive o de `@radix-ui/react-dismissable-layer`) vivem no `pnpm-workspace.yaml` — detalhe em `docs/claude/dependencias.md`.
 
 ## Onde registrar convenção nova
 

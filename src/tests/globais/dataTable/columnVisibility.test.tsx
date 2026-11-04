@@ -165,19 +165,94 @@ describe('DataTable — visibilidade de colunas', () => {
     ).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('põe o ícone no cabeçalho da coluna de ações, sem coluna extra', () => {
+  it('põe o ícone em coluna própria, depois da coluna Ações', () => {
     renderTable();
 
     const headers = screen.getAllByRole('columnheader');
-    expect(headers).toHaveLength(4);
+    expect(headers).toHaveLength(5);
     expect(
       within(headers.at(-1)!).getByRole('button', {
         name: 'Configurar colunas',
       })
     ).toBeInTheDocument();
+    expect(headers.at(-2)).toHaveTextContent('Ações');
+    expect(
+      within(headers.at(-2)!).queryByRole('button', {
+        name: 'Configurar colunas',
+      })
+    ).not.toBeInTheDocument();
   });
 
-  it('sem coluna de sistema no fim, cria uma coluna só para o ícone', () => {
+  it('nem Ações nem a coluna do ícone aparecem no menu de colunas', async () => {
+    const user = userEvent.setup();
+    renderTable();
+    await openMenu(user);
+
+    expect(
+      screen.queryByRole('menuitemcheckbox', { name: 'Ações' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitemcheckbox', { name: 'Configurar colunas' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('carregando, a coluna do ícone não desenha skeleton', () => {
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        columnVisibilityKey={TABLE_KEY}
+        isLoading
+      />
+    );
+
+    const row = container.querySelector('tbody tr')!;
+    const cells = within(row as HTMLElement).getAllByRole('cell');
+    expect(cells).toHaveLength(5);
+    expect(cells.at(-1)).toBeEmptyDOMElement();
+    expect(cells.at(0)).not.toBeEmptyDOMElement();
+  });
+
+  it('carregando, o skeleton da coluna Ações é centralizado e de largura fixa', () => {
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        columnVisibilityKey={TABLE_KEY}
+        isLoading
+      />
+    );
+
+    const row = container.querySelector('tbody tr')!;
+    const actionsCell = within(row as HTMLElement)
+      .getAllByRole('cell')
+      .at(-2)!;
+    expect(actionsCell.firstElementChild).toHaveClass('mx-auto', 'w-16');
+    const nameCell = within(row as HTMLElement)
+      .getAllByRole('cell')
+      .at(0)!;
+    expect(nameCell.firstElementChild).not.toHaveClass('mx-auto');
+  });
+
+  it('o estado vazio ocupa todas as colunas, inclusive a do ícone', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        columnVisibilityKey={TABLE_KEY}
+      />
+    );
+
+    expect(screen.getByRole('cell')).toHaveAttribute('colspan', '5');
+  });
+
+  it('sem coluna de ações, a coluna do ícone existe do mesmo jeito', () => {
     render(
       <DataTable
         columns={columns.slice(0, 2)}

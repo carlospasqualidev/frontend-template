@@ -34,7 +34,7 @@ export function IdleTimeout() {
         if (!next) continueSession();
       }}
       title="Sessão prestes a expirar"
-      description="Você está inativo há um tempo. Por segurança, sua sessão será encerrada automaticamente."
+      description="Sem atividade há um tempo."
     >
       <p className="mb-4 text-sm text-muted-foreground">
         Encerrando em{' '}

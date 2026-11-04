@@ -1,6 +1,7 @@
 import { Card } from '@/components/global/card/card';
 import { DemoNotice } from '@/components/global/demoNotice/demoNotice';
 import { Typography } from '@/components/ui/typography';
+import { PAIRED_ANCHOR_CONTENT_CLASS } from '@/lib/constants/pairedCard';
 import { DEMO_WEEKLY_ACTIVITY } from '@/screens/home/utils/homeDemo';
 
 interface ActivityChartProps {
@@ -25,8 +26,9 @@ export function ActivityChart({ className }: ActivityChartProps) {
       description={`${total} logins nos últimos 7 dias`}
       action={<DemoNotice />}
       className={className}
+      contentClassName={PAIRED_ANCHOR_CONTENT_CLASS}
     >
-      <div className="flex h-48 gap-2 sm:gap-3">
+      <div className="flex h-48 w-full gap-2 sm:gap-3 lg:h-auto lg:min-h-48 lg:flex-1">
         {DEMO_WEEKLY_ACTIVITY.map((point) => {
           const heightPercent = max > 0 ? (point.value / max) * 100 : 0;
           return (

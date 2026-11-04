@@ -27,10 +27,7 @@ export function UserFormFields({
 
   return (
     <>
-      <Card
-        title="Identificação"
-        description="Nome, e-mail de acesso e contato."
-      >
+      <Card title="Identificação">
         <div className="grid items-start gap-4 sm:grid-cols-2">
           <InputField
             control={control}
@@ -67,14 +64,7 @@ export function UserFormFields({
         </div>
       </Card>
 
-      <Card
-        title="Acesso"
-        description={
-          isCreate
-            ? 'Senha do primeiro acesso e tempo até o logout por inatividade.'
-            : 'Tempo até o logout por inatividade.'
-        }
-      >
+      <Card title="Acesso">
         <div className="grid items-start gap-4 sm:grid-cols-2">
           {isCreate && (
             <>
@@ -110,7 +100,7 @@ export function UserFormFields({
         </div>
       </Card>
 
-      <Card title="Foto" description="Aparece ao lado do nome no sistema.">
+      <Card title="Foto">
         <UserImageField control={control} readOnly={readOnly} />
       </Card>
     </>

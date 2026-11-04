@@ -50,7 +50,10 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn(
+        'text-sm text-muted-foreground @max-[20rem]/card-header:col-start-1',
+        className
+      )}
       {...props}
     />
   );
@@ -61,7 +64,9 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="card-action"
       className={cn(
-        'col-start-2 row-span-2 row-start-1 self-start justify-self-end',
+        // Em cabeçalho estreito (< 20rem de conteúdo) a ação desce para baixo do
+        // título, em vez de empurrar a coluna e ser cortada pelo overflow do Card.
+        'col-start-2 row-span-2 row-start-1 self-start justify-self-end @max-[20rem]/card-header:col-start-1 @max-[20rem]/card-header:row-span-1 @max-[20rem]/card-header:row-start-auto @max-[20rem]/card-header:mt-1 @max-[20rem]/card-header:justify-self-start',
         className
       )}
       {...props}

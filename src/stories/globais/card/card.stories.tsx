@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { Card } from '@/components/global/card/card';
 import { Button } from '@/components/global/button/button';
+import { DemoNotice } from '@/components/global/demoNotice/demoNotice';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -11,6 +12,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Typography } from '@/components/ui/typography';
+import {
+  PAIRED_LIST_CARD_CLASS,
+  PAIRED_LIST_CONTENT_CLASS,
+} from '@/lib/constants/pairedCard';
+import { ActivityChart } from '@/screens/home/activityChart';
+import { PendingTasks } from '@/screens/home/pendingTasks';
 
 const meta = {
   title: 'Globais/Card',
@@ -98,7 +105,7 @@ export const Vitrine: Story = {
           <Badge variant="default">Ativo</Badge>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline">Trocar de plano</Button>
-            <Button variant="ghost">Cancelar</Button>
+            <Button variant="ghost">Cancelar plano</Button>
           </div>
         </div>
       </Card>
@@ -205,6 +212,95 @@ export const ComAcaoNoCabecalho: Story = {
       description: {
         story:
           'Ação primária de uma seção (ex.: "Adicionar …") no `action` do Card — alinhada à direita do cabeçalho. É o padrão: NÃO coloque o botão de adicionar solto acima/dentro do conteúdo.',
+      },
+    },
+  },
+};
+
+/**
+ * Largura útil da Home em `lg`+: viewport − sidebar (16rem expandida, 48px
+ * recolhida) − 64px de padding do layout. O breakpoint segue a viewport.
+ * `100vw` inclui a barra de rolagem vertical (~15px no Windows): a simulação
+ * fica até ~15px mais larga que a Home real, margem aceita para a story.
+ */
+const HOME_WIDTH_EXPANDED = 'lg:w-[calc(100vw-20rem)]';
+const HOME_WIDTH_COLLAPSED = 'lg:w-[calc(100vw-48px-64px)]';
+
+function LongList() {
+  return (
+    <Card
+      title="Lista longa"
+      className={PAIRED_LIST_CARD_CLASS}
+      contentClassName={PAIRED_LIST_CONTENT_CLASS}
+    >
+      <ul className="divide-y divide-border/60">
+        {Array.from({ length: 30 }, (_, index) => (
+          <li key={index} className="py-3 text-sm">
+            Item {index + 1}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+export const CabecalhoEstreito: Story = {
+  render: () => (
+    <div className="grid gap-6">
+      <div className="w-60">
+        <Card
+          title="Pendências"
+          description="4 itens aguardando"
+          action={<DemoNotice />}
+        >
+          <Typography variant="muted">Coluna estreita (15rem)</Typography>
+        </Card>
+      </div>
+      <div className="w-full max-w-[28rem]">
+        <Card
+          title="Pendências"
+          description="4 itens aguardando"
+          action={<DemoNotice />}
+        >
+          <Typography variant="muted">Coluna larga (28rem)</Typography>
+        </Card>
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Título + descrição + ação. Em cabeçalho com menos de 20rem de conteúdo, título, descrição e ação empilham na coluna 1 (a ação por último), sem cortar a ação; em cabeçalho largo a ação fica à direita.',
+      },
+    },
+  },
+};
+
+export const ParComListaAoLado: Story = {
+  render: () => (
+    <div className="grid gap-8">
+      <div className={`grid gap-4 lg:grid-cols-3 ${HOME_WIDTH_EXPANDED}`}>
+        <ActivityChart className="lg:col-span-2" />
+        <PendingTasks />
+      </div>
+
+      <div className={`grid gap-4 lg:grid-cols-3 ${HOME_WIDTH_COLLAPSED}`}>
+        <ActivityChart className="lg:col-span-2" />
+        <PendingTasks />
+      </div>
+
+      <div className={`grid gap-4 lg:grid-cols-3 ${HOME_WIDTH_EXPANDED}`}>
+        <ActivityChart className="lg:col-span-2" />
+        <LongList />
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Par lista + gráfico: em `lg` a linha mede a lista até o teto (`PAIRED_LIST_CARD_CLASS` + `PAIRED_LIST_CONTENT_CLASS`) e só acima dele a lista rola por dentro; o gráfico (`PAIRED_ANCHOR_CONTENT_CLASS`) ocupa a altura da linha. Os blocos simulam a largura útil da Home em `lg`+ (viewport − sidebar − padding): 1º com a sidebar expandida (4 itens, sem scroll), 2º com a recolhida, 3º com 30 itens (rola). Abaixo de `lg` empilha, com altura máxima na lista.',
       },
     },
   },

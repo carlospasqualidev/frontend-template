@@ -35,7 +35,6 @@ function PasswordCard() {
   return (
     <Card
       title="Senha"
-      description="Use uma senha forte e exclusiva deste sistema."
       action={
         <Button variant="outline" onClick={() => setOpen(true)}>
           <KeyRound />
@@ -78,11 +77,7 @@ function TwoFactorCard() {
 /** Sessões ativas da conta: demonstração (a sessão não tem registro no servidor). */
 function SessionsCard() {
   return (
-    <Card
-      title="Sessões ativas"
-      description="Dispositivos que estão atualmente conectados à sua conta."
-      action={<DemoNotice />}
-    >
+    <Card title="Sessões ativas" action={<DemoNotice />}>
       <ul className="space-y-3">
         {DEMO_ACCOUNT_SESSIONS.map((session, index) => (
           <li key={session.id} className="space-y-3">

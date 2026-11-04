@@ -31,6 +31,58 @@ const filters: DataTableFilter[] = [
 ];
 
 describe('DataTable', () => {
+  it('mostra o seletor "Itens por página" só com onPageSizeChange e dispara a troca', async () => {
+    const user = userEvent.setup();
+    const onPageSizeChange = vi.fn();
+    const { rerender } = render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+      />
+    );
+
+    expect(screen.queryByText('Itens por página')).not.toBeInTheDocument();
+
+    rerender(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        pageSize={25}
+        onPageSizeChange={onPageSizeChange}
+      />
+    );
+
+    const trigger = screen.getByRole('combobox', { name: 'Itens por página' });
+    expect(trigger).toHaveTextContent('25');
+
+    await user.click(trigger);
+    expect(
+      screen.getAllByRole('option').map((option) => option.textContent)
+    ).toEqual(['25', '50', '100']);
+    await user.click(screen.getByRole('option', { name: '100' }));
+
+    expect(onPageSizeChange).toHaveBeenCalledWith(100);
+  });
+
+  it('não mostra o seletor quando pageSize está fora das opções', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        pageSize={5}
+        onPageSizeChange={() => undefined}
+      />
+    );
+
+    expect(screen.queryByText('Itens por página')).not.toBeInTheDocument();
+  });
+
   it('renderiza linhas quando há dados', () => {
     const data: Row[] = [
       { id: '1', email: 'ana@example.com' },

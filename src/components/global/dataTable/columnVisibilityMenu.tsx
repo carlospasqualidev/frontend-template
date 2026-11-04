@@ -1,4 +1,4 @@
-import { flexRender, type RowData } from '@tanstack/react-table';
+import { type RowData } from '@tanstack/react-table';
 import { Columns3Cog, RotateCcw } from 'lucide-react';
 
 import type {
@@ -115,32 +115,16 @@ export function ColumnVisibilityMenu<TData extends RowData>({
   );
 }
 
-const MENU_COLUMN_ID = 'columnVisibility';
+export const MENU_COLUMN_ID = 'columnVisibility';
 
 /**
- * Coloca o menu de colunas no canto direito do cabeçalho. Se a última coluna já
- * é de sistema (não ocultável — `actionsColumn`, `rowActionsColumn`), o ícone
- * entra no cabeçalho dela, ao lado do título que ela tiver; senão, a tabela
- * ganha uma coluna estreita só para o ícone.
+ * Coloca o menu de colunas numa coluna própria, estreita e à direita, do
+ * tamanho do ícone (a coluna "Ações", quando existe, fica sozinha no seu eixo).
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function withColumnVisibilityMenu<TData extends RowData>(
   columns: DataTableColumnDef<TData>[]
 ): DataTableColumnDef<TData>[] {
-  const last = columns.at(-1);
-
-  if (last && last.enableHiding === false) {
-    const originalHeader = last.header;
-    const merged: DataTableColumnDef<TData> = { ...last };
-    merged.header = (context) => (
-      <div className="flex items-center justify-end gap-2">
-        {flexRender(originalHeader, context)}
-        <ColumnVisibilityMenu table={context.table} />
-      </div>
-    );
-    return [...columns.slice(0, -1), merged];
-  }
-
   return [
     ...columns,
     {

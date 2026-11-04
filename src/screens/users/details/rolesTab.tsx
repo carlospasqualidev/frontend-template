@@ -35,7 +35,7 @@ function NoRoles() {
 /** Sem `backoffice.roles.read`: só os nomes dos cargos, que vêm no usuário. */
 function RoleNames({ roles }: { roles: UserRole[] }) {
   return (
-    <Card title="Cargos" description="Os cargos que valem para esta pessoa.">
+    <Card title="Cargos">
       {roles.length === 0 ? (
         <NoRoles />
       ) : (
@@ -207,10 +207,7 @@ function EditableRoles({
         />
       </Card>
 
-      <Card
-        title="Permissões dos cargos"
-        description="O que os cargos escolhidos permitem, para conferência."
-      >
+      <Card title="Permissões dos cargos">
         {roleIds.length === 0 ? (
           <NoRoles />
         ) : (

@@ -20,6 +20,15 @@ describe('PageHeader', () => {
     expect(screen.getByText('Resumo do seu dia.')).toBeInTheDocument();
   });
 
+  it('sem `description`, não renderiza o parágrafo da descrição', () => {
+    render(<PageHeader title="Início" />);
+
+    expect(screen.getByRole('heading', { name: 'Início' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading').parentElement?.querySelector('p')
+    ).toBeNull();
+  });
+
   it('renderiza as ações quando informadas', () => {
     render(
       <PageHeader

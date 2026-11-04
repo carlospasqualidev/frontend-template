@@ -172,7 +172,7 @@ export const Vitrine: Story = {
 
       <Card
         title="Numa tabela"
-        description="A coluna encolhe até o conteúdo e fica colada na borda direita. Na 2ª linha, as etapas ainda não liberadas aparecem desabilitadas — a posição de cada ícone não muda entre linhas."
+        description="A coluna encolhe até o conteúdo, com título e botões centralizados no mesmo eixo. Na 2ª linha, as etapas ainda não liberadas aparecem desabilitadas — a posição de cada ícone não muda entre linhas."
       >
         <div className="overflow-x-auto rounded-md border">
           <Table>
@@ -180,7 +180,7 @@ export const Vitrine: Story = {
               <TableRow>
                 <TableHead>Produto</TableHead>
                 <TableHead>Referência</TableHead>
-                <TableHead className="w-px">Ações</TableHead>
+                <TableHead className="w-px text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -13,7 +13,7 @@ export interface ConfigModuleOutline {
  * Formato esperado da tela, para o skeleton reservar o espaço enquanto a
  * leitura (`GET /client/system-configs`) não volta: os grupos na ordem de
  * exibição e uma linha por chave do catálogo do servidor, pelo tipo do campo.
- * Chave ou grupo novo no catálogo entra aqui junto de `moduleDescription`.
+ * Chave ou grupo novo no catálogo entra aqui.
  */
 export const SETTINGS_OUTLINE: readonly ConfigModuleOutline[] = [
   { module: 'GENERAL', rows: ['field', 'field'] },
@@ -33,19 +33,6 @@ function moduleRank(module: string): number {
       return 2;
     default:
       return 3;
-  }
-}
-
-/** Descrição pt-BR do grupo, pelo que ele tem no catálogo. */
-export function moduleDescription(module: string): string {
-  switch (module) {
-    case 'SECURITY':
-      return 'Sessão e retenção da auditoria.';
-    case 'NOTIFICATIONS':
-      return 'Envio de notificações por e-mail.';
-    case 'GENERAL':
-    default:
-      return 'Nome da aplicação e e-mail de suporte.';
   }
 }
 

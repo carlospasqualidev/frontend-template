@@ -15,7 +15,9 @@ function Harness({
   onBack,
   backLabel,
   icon,
+  description = 'Atualize seus dados.',
 }: {
+  description?: string | null;
   initialOpen?: boolean;
   size?: ModalSize;
   onBack?: () => void;
@@ -34,7 +36,7 @@ function Harness({
         setOpen={setOpen}
         size={size}
         title="Editar perfil"
-        description="Atualize seus dados."
+        description={description ?? undefined}
         onBack={onBack}
         backLabel={backLabel}
         icon={icon}
@@ -76,6 +78,45 @@ describe('Modal (global)', () => {
     expect(screen.getByText('Editar perfil')).toBeInTheDocument();
     expect(screen.getByText('Atualize seus dados.')).toBeInTheDocument();
     expect(screen.getByText('Conteúdo do modal')).toBeInTheDocument();
+  });
+
+  it('com descrição, liga o diálogo a ela por aria-describedby', () => {
+    render(<Harness initialOpen />);
+
+    const description = screen.getByText('Atualize seus dados.');
+    expect(screen.getByRole('dialog')).toHaveAttribute(
+      'aria-describedby',
+      description.id
+    );
+  });
+
+  it('sem descrição, não renderiza elemento de descrição nem aria-describedby', () => {
+    render(<Harness initialOpen description={null} />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-slot="dialog-description"]')).toBeNull();
+    expect(dialog).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByText('Editar perfil')).toBeInTheDocument();
+  });
+
+  it('no mobile (Drawer), sem descrição, também não renderiza descrição nem aria-describedby', () => {
+    window.matchMedia = (query) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+
+    render(<Harness initialOpen description={null} />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-slot="drawer-description"]')).toBeNull();
+    expect(dialog).not.toHaveAttribute('aria-describedby');
   });
 
   it('inicializa aberto quando open=true desde o start', () => {
@@ -146,5 +187,78 @@ describe('ModalFooter (global)', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+  });
+
+  it('centraliza e quebra de linha, com o botão único em 100% por only-of-type', () => {
+    render(
+      <ModalFooter>
+        <button type="button">Salvar</button>
+      </ModalFooter>
+    );
+
+    expect(screen.getByRole('button').parentElement).toHaveClass(
+      'flex-wrap',
+      'justify-center',
+      'gap-2',
+      '[&>button:only-of-type]:basis-full'
+    );
+  });
+
+  it('com dois botões, mantém ambos no DOM, na ordem, sob a mesma regra', () => {
+    render(
+      <ModalFooter>
+        <button type="button">Cancelar</button>
+        <button type="button">Confirmar</button>
+      </ModalFooter>
+    );
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      'Cancelar',
+      'Confirmar',
+    ]);
+    expect(buttons[0].parentElement).toHaveClass('justify-center');
+    expect(
+      buttons[0].parentElement?.querySelectorAll('button:only-of-type')
+    ).toHaveLength(0);
+  });
+
+  it('com condicional falsa, o único botão fica sob a regra de 100%; com verdadeira, são dois irmãos centralizados', () => {
+    const Footer = ({ canDelete }: { canDelete: boolean }) => (
+      <ModalFooter>
+        <button type="button">Salvar</button>
+        {canDelete && <button type="button">Excluir</button>}
+      </ModalFooter>
+    );
+    const { container, rerender } = render(<Footer canDelete={false} />);
+    const footer = container.firstElementChild;
+    expect(footer).toHaveClass(
+      'flex-wrap',
+      'justify-center',
+      '[&>button:only-of-type]:basis-full'
+    );
+    expect(footer?.querySelectorAll(':scope > button')).toHaveLength(1);
+
+    rerender(<Footer canDelete />);
+    expect(footer?.querySelectorAll(':scope > button')).toHaveLength(2);
+    expect(footer).toHaveClass('justify-center', 'gap-2');
+  });
+
+  it('texto ao lado do botão: linha inteira centralizada, e o botão segue sendo o único <button> filho', () => {
+    const { container } = render(
+      <ModalFooter>
+        <p>Esta ação não pode ser desfeita.</p>
+        <button type="button">Excluir</button>
+      </ModalFooter>
+    );
+    const footer = container.firstElementChild;
+
+    expect(footer).toHaveClass(
+      '[&>:not(button)]:basis-full',
+      '[&>:not(button)]:text-center',
+      '[&>button:only-of-type]:basis-full'
+    );
+    expect(footer?.querySelector(':scope > p')?.tagName).toBe('P');
+    expect(footer?.querySelectorAll(':scope > button')).toHaveLength(1);
   });
 });

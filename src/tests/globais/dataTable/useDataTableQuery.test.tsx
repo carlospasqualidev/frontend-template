@@ -1,14 +1,38 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useDataTableQuery } from '@/components/global/dataTable/useDataTableQuery';
 
 describe('useDataTableQuery', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('usa a preferência de itens por página salva já na primeira renderização', () => {
+    localStorage.setItem('dataTable:pageSize', '100');
+
+    const { result } = renderHook(() => useDataTableQuery({ pageSize: 25 }));
+
+    expect(result.current.query.pageSize).toBe(100);
+    expect(result.current.tableProps.pageSize).toBe(100);
+  });
+
+  it('trocar itens por página grava no storage e volta para a primeira página', () => {
+    const { result } = renderHook(() => useDataTableQuery());
+
+    act(() => result.current.tableProps.onPageChange(3));
+    act(() => result.current.tableProps.onPageSizeChange(50));
+
+    expect(result.current.query.pageSize).toBe(50);
+    expect(result.current.query.page).toBe(0);
+    expect(localStorage.getItem('dataTable:pageSize')).toBe('50');
+  });
+
   it('inicializa com defaults de página, ordenação e filtros', () => {
     const { result } = renderHook(() => useDataTableQuery());
 
     expect(result.current.query.page).toBe(0);
-    expect(result.current.query.pageSize).toBe(50);
+    expect(result.current.query.pageSize).toBe(25);
     expect(result.current.query.sort).toEqual([]);
     expect(result.current.query.filters).toEqual({});
   });

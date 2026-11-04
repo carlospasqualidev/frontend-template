@@ -113,9 +113,9 @@ function StepsDemo() {
         backLabel="Voltar à seleção"
       >
         {step === 'menu' ? (
-          <Button className="w-full" onClick={() => setStep('form')}>
-            Continuar
-          </Button>
+          <ModalFooter>
+            <Button onClick={() => setStep('form')}>Continuar</Button>
+          </ModalFooter>
         ) : (
           <form className="grid items-start gap-6">
             <div className="grid gap-3">
@@ -131,6 +131,48 @@ function StepsDemo() {
     </>
   );
 }
+
+function TwoButtonsDemo() {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button
+        onClick={(event) => {
+          event.currentTarget.blur();
+          setOpen(true);
+        }}
+      >
+        Abrir modal com dois botões
+      </Button>
+
+      <Modal
+        title="Editar perfil"
+        description="Dois botões ficam centralizados, cada um com a largura do texto."
+        open={open}
+        setOpen={setOpen}
+      >
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Restaurar padrão
+          </Button>
+          <Button onClick={() => setOpen(false)}>Salvar alterações</Button>
+        </ModalFooter>
+      </Modal>
+    </>
+  );
+}
+
+export const ComDoisBotoes: Story = {
+  render: () => (
+    <Card
+      title="Rodapé com dois botões"
+      description="Um botão ocupa a linha toda; dois ou mais centralizam e quebram de linha se não couberem."
+    >
+      <TwoButtonsDemo />
+    </Card>
+  ),
+};
 
 export const ComVoltar: Story = {
   render: () => (

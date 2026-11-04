@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Card } from '@/components/global/card/card';
+import { CardContent } from '@/components/ui/card';
 
 describe('Card (global)', () => {
   it('renderiza title, description e children', () => {
@@ -104,5 +105,52 @@ describe('Card recolhível (expanded/onToggle)', () => {
       screen.queryByRole('button', { name: 'Resumo' })
     ).not.toBeInTheDocument();
     expect(screen.getByText('Corpo estático')).toBeInTheDocument();
+  });
+});
+
+describe('Card (global): contentClassName', () => {
+  it('aplica a classe ao corpo do card estático', () => {
+    render(
+      <Card title="Lista" contentClassName="max-h-40 overflow-y-auto">
+        <p>Item</p>
+      </Card>
+    );
+
+    const content = screen
+      .getByText('Item')
+      .closest('[data-slot="card-content"]');
+    expect(content).toHaveClass('max-h-40', 'overflow-y-auto');
+  });
+
+  it('aplica a classe ao corpo do card recolhível expandido', () => {
+    render(
+      <Card
+        title="Lista"
+        expanded
+        onToggle={() => undefined}
+        contentClassName="max-h-40"
+      >
+        <p>Item</p>
+      </Card>
+    );
+
+    expect(
+      screen.getByText('Item').closest('[data-slot="card-content"]')
+    ).toHaveClass('max-h-40');
+  });
+
+  it('sem a prop, o corpo mantém exatamente a classe base do CardContent', () => {
+    const { container } = render(<CardContent />);
+    const baseClassName = container.firstElementChild?.className;
+
+    render(
+      <Card title="Lista">
+        <p>Item</p>
+      </Card>
+    );
+
+    expect(
+      screen.getByText('Item').closest('[data-slot="card-content"]')?.className
+    ).toBe(baseClassName);
   });
 });

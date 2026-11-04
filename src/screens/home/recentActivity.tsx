@@ -105,7 +105,6 @@ export function RecentActivity({ className }: RecentActivityProps) {
   return (
     <Card
       title="Atividade recente"
-      description="Últimos eventos da trilha de auditoria."
       action={
         <Link href="/audit-logs" newTabLabel="Abrir a auditoria em nova aba">
           Ver auditoria

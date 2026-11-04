@@ -7,7 +7,6 @@ import {
   SkeletonValue,
 } from '@/components/global/skeleton/skeleton';
 import {
-  moduleDescription,
   SETTINGS_OUTLINE,
   type ConfigRowKind,
 } from '@/screens/settings/utils/configModules';
@@ -42,11 +41,7 @@ export function SettingsSkeleton(): JSX.Element {
   return (
     <div className="space-y-4">
       {SETTINGS_OUTLINE.map(({ module, rows }) => (
-        <Card
-          key={module}
-          title={systemConfigModuleLabel(module)}
-          description={moduleDescription(module)}
-        >
+        <Card key={module} title={systemConfigModuleLabel(module)}>
           <div>
             {rows.map((kind, index) => (
               <ConfigRowSkeleton key={index} kind={kind} />

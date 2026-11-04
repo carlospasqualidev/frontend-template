@@ -155,9 +155,9 @@ describe('useIdleLogout — logout por inatividade', () => {
   });
 
   it('localStorage indisponível não quebra o hook (segue só nesta aba)', async () => {
-    const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(
-      () => undefined
-    );
+    const consoleInfoSpy = vi
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined);
     const setItemSpy = vi
       .spyOn(Storage.prototype, 'setItem')
       .mockImplementation(() => {

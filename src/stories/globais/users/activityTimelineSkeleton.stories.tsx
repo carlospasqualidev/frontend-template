@@ -7,10 +7,7 @@ export default {
 };
 
 export const Default = () => (
-  <Card
-    title="Linha do tempo"
-    description="Eventos da trilha de auditoria deste usuário, do mais recente para o mais antigo."
-  >
+  <Card title="Linha do tempo">
     <ActivityTimelineSkeleton />
   </Card>
 );

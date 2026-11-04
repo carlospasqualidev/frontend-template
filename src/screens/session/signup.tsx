@@ -86,9 +86,6 @@ export function SignupScreen() {
                   <Typography as="h1" variant="h3">
                     Crie sua conta
                   </Typography>
-                  <Typography variant="muted" className="text-balance">
-                    Informe seus dados abaixo para criar sua conta
-                  </Typography>
                 </div>
 
                 <InputField

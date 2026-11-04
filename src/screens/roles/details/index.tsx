@@ -142,7 +142,12 @@ export function RoleDetailsPage() {
     roleQuery.isPending ||
     (permissions.canReadUsers && membersQuery.isPending)
   ) {
-    return <RoleDetailSkeleton tabs={detailTabs(permissions)} />;
+    return (
+      <RoleDetailSkeleton
+        tabs={detailTabs(permissions)}
+        readOnly={!permissions.canUpdate}
+      />
+    );
   }
 
   // Sem o cargo (a primeira leitura falhou) ou ele não existe mais (404 numa

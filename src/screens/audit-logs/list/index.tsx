@@ -26,7 +26,7 @@ import {
   type AuditLogListItem,
 } from '@/services/audit/auditApi';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 type BadgeVariant = React.ComponentProps<typeof Badge>['variant'];
 

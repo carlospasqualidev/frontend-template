@@ -27,6 +27,11 @@ interface ICardBase {
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Classes extras do corpo (`CardContent`), ex.: altura máxima com scroll
+   * interno (ver `PAIRED_CARD_*` em `lib/constants/pairedCard.ts`).
+   */
+  contentClassName?: string;
 }
 
 /**
@@ -54,7 +59,8 @@ function isCollapsible(
 }
 
 export function Card(props: ICard) {
-  const { title, description, action, children, className } = props;
+  const { title, description, action, children, className, contentClassName } =
+    props;
 
   const cardClassName = cn(
     'rounded-2xl border border-border/70 shadow-sm ring-0 sm:rounded-3xl dark:shadow-none',
@@ -69,7 +75,7 @@ export function Card(props: ICard) {
           {description && <CardDescription>{description}</CardDescription>}
           {action && <CardAction>{action}</CardAction>}
         </CardHeader>
-        <CardContent>{children}</CardContent>
+        <CardContent className={contentClassName}>{children}</CardContent>
       </CardPrimitive>
     );
   }
@@ -103,7 +109,7 @@ export function Card(props: ICard) {
           {action && <CardAction>{action}</CardAction>}
         </CardHeader>
         <CollapsibleContent>
-          <CardContent>{children}</CardContent>
+          <CardContent className={contentClassName}>{children}</CardContent>
         </CollapsibleContent>
       </CardPrimitive>
     </Collapsible>

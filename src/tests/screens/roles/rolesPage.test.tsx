@@ -119,6 +119,7 @@ function refused(status: number, message: string): AxiosError {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   queryClient = makeTestQueryClient();
   signIn(ALL_PERMISSIONS);
   vi.mocked(fetchRoles)

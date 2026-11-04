@@ -3,3 +3,5 @@ allowBuilds:
 permissions:
   '@tanstack/react-table':
     skills: true
+overrides:
+  '@radix-ui/react-dismissable-layer': 1.2.1

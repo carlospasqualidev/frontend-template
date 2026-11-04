@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { isPageSizeOption } from './pageSizeStorage';
+
 /**
  * Schema dos search params usados pela `DataTable` server-side. Plugue
  * `validateDataTableSearch` no `validateSearch` da rota para persistir
@@ -13,8 +15,17 @@ const filterValueSchema = z.union([
 
 const sortSchema = z.array(z.object({ id: z.string(), desc: z.boolean() }));
 
+// `?pageSize=` fora das opções é descartado sozinho (vale o storage), sem
+// derrubar page/sort/filters da mesma URL.
+const pageSizeSchema = z
+  .number()
+  .refine(isPageSizeOption)
+  .optional()
+  .catch(undefined);
+
 export const dataTableSearchSchema = z.object({
   page: z.number().optional(),
+  pageSize: pageSizeSchema,
   sort: sortSchema.optional(),
   filters: z.record(z.string(), filterValueSchema).optional(),
 });
@@ -23,13 +34,14 @@ export type DataTableSearch = z.infer<typeof dataTableSearchSchema>;
 
 /**
  * Nomes dos search params para uma tabela. Sem `keyPrefix`, usa as chaves padrão
- * (`page`/`sort`/`filters`). Com `keyPrefix`, prefixa-as (`byUserPage`,
- * `byUserSort`, `byUserFilters`) para que mais de uma tabela na mesma rota
+ * (`page`/`pageSize`/`sort`/`filters`). Com `keyPrefix`, prefixa-as (`byUserPage`,
+ * `byUserPageSize`, `byUserSort`, `byUserFilters`) para que mais de uma tabela na mesma rota
  * coexistam na URL sem disputar as mesmas chaves.
  */
 export function dataTableSearchKeys(keyPrefix?: string) {
   return {
     page: keyPrefix ? `${keyPrefix}Page` : 'page',
+    pageSize: keyPrefix ? `${keyPrefix}PageSize` : 'pageSize',
     sort: keyPrefix ? `${keyPrefix}Sort` : 'sort',
     filters: keyPrefix ? `${keyPrefix}Filters` : 'filters',
   };
@@ -64,6 +76,7 @@ export function validateDataTableSearch(
   const keys = dataTableSearchKeys(keyPrefix);
   const prefixedSchema = z.object({
     [keys.page]: z.number().optional(),
+    [keys.pageSize]: pageSizeSchema,
     [keys.sort]: sortSchema.optional(),
     [keys.filters]: z.record(z.string(), filterValueSchema).optional(),
   });

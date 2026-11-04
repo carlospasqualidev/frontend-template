@@ -10,7 +10,7 @@ export default {
 export const Default = () => (
   <Card
     title="Permissões"
-    description="O que o cargo permite. Marcar uma ação de escrita marca também a de visualizar do mesmo grupo."
+    description="Marcar uma ação de escrita marca também a de visualizar do mesmo grupo."
   >
     <PermissionTreeSkeleton />
   </Card>

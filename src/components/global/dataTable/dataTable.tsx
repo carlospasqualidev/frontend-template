@@ -10,8 +10,12 @@ import {
 import { Eraser, Search } from 'lucide-react';
 
 import { expandColumn } from './columnHelpers';
-import { withColumnVisibilityMenu } from './columnVisibilityMenu';
+import {
+  MENU_COLUMN_ID,
+  withColumnVisibilityMenu,
+} from './columnVisibilityMenu';
 import { dataTableFeatures, type DataTableColumnDef } from './tableFeatures';
+import { isPageSizeOption, PAGE_SIZE_OPTIONS } from './pageSizeStorage';
 import { useColumnVisibility } from './useColumnVisibility';
 import {
   DataTableFilters,
@@ -23,6 +27,13 @@ import { Empty } from '@/components/global/empty/empty';
 import { SkeletonText } from '@/components/global/skeleton/skeleton';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -79,8 +90,15 @@ interface DataTableProps<TData extends RowData> {
    * um `COUNT` total.
    */
   onPageChange: (pageIndex: number) => void;
-  /** Quantidade de linhas por página (usada para detectar a última página). Padrão: `50`. */
+  /** Quantidade de linhas por página (usada para detectar a última página). Padrão: `25`. */
   pageSize?: number;
+  /**
+   * Chamado ao escolher outro "Itens por página" (25, 50 ou 100). Opt-in: sem
+   * ele, ou com `pageSize` fora dessas opções, o seletor não aparece. Já vem
+   * fiado em `tableProps` pelos hooks `useDataTableQuery`/
+   * `useDataTableUrlQuery`, que também guardam a escolha.
+   */
+  onPageSizeChange?: (pageSize: number) => void;
   /**
    * Total de itens no conjunto completo (todas as páginas), quando o backend o
    * fornece. Opt-in: quando definido, "Próxima" é habilitada por
@@ -187,6 +205,7 @@ export function DataTable<TData extends RowData>({
   pageIndex,
   onPageChange,
   pageSize = 25,
+  onPageSizeChange,
   rowCount,
   emptyMessage = 'Nenhum resultado.',
   onSortingChange,
@@ -247,6 +266,7 @@ export function DataTable<TData extends RowData>({
   });
 
   const columnCount = table.getVisibleLeafColumns().length;
+  const pageSizeLabelId = React.useId();
 
   return (
     <div>
@@ -293,13 +313,18 @@ export function DataTable<TData extends RowData>({
                 >
                   {table.getVisibleLeafColumns().map((column, colIndex) => {
                     const meta = column.columnDef.meta;
-                    const width =
-                      SKELETON_WIDTHS[
-                        (rowIndex + colIndex) % SKELETON_WIDTHS.length
-                      ];
+                    // Coluna de ações: largura fixa no mesmo eixo do título e
+                    // dos botões, para não alargar a coluna ao carregar.
+                    const width = meta?.isActions
+                      ? 'mx-auto w-16'
+                      : SKELETON_WIDTHS[
+                          (rowIndex + colIndex) % SKELETON_WIDTHS.length
+                        ];
                     return (
                       <TableCell key={column.id} className={meta?.className}>
-                        <SkeletonText className={width} />
+                        {column.id === MENU_COLUMN_ID ? null : (
+                          <SkeletonText className={width} />
+                        )}
                       </TableCell>
                     );
                   })}
@@ -440,28 +465,56 @@ export function DataTable<TData extends RowData>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(pageIndex - 1)}
-          disabled={pageIndex === 0 || isLoading}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(pageIndex + 1)}
-          disabled={
-            isLoading ||
-            (rowCount != null
-              ? (pageIndex + 1) * pageSize >= rowCount
-              : data.length < pageSize)
-          }
-        >
-          Próxima
-        </Button>
+      <div className="flex flex-wrap items-center justify-end gap-2 py-4">
+        {onPageSizeChange && isPageSizeOption(pageSize) ? (
+          <div className="mr-2 flex items-center gap-2">
+            <span
+              id={pageSizeLabelId}
+              className="text-sm whitespace-nowrap text-muted-foreground"
+            >
+              Itens por página
+            </span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
+              disabled={isLoading}
+            >
+              <SelectTrigger size="sm" aria-labelledby={pageSizeLabelId}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(pageIndex - 1)}
+            disabled={pageIndex === 0 || isLoading}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(pageIndex + 1)}
+            disabled={
+              isLoading ||
+              (rowCount != null
+                ? (pageIndex + 1) * pageSize >= rowCount
+                : data.length < pageSize)
+            }
+          >
+            Próxima
+          </Button>
+        </div>
       </div>
     </div>
   );

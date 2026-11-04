@@ -19,7 +19,6 @@ import { useZodForm } from '@/lib/forms/useZodForm';
 import { SettingsSkeleton } from '@/screens/settings/settingsSkeleton';
 import {
   groupByModule,
-  moduleDescription,
   type ModuleGroup,
 } from '@/screens/settings/utils/configModules';
 import { systemConfigKeys } from '@/screens/settings/utils/queryKeys';
@@ -202,11 +201,7 @@ function SettingsForm({ configs }: { configs: SystemConfig[] }) {
 
       <form id={FORM_ID} onSubmit={onSubmit} className="space-y-4" noValidate>
         {groupConfigsByModule(configs).map(({ module, items }) => (
-          <Card
-            key={module}
-            title={systemConfigModuleLabel(module)}
-            description={moduleDescription(module)}
-          >
+          <Card key={module} title={systemConfigModuleLabel(module)}>
             <div>
               {items.map(({ config, index }) => (
                 <ConfigField

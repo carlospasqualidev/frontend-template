@@ -2,6 +2,7 @@ import * as React from 'react';
 import { type SortingState } from '@tanstack/react-table';
 
 import { type DataTableFilterValues } from './filters';
+import { readStoredPageSize, writeStoredPageSize } from './pageSizeStorage';
 
 export interface DataTableQuery {
   /** Página atual (0-based). */
@@ -15,7 +16,10 @@ export interface DataTableQuery {
 }
 
 interface UseDataTableQueryOptions {
-  /** Linhas por página. Padrão: `50`. */
+  /**
+   * Linhas por página quando não há preferência salva. Padrão: `25`. Vale só
+   * como valor **inicial** (lido no mount); mudar a prop depois não tem efeito.
+   */
   pageSize?: number;
   /** Ordenação inicial. */
   defaultSorting?: SortingState;
@@ -31,6 +35,7 @@ export interface UseDataTableQueryResult {
     pageIndex: number;
     onPageChange: (pageIndex: number) => void;
     pageSize: number;
+    onPageSizeChange: (pageSize: number) => void;
     onSortingChange: (sorting: SortingState) => void;
     onSearch: (filters: DataTableFilterValues) => void;
     defaultFilterValues?: DataTableFilterValues;
@@ -40,6 +45,7 @@ export interface UseDataTableQueryResult {
 /** Alteração parcial do estado, aplicada de uma vez (página/ordenação/filtros). */
 export type DataTableQueryPatch = Partial<{
   page: number;
+  pageSize: number;
   sort: SortingState;
   filters: DataTableFilterValues;
 }>;
@@ -70,6 +76,8 @@ export function buildDataTableResult(
       pageSize: state.pageSize,
       pageIndex: state.page,
       onPageChange: (page) => patch({ page }),
+      // Novo tamanho de página também volta para a primeira página.
+      onPageSizeChange: (pageSize) => patch({ pageSize, page: 0 }),
       // Nova ordenação/busca sempre volta para a primeira página.
       onSortingChange: (sort) => patch({ sort, page: 0 }),
       onSearch: (filters) => patch({ filters, page: 0 }),
@@ -100,9 +108,17 @@ export function buildDataTableResult(
 export function useDataTableQuery(
   options: UseDataTableQueryOptions = {}
 ): UseDataTableQueryResult {
-  const { pageSize = 50, defaultSorting, defaultFilters } = options;
+  const {
+    pageSize: defaultPageSize = 25,
+    defaultSorting,
+    defaultFilters,
+  } = options;
 
   const [page, setPage] = React.useState(0);
+  // Preferência salva neste navegador vale já na primeira renderização.
+  const [pageSize, setPageSize] = React.useState<number>(
+    () => readStoredPageSize() ?? defaultPageSize
+  );
   const [sort, setSort] = React.useState<SortingState>(defaultSorting ?? []);
   const [filters, setFilters] = React.useState<DataTableFilterValues>(
     defaultFilters ?? {}
@@ -110,6 +126,10 @@ export function useDataTableQuery(
 
   const patch = (next: DataTableQueryPatch) => {
     if (next.page !== undefined) setPage(next.page);
+    if (next.pageSize !== undefined) {
+      setPageSize(next.pageSize);
+      writeStoredPageSize(next.pageSize);
+    }
     if (next.sort !== undefined) setSort(next.sort);
     if (next.filters !== undefined) setFilters(next.filters);
   };

@@ -81,10 +81,7 @@ export const Vitrine: Story = {
             name="João Pedro"
             imageUrl="https://i.pravatar.cc/120?img=12"
           />
-          <UserAvatar
-            name="Carla Mendes"
-            imageUrl="https://example.invalid/x.png"
-          />
+          <UserAvatar name="Carla Mendes" imageUrl="data:image/png;base64," />
         </div>
         <Typography variant="muted" className="mt-3 text-xs">
           A última imagem aponta para uma URL inválida — o fallback assume.

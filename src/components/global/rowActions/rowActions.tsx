@@ -197,7 +197,9 @@ interface RowActionsProps {
 export function RowActions({ actions, className }: RowActionsProps) {
   // Sem nenhuma ação, reserva o espaço de um botão para a linha manter a MESMA
   // altura das que têm ações (linhas de altura uniforme na tabela).
-  if (actions.length === 0) return <div aria-hidden className="size-7" />;
+  if (actions.length === 0) {
+    return <div aria-hidden className="mx-auto size-7" />;
+  }
 
   return (
     // Isola os eventos do `onRowClick`/`getRowHref` da linha: executar uma ação
@@ -205,7 +207,7 @@ export function RowActions({ actions, className }: RowActionsProps) {
     // clicável cancela o padrão do botão do meio (evitar o autoscroll) — e isso
     // impediria o clique do meio de abrir a AÇÃO em nova aba.
     <div
-      className={cn('flex items-center justify-end gap-0.5', className)}
+      className={cn('flex items-center justify-center gap-0.5', className)}
       onClick={(event) => event.stopPropagation()}
       onAuxClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}

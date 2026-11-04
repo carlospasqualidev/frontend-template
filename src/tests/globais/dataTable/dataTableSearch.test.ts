@@ -29,6 +29,22 @@ describe('validateDataTableSearch', () => {
     expect(validateDataTableSearch(search)).toEqual(search);
   });
 
+  it('aceita pageSize só entre as opções e descarta o resto sem perder o demais', () => {
+    expect(validateDataTableSearch({ pageSize: 50 })).toEqual({ pageSize: 50 });
+    expect(validateDataTableSearch({ page: 2, pageSize: 10 })).toEqual({
+      page: 2,
+    });
+  });
+
+  it('com keyPrefix, valida a chave prefixada de pageSize', () => {
+    expect(validateDataTableSearch({ byUserPageSize: 100 }, 'byUser')).toEqual({
+      byUserPageSize: 100,
+    });
+    expect(validateDataTableSearch({ byUserPageSize: 7 }, 'byUser')).toEqual(
+      {}
+    );
+  });
+
   it('reverte para vazio se a URL contém algo inválido', () => {
     expect(validateDataTableSearch({ page: 'abc' })).toEqual({});
     expect(validateDataTableSearch({ sort: 'invalid' })).toEqual({});

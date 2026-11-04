@@ -13,6 +13,11 @@ import { DemoNotice } from '@/components/global/demoNotice/demoNotice';
 import { notifyDemoAction } from '@/components/global/demoNotice/notifyDemoAction';
 import { Typography } from '@/components/ui/typography';
 import {
+  PAIRED_LIST_CARD_CLASS,
+  PAIRED_LIST_CONTENT_CLASS,
+} from '@/lib/constants/pairedCard';
+import { cn } from '@/lib/utils';
+import {
   DEMO_PENDING_TASKS,
   type PendingTask,
   type PendingTaskKind,
@@ -35,9 +40,9 @@ export function PendingTasks({ className }: PendingTasksProps) {
   return (
     <Card
       title="Pendências"
-      description="Itens que precisam da sua atenção."
       action={<DemoNotice />}
-      className={className}
+      className={cn(PAIRED_LIST_CARD_CLASS, className)}
+      contentClassName={PAIRED_LIST_CONTENT_CLASS}
     >
       <ul className="divide-y divide-border/60">
         {DEMO_PENDING_TASKS.map((task) => (

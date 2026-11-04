@@ -25,10 +25,7 @@ type Story = StoryObj<typeof meta>;
 export const Vitrine: Story = {
   render: () => (
     <div className="space-y-6">
-      <PageHeader
-        title="Pagamentos"
-        description="Acompanhe e gerencie os pagamentos da sua organização em um só lugar."
-      />
+      <PageHeader title="Pagamentos" />
 
       <PageHeader
         title="Pagamentos"

@@ -54,8 +54,11 @@ function ItemSkeleton({ label }: { label: string }) {
  */
 export function RoleDetailSkeleton({
   tabs,
+  readOnly = false,
 }: {
   tabs: RoleDetailSkeletonTab[];
+  /** Sem `canUpdate` a tela não mostra a regra de escrita sob "Permissões". */
+  readOnly?: boolean;
 }): JSX.Element {
   const [first] = tabs;
 
@@ -74,19 +77,13 @@ export function RoleDetailSkeleton({
 
       <TabsContent value={first?.value ?? ''} className="pt-4">
         <div className="grid items-start gap-4 lg:grid-cols-2" aria-busy>
-          <Card
-            title="Identificação"
-            description="Nome e descrição, como aparecem na escolha de cargos."
-          >
+          <Card title="Identificação">
             <div className="grid items-start gap-4">
               <FieldSkeleton label="Nome" />
               <FieldSkeleton label="Descrição" className="h-19 w-full" />
             </div>
           </Card>
-          <Card
-            title="Resumo"
-            description="Quem usa o cargo e quando ele foi criado e alterado."
-          >
+          <Card title="Resumo">
             <div className="grid gap-4 sm:grid-cols-2">
               <ItemSkeleton label="Usuários" />
               <ItemSkeleton label="Criado em" />
@@ -96,7 +93,11 @@ export function RoleDetailSkeleton({
           </Card>
           <Card
             title="Permissões"
-            description="O que o cargo permite. Marcar uma ação de escrita marca também a de visualizar do mesmo grupo."
+            description={
+              readOnly
+                ? undefined
+                : 'Marcar uma ação de escrita marca também a de visualizar do mesmo grupo.'
+            }
             className="lg:col-span-2"
           >
             <PermissionTreeSkeleton />

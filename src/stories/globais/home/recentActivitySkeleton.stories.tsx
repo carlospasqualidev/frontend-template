@@ -8,10 +8,7 @@ export default {
 
 /** A "Atividade recente" da home enquanto a trilha carrega. */
 export const Default = () => (
-  <Card
-    title="Atividade recente"
-    description="Últimos eventos da trilha de auditoria."
-  >
+  <Card title="Atividade recente">
     <RecentActivitySkeleton />
   </Card>
 );

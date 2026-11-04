@@ -23,9 +23,16 @@ import {
   MANAGER_STORAGE_STATE,
 } from './helpers/storageState';
 
-// Edições de telefone no preparo: com a criação e o bloqueio, a pessoa
-// auditada fica com 12 eventos, mais que uma página (10).
+// Edições de telefone no preparo da "Atividade do usuário": com a criação e o
+// bloqueio, a pessoa fica com 12 eventos, mais que uma página da linha do
+// tempo (10).
 const PHONE_EDITS = 10;
+
+// A trilha abre com 25 linhas por página. Com a criação e o bloqueio, a pessoa
+// auditada fica com 32 eventos: 25 na primeira página e 7 na seguinte.
+const AUDIT_PAGE_SIZE = 25;
+const AUDIT_PHONE_EDITS = 30;
+const AUDIT_EVENTS = AUDIT_PHONE_EDITS + 2;
 
 function rowWith(page: Page, text: string) {
   return page.locator('tbody tr', { hasText: text });
@@ -38,7 +45,7 @@ async function searchContent(page: Page, text: string): Promise<void> {
 
 // Trilha de auditoria (`/audit-logs`) contra o server real — listagem com
 // filtro server-side e detalhe em modal. O preparo cria pela API, com nomes
-// únicos desta execução, uma pessoa auditada (criação, 10 edições e o
+// únicos desta execução, uma pessoa auditada (criação, 30 edições e o
 // bloqueio) e, por último, uma vizinha (só a criação, o evento mais recente).
 // Buscar pelo nome da auditada isola os eventos dela dos que o banco já tem.
 test.describe('Auditoria', () => {
@@ -59,7 +66,7 @@ test.describe('Auditoria', () => {
 
     const audited = await createUserWithoutRole(admin, auditedName);
     preparedUsers.push(audited);
-    for (let edit = 1; edit <= PHONE_EDITS; edit += 1) {
+    for (let edit = 1; edit <= AUDIT_PHONE_EDITS; edit += 1) {
       await updateUser(admin, audited.id, {
         phone: `1199999${String(edit).padStart(4, '0')}`,
       });
@@ -122,20 +129,20 @@ test.describe('Auditoria', () => {
     await expect(rowWith(page, neighborCreated)).toHaveCount(0);
   });
 
-  // Paginação 0-based (DataTable e backend): a primeira página traz os 10
-  // eventos mais recentes da auditada e a seguinte, os 2 restantes — nenhum é
+  // Paginação 0-based (DataTable e backend): a primeira página traz os 25
+  // eventos mais recentes da auditada e a seguinte, os 7 restantes — nenhum é
   // pulado.
   test('pagina a partir do primeiro registro', async ({ page }) => {
     await searchContent(page, auditedName);
 
     const rows = page.locator('tbody tr');
     await expect(rowWith(page, blocked)).toBeVisible();
-    await expect(rows).toHaveCount(10);
+    await expect(rows).toHaveCount(AUDIT_PAGE_SIZE);
 
     await page.getByRole('button', { name: 'Próxima' }).click();
 
     await expect(rowWith(page, created)).toBeVisible();
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(AUDIT_EVENTS - AUDIT_PAGE_SIZE);
     await expect(rowWith(page, blocked)).toHaveCount(0);
   });
 
@@ -143,12 +150,12 @@ test.describe('Auditoria', () => {
     page,
   }) => {
     await searchContent(page, auditedName);
-    // A lista filtrada já na tela: a página cheia (10) só com a auditada, o
+    // A lista filtrada já na tela: a página cheia (25) só com a auditada, o
     // que a lista de antes da busca não tem (a criação da vizinha, mais nova
-    // que tudo da auditada, ocupa uma das 10). Sem isso, o clique pode achar o
+    // que tudo da auditada, ocupa uma das 25). Sem isso, o clique pode achar o
     // bloqueio na lista de antes e cair na linha que a resposta põe no lugar.
-    await expect(rowWith(page, auditedName)).toHaveCount(10);
-    await expect(page.locator('tbody tr')).toHaveCount(10);
+    await expect(rowWith(page, auditedName)).toHaveCount(AUDIT_PAGE_SIZE);
+    await expect(page.locator('tbody tr')).toHaveCount(AUDIT_PAGE_SIZE);
     await rowWith(page, blocked).click();
 
     const dialog = page.getByRole('dialog', { name: 'Detalhe da auditoria' });

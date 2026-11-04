@@ -8,7 +8,7 @@
 export interface NotificationSetting {
   id: string;
   label: string;
-  description: string;
+  description?: string;
   checked: boolean;
 }
 
@@ -16,7 +16,6 @@ export const DEMO_NOTIFICATION_CHANNELS: NotificationSetting[] = [
   {
     id: 'channel-email',
     label: 'E-mail',
-    description: 'Receba notificações no e-mail cadastrado.',
     checked: true,
   },
   {

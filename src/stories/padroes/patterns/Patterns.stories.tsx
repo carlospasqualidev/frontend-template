@@ -32,7 +32,7 @@ import { Card } from '@/components/global/card/card';
 import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
 import { InputField } from '@/components/global/form/inputField';
 import { Select } from '@/components/global/form/select';
-import { Modal } from '@/components/global/modal/modal';
+import { Modal, ModalFooter } from '@/components/global/modal/modal';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -672,9 +672,11 @@ function PersonForm({
       />
 
       {isDirty && (
-        <Button type="submit" loading={isSubmitting} className="w-full">
-          {initial ? 'Salvar alterações' : 'Cadastrar'}
-        </Button>
+        <ModalFooter>
+          <Button type="submit" loading={isSubmitting}>
+            {initial ? 'Salvar alterações' : 'Cadastrar'}
+          </Button>
+        </ModalFooter>
       )}
     </form>
   );
@@ -751,7 +753,7 @@ function CrudDemo() {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Papel</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -776,8 +778,8 @@ function CrudDemo() {
                   <TableCell className="font-medium">{person.name}</TableCell>
                   <TableCell>{person.email}</TableCell>
                   <TableCell>{roleLabel[person.role]}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-1">
                       <ConfirmDialog
                         title={`Remover ${person.name}?`}
                         description="Esta ação não pode ser desfeita."

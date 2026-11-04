@@ -46,14 +46,13 @@ Quando um campo (`InputField`/`NumberField`/`Combobox`/…) exibe mensagem de er
   O `aria-label` também mantém o nome acessível estável para os testes (`getByRole('button', { name: 'Salvar alterações' })`) mesmo com o texto oculto no mobile.
 
 - Ações destrutivas/críticas usam `ConfirmDialog` (ver **Abstrações globais** em [`components.md`](components.md)).
-- A ordem visual segue: ações secundárias/destrutivas à esquerda, ação primária à direita (ex.: `Excluir` sozinho; ou `Descartar` … `Salvar alterações` quando há mudança).
+- A ordem visual segue: ações negativas/secundárias à esquerda, positivas à direita, inclusive a destrutiva (ex.: `Excluir` sozinho; `Copiar` … `Excluir`; ou `Descartar` … `Salvar alterações` quando há mudança).
 
 **Ação de uma seção (não da tela) vai no slot `action` do `Card`** — alinhada à direita do cabeçalho, não solta acima/dentro do corpo. Ação da _tela_ inteira continua no `PageActions`; ação de uma _seção_ (ex.: "Adicionar item" numa coleção-filha) fica no `action` do `Card` que a envolve.
 
 ```tsx
 <Card
   title="Membros"
-  description="Pessoas com acesso a este projeto."
   action={
     <Button variant="outline" size="sm">
       <Plus />

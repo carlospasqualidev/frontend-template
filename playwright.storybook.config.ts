@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm run storybook -- --no-open --quiet',
+    command: 'pnpm run storybook --no-open --quiet',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     // O primeiro boot do Storybook compila o bundle inteiro — bem mais lento

@@ -64,10 +64,7 @@ export function OverviewTab({
     >
       <RoleIdentityCard control={control} readOnly={readOnly} />
 
-      <Card
-        title="Resumo"
-        description="Quem usa o cargo e quando ele foi criado e alterado."
-      >
+      <Card title="Resumo">
         <dl className="grid gap-4 sm:grid-cols-2">
           <DefinitionItem label="Usuários">
             {usersCountText(role.usersCount)}

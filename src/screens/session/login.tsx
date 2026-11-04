@@ -67,9 +67,6 @@ export function LoginScreen() {
                   <Typography as="h1" variant="h3">
                     Bem-vindo de volta
                   </Typography>
-                  <Typography variant="muted" className="text-balance">
-                    Faça login na sua conta
-                  </Typography>
                 </div>
 
                 <InputField

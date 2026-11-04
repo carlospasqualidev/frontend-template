@@ -101,12 +101,12 @@ afterEach(() => {
 
 describe('SettingsPage — carregando', () => {
   // O skeleton segue o formato esperado da tela (`SETTINGS_OUTLINE`), sem
-  // depender da leitura: um card por grupo, com a descrição da tela, e uma
+  // depender da leitura: um card por grupo, sem descrição, e uma
   // linha por chave. Cada linha tem três blocos (rótulo, descrição, campo).
   it('reserva os três grupos e as seis chaves do catálogo', async () => {
     vi.mocked(fetchSystemConfigs).mockReturnValue(new Promise(() => {}));
     renderSettings();
-    await screen.findByText('Nome da aplicação e e-mail de suporte.');
+    await screen.findByText('Geral');
 
     const titles = [
       ...document.querySelectorAll('[data-slot="card-title"]'),
@@ -122,15 +122,10 @@ describe('SettingsPage — carregando', () => {
     expect(rowsIn('Segurança')).toBe(3);
     expect(rowsIn('Notificações')).toBe(1);
 
+    // Os cards dos grupos não têm descrição: nada de texto sob o título.
     expect(
-      screen.getByText('Nome da aplicação e e-mail de suporte.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Sessão e retenção da auditoria.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Envio de notificações por e-mail.')
-    ).toBeInTheDocument();
+      document.querySelector('[data-slot="card-description"]')
+    ).not.toBeInTheDocument();
   });
 });
 

@@ -9,15 +9,30 @@ import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTable
  * verifica o CONTRATO com a URL (o que entra, o que sai, o que é omitido).
  */
 let search: Record<string, unknown> = {};
+// Com `deferredNavigation`, a URL só muda quando o teste chama `commitUrl`,
+// como no router real (a URL muda depois do clique, não no mesmo instante).
+let deferredNavigation = false;
+let commitUrl: () => void = () => {};
 const navigate = vi.fn((options: { search?: unknown }) => {
-  if (typeof options.search === 'function') {
-    search = (
-      options.search as (
-        previous: Record<string, unknown>
-      ) => Record<string, unknown>
-    )(search);
+  const apply = () => {
+    if (typeof options.search === 'function') {
+      search = (
+        options.search as (
+          previous: Record<string, unknown>
+        ) => Record<string, unknown>
+      )(search);
+    }
+  };
+  if (!deferredNavigation) {
+    apply();
+    return Promise.resolve();
   }
-  return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    commitUrl = () => {
+      apply();
+      resolve();
+    };
+  });
 });
 
 vi.mock('@tanstack/react-router', () => ({
@@ -26,7 +41,9 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 beforeEach(() => {
+  localStorage.clear();
   search = {};
+  deferredNavigation = false;
   navigate.mockClear();
 });
 
@@ -35,7 +52,7 @@ describe('useDataTableUrlQuery', () => {
     const { result } = renderHook(() => useDataTableUrlQuery());
 
     expect(result.current.query.page).toBe(0);
-    expect(result.current.query.pageSize).toBe(50);
+    expect(result.current.query.pageSize).toBe(25);
     expect(result.current.query.sort).toEqual([]);
     expect(result.current.query.filters).toEqual({});
   });
@@ -84,6 +101,139 @@ describe('useDataTableUrlQuery', () => {
 
     expect(search.filters).toEqual({ status: 'active' });
     expect(search.page).toBeUndefined();
+  });
+
+  describe('itens por página', () => {
+    it('sem preferência nem URL, vale o padrão do hook', () => {
+      const { result } = renderHook(() =>
+        useDataTableUrlQuery({ pageSize: 25 })
+      );
+
+      expect(result.current.query.pageSize).toBe(25);
+    });
+
+    it('usa a preferência salva já na primeira renderização', () => {
+      localStorage.setItem('dataTable:pageSize', '100');
+
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      expect(result.current.query.pageSize).toBe(100);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('ignora preferência salva fora das opções', () => {
+      localStorage.setItem('dataTable:pageSize', '10');
+
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      expect(result.current.query.pageSize).toBe(25);
+    });
+
+    it('?pageSize= vence a preferência salva', () => {
+      localStorage.setItem('dataTable:pageSize', '100');
+      search = { pageSize: 50 };
+
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      expect(result.current.query.pageSize).toBe(50);
+    });
+
+    it('trocar grava na URL e no storage e volta para a página 1', () => {
+      search = { page: 3 };
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      act(() => result.current.tableProps.onPageSizeChange(100));
+
+      expect(search.pageSize).toBe(100);
+      expect(search.page).toBeUndefined();
+      expect(localStorage.getItem('dataTable:pageSize')).toBe('100');
+    });
+
+    // Cada render vira uma requisição na tela: o par {página antiga, tamanho
+    // novo} nunca pode ser observado (seria uma requisição intermediária).
+    it('trocar o tamanho na página N nunca expõe {page: N, pageSize: novo}', async () => {
+      search = { page: 3 };
+      const observed: { page: number; pageSize: number }[] = [];
+      const { result, rerender } = renderHook(() => {
+        const value = useDataTableUrlQuery();
+        observed.push({
+          page: value.query.page,
+          pageSize: value.query.pageSize,
+        });
+        return value;
+      });
+
+      deferredNavigation = true;
+      act(() => result.current.tableProps.onPageSizeChange(50));
+      // Antes de a URL mudar, a tela ainda mostra a página antiga e o tamanho antigo.
+      expect(observed.at(-1)).toEqual({ page: 3, pageSize: 25 });
+
+      await act(async () => {
+        commitUrl();
+      });
+      // O router re-renderiza com o novo search; o mock da URL exige o rerender.
+      rerender();
+
+      expect(observed).not.toContainEqual({ page: 3, pageSize: 50 });
+      expect(observed.at(-1)).toEqual({ page: 0, pageSize: 50 });
+    });
+
+    it('trocar o tamanho substitui a entrada do histórico; trocar de página não', () => {
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      act(() => result.current.tableProps.onPageSizeChange(50));
+      expect(navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ replace: true })
+      );
+
+      act(() => result.current.tableProps.onPageChange(2));
+      expect(navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ replace: false })
+      );
+    });
+
+    it('omite da URL o valor igual ao padrão, mas guarda a escolha', () => {
+      localStorage.setItem('dataTable:pageSize', '100');
+      search = { pageSize: 100 };
+      const { result } = renderHook(() => useDataTableUrlQuery());
+
+      act(() => result.current.tableProps.onPageSizeChange(25));
+
+      expect(search.pageSize).toBeUndefined();
+      expect(localStorage.getItem('dataTable:pageSize')).toBe('25');
+    });
+
+    // A preferência só entra no estado depois de a URL mudar; escolher o padrão
+    // (que a URL omite) precisa mesmo assim trocar o tamanho salvo.
+    it('escolher o padrão com outra preferência salva aplica o padrão depois da navegação', async () => {
+      localStorage.setItem('dataTable:pageSize', '100');
+      const { result, rerender } = renderHook(() => useDataTableUrlQuery());
+      expect(result.current.query.pageSize).toBe(100);
+
+      deferredNavigation = true;
+      act(() => result.current.tableProps.onPageSizeChange(25));
+      await act(async () => {
+        commitUrl();
+      });
+      rerender();
+
+      expect(result.current.query.pageSize).toBe(25);
+      expect(localStorage.getItem('dataTable:pageSize')).toBe('25');
+    });
+
+    it('com keyPrefix usa a chave prefixada na URL', () => {
+      search = { byUserPageSize: 50 };
+      const { result } = renderHook(() =>
+        useDataTableUrlQuery({ keyPrefix: 'byUser' })
+      );
+
+      expect(result.current.query.pageSize).toBe(50);
+
+      act(() => result.current.tableProps.onPageSizeChange(100));
+
+      expect(search.byUserPageSize).toBe(100);
+      expect(search.pageSize).toBeUndefined();
+    });
   });
 
   it('"Limpar" remove os filtros da URL', () => {

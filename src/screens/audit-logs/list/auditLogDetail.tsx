@@ -138,13 +138,7 @@ export function AuditLogDetailModal({
   ];
 
   return (
-    <Modal
-      open={open}
-      setOpen={setOpen}
-      size="xl"
-      title="Detalhe da auditoria"
-      description="Quem fez o quê, quando, e o que mudou no registro."
-    >
+    <Modal open={open} setOpen={setOpen} size="xl" title="Detalhe da auditoria">
       {isError ? (
         <Typography variant="muted">
           Não foi possível carregar este registro de auditoria.

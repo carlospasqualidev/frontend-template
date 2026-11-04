@@ -115,7 +115,7 @@ const filters = [
   dateRangeFilter({ key: 'period', label: 'Período' }),
 ];
 
-const DATABASE: Payment[] = [
+const SEED_PAYMENTS: Payment[] = [
   {
     id: '728ed52f',
     amount: 100,
@@ -202,7 +202,30 @@ const DATABASE: Payment[] = [
   },
 ];
 
-const PAGE_SIZE = 5;
+const STATUSES: Payment['status'][] = [
+  'pending',
+  'processing',
+  'success',
+  'failed',
+];
+
+/** Completa a base com registros fictícios para a paginação e o seletor aparecerem. */
+function generatePayments(count: number): Payment[] {
+  return Array.from({ length: count }, (_, index) => {
+    const day = (index % 28) + 1;
+    return {
+      id: `gen${String(index + 1).padStart(4, '0')}`,
+      amount: 50 + ((index * 37) % 450),
+      status: STATUSES.at(index % STATUSES.length) ?? 'pending',
+      email: `cliente${index + 1}@example.com`,
+      createdAt: `2026-0${(index % 5) + 1}-${String(day).padStart(2, '0')}`,
+    };
+  });
+}
+
+const DATABASE: Payment[] = [...SEED_PAYMENTS, ...generatePayments(120)];
+
+const PAGE_SIZE = 25;
 
 function sortValue(payment: Payment, columnId: string): string {
   return columnId === 'email' ? payment.email : payment.createdAt;
@@ -211,7 +234,8 @@ function sortValue(payment: Payment, columnId: string): string {
 function queryDatabase(
   filterValues: DataTableFilterValues,
   sorting: SortingState,
-  pageIndex: number
+  pageIndex: number,
+  pageSize: number
 ): Payment[] {
   const email =
     typeof filterValues.email === 'string'
@@ -248,10 +272,7 @@ function queryDatabase(
       })
     : matches;
 
-  return ordered.slice(
-    pageIndex * PAGE_SIZE,
-    pageIndex * PAGE_SIZE + PAGE_SIZE
-  );
+  return ordered.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
 }
 
 function PaymentsTable() {
@@ -264,7 +285,12 @@ function PaymentsTable() {
     defaultSorting: [{ id: 'createdAt', desc: true }],
   });
 
-  const pageData = queryDatabase(query.filters, query.sort, query.page);
+  const pageData = queryDatabase(
+    query.filters,
+    query.sort,
+    query.page,
+    query.pageSize
+  );
 
   return (
     <DataTable
@@ -313,9 +339,10 @@ const LOADING_MS = 1500;
 function useDeferredQueryDatabase(
   filters: DataTableFilterValues,
   sort: SortingState,
-  page: number
+  page: number,
+  pageSize: number
 ) {
-  const requestKey = JSON.stringify({ filters, sort, page });
+  const requestKey = JSON.stringify({ filters, sort, page, pageSize });
   const [result, setResult] = React.useState<{
     key: string;
     data: Payment[];
@@ -323,10 +350,13 @@ function useDeferredQueryDatabase(
 
   React.useEffect(() => {
     const timeout = setTimeout(() => {
-      setResult({ key: requestKey, data: queryDatabase(filters, sort, page) });
+      setResult({
+        key: requestKey,
+        data: queryDatabase(filters, sort, page, pageSize),
+      });
     }, LOADING_MS);
     return () => clearTimeout(timeout);
-  }, [requestKey, filters, sort, page]);
+  }, [requestKey, filters, sort, page, pageSize]);
 
   return { data: result.data, isLoading: result.key !== requestKey };
 }
@@ -340,7 +370,8 @@ function DataTableLoadingDemo() {
   const { data, isLoading } = useDeferredQueryDatabase(
     query.filters,
     query.sort,
-    query.page
+    query.page,
+    query.pageSize
   );
 
   return (
@@ -362,7 +393,7 @@ export const Loading: Story = {
     docs: {
       description: {
         story:
-          'Quando `isLoading` é `true`, a tabela renderiza `pageSize` linhas de skeleton no lugar das células — header, filtros e paginação permanecem visíveis (a paginação fica desabilitada). Cada troca de filtro, ordenação ou página dispara um novo loading de 1,5s para demonstrar o estado.',
+          'Quando `isLoading` é `true`, a tabela renderiza algumas linhas de skeleton no lugar das células — header, filtros e paginação permanecem visíveis (a paginação fica desabilitada). Cada troca de filtro, ordenação ou página dispara um novo loading de 1,5s para demonstrar o estado.',
       },
     },
   },
@@ -491,13 +522,13 @@ function ColumnVisibilityShowcase() {
     <div className="space-y-4">
       <Card
         title="Sem coluna de ações"
-        description="Quando a última coluna é de dado, a tabela ganha uma coluna estreita no fim só para o ícone de colunas, no canto direito do cabeçalho. A escolha é salva neste navegador."
+        description="Sem coluna de ações, a tabela ganha do mesmo jeito a coluna estreita no fim só para o ícone de colunas, no canto direito do cabeçalho. A escolha é salva neste navegador."
       >
         <RolesTable tableKey="storybook-roles" />
       </Card>
       <Card
         title="Com coluna de ações"
-        description="Quando a última coluna é de sistema (⋯ ou Ações), o ícone entra no cabeçalho dela, sem coluna extra. Age na hora, sem esperar o Buscar. Colunas com SortableHeader precisam de meta.label para aparecer no menu; seleção e ações nunca aparecem."
+        description="O ícone ganha coluna própria, do tamanho dele, à direita da coluna Ações (que fica centralizada, sozinha no seu eixo). Age na hora, sem esperar o Buscar. Colunas com SortableHeader precisam de meta.label para aparecer no menu; seleção e ações nunca aparecem."
       >
         <PaymentsTable />
       </Card>
@@ -524,7 +555,7 @@ export const ColumnVisibility: Story = {
     docs: {
       description: {
         story:
-          'Com `columnVisibilityKey`, a tabela ganha o ícone **Configurar colunas** no canto direito do cabeçalho: o usuário escolhe quais colunas ver e a escolha fica salva só neste navegador (`localStorage`), sem ir para a URL. Só as colunas ocultas são gravadas, então uma coluna nova aparece visível para todos.',
+          'Com `columnVisibilityKey`, a tabela ganha o ícone **Configurar colunas** numa coluna própria, no canto direito do cabeçalho: o usuário escolhe quais colunas ver e a escolha fica salva só neste navegador (`localStorage`), sem ir para a URL. Só as colunas ocultas são gravadas, então uma coluna nova aparece visível para todos.',
       },
     },
   },

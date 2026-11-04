@@ -16,21 +16,18 @@ import type { IUser } from '@/types/user/types';
  */
 
 /** Títulos e descrições dos cards do perfil, os mesmos na tela e no skeleton. */
-export const PROFILE_SECTIONS = {
-  identification: {
-    title: 'Identificação',
-    description: 'Como você aparece para as outras pessoas do sistema.',
-  },
+export const PROFILE_SECTIONS: Record<
+  'identification' | 'access' | 'photo',
+  { title: string; description?: string }
+> = {
+  identification: { title: 'Identificação' },
   access: {
     title: 'Acesso',
     description:
-      'Tempo até o logout por inatividade, até o limite da empresa. Vazio usa o padrão dela.',
+      'O tempo vai até o limite da empresa; vazio usa o padrão dela.',
   },
-  photo: {
-    title: 'Foto',
-    description: 'Aparece ao lado do seu nome no sistema.',
-  },
-} as const;
+  photo: { title: 'Foto' },
+};
 
 const IDLE_TIMEOUT_MESSAGE =
   'Informe um tempo de inatividade inteiro de 1 a 480 minutos.';

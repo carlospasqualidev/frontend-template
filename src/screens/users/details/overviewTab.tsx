@@ -87,7 +87,6 @@ export function OverviewTab({
 
       <Card
         title="Situação"
-        description="Status do acesso e quando a conta foi criada e usada."
         action={readOnly ? undefined : <UserStatusAction user={user} />}
       >
         <dl className="grid gap-4 sm:grid-cols-2">

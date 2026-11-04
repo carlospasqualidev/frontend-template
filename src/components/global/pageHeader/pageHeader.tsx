@@ -4,7 +4,7 @@ import { Typography } from '@/components/ui/typography';
 
 interface IPageHeader {
   title: string;
-  description: string;
+  description?: string;
   actions?: ReactNode;
 }
 
@@ -19,9 +19,11 @@ export function PageHeader({ title, description, actions }: IPageHeader) {
         <Typography as="h1" variant="h3">
           {title}
         </Typography>
-        <Typography variant="muted" className="max-w-2xl">
-          {description}
-        </Typography>
+        {description ? (
+          <Typography variant="muted" className="max-w-2xl">
+            {description}
+          </Typography>
+        ) : null}
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}
     </div>

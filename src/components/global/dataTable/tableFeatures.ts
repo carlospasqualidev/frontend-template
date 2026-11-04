@@ -37,6 +37,12 @@ export interface DataTableColumnMeta {
    * não pode ser ocultada pelo usuário.
    */
   label?: string;
+  /**
+   * Marca a coluna de ações por linha (já posta por `actionsColumn` e
+   * `rowActionsColumn`): no carregamento, o skeleton dela é centralizado e de
+   * largura fixa, no mesmo eixo do título e dos botões.
+   */
+  isActions?: boolean;
 }
 
 /**

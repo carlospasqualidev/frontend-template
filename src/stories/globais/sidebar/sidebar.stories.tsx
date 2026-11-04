@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { Card } from '@/components/global/card/card';
@@ -46,6 +47,19 @@ function withFakeSession() {
   });
 }
 
+/**
+ * A sidebar é `position: fixed` com `h-svh`: sem containing block ela escapa da
+ * caixa e as instâncias se empilham sobre a página (visível no Docs).
+ * `transform-gpu` cria o containing block e a altura passa a ser a da caixa.
+ */
+function SidebarFrame({ children }: { children: ReactNode }): ReactNode {
+  return (
+    <div className="h-112 transform-gpu overflow-hidden rounded-lg border **:data-[slot=sidebar-container]:h-full [&>div]:min-h-0">
+      {children}
+    </div>
+  );
+}
+
 export const Vitrine: Story = {
   render: () => {
     withFakeSession();
@@ -56,22 +70,22 @@ export const Vitrine: Story = {
           title="Expandida"
           description="Módulo colapsável com as telas dentro; o grupo abre sozinho quando a rota ativa é uma das suas."
         >
-          <div className="h-[28rem] overflow-hidden rounded-lg border">
+          <SidebarFrame>
             <SidebarProvider defaultOpen>
               <AppSidebar />
             </SidebarProvider>
-          </div>
+          </SidebarFrame>
         </Card>
 
         <Card
           title="Recolhida em ícones"
           description="Só os ícones do módulo. Clicar abre um flyout à direita com as telas — sem ele os filhos ficariam inalcançáveis neste modo."
         >
-          <div className="h-[28rem] overflow-hidden rounded-lg border">
+          <SidebarFrame>
             <SidebarProvider defaultOpen={false}>
               <AppSidebar />
             </SidebarProvider>
-          </div>
+          </SidebarFrame>
         </Card>
 
         <Card

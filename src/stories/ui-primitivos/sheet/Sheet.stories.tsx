@@ -61,10 +61,10 @@ function EditUserSheet() {
         </div>
         <SheetFooter>
           <SheetClose asChild>
-            <Button>Salvar alterações</Button>
+            <Button variant="outline">Cancelar</Button>
           </SheetClose>
           <SheetClose asChild>
-            <Button variant="outline">Cancelar</Button>
+            <Button>Salvar alterações</Button>
           </SheetClose>
         </SheetFooter>
       </SheetContent>

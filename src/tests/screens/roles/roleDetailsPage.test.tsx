@@ -637,6 +637,9 @@ describe('RoleDetailsPage — usuários do cargo', () => {
       expect.stringContaining('Camila Oliveira'),
     ]);
     expect(rows.at(1)).toHaveTextContent('Bloqueado');
+    const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' });
+    expect(actionsHeader).toHaveClass('text-center');
+    expect(actionsHeader).not.toHaveClass('sr-only');
   });
 
   it('vincula pela busca do servidor e grava o conjunto completo', async () => {

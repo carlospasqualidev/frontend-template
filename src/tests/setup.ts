@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
 import { dropLeaveRequest } from '@/hooks/useUnsavedChangesGuard';
@@ -44,6 +44,11 @@ if (typeof Element.prototype.scrollIntoView === 'undefined') {
 
 // Limpa o DOM renderizado após cada teste, e a pergunta do guard de edição não
 // salva que um teste deixou aberta não passa para o seguinte.
+// Teto de espera do `findBy*`/`waitFor`: o padrão (1 s) é apertado para o primeiro
+// render frio de uma tela (766 ms sozinho, medido em 2026-11-04) e estourava com a
+// suíte inteira em paralelo (pre-push). Só sobe o limite: teste que passa não espera mais.
+configure({ asyncUtilTimeout: 5000 });
+
 afterEach(() => {
   cleanup();
   dropLeaveRequest();

@@ -701,6 +701,43 @@ export const HiddenPagination: Story = {
   },
 };
 
+type Charge = { id: string; label: string; amount: number };
+
+const CHARGES: Charge[] = [
+  { id: 'c1', label: 'Mensalidade', amount: 120 },
+  { id: 'c2', label: 'Taxa de adesão', amount: 80.5 },
+  { id: 'c3', label: 'Multa', amount: 19.5 },
+];
+
+const brl = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const chargeColumns: DataTableColumnDef<Charge>[] = [
+  { accessorKey: 'label', header: 'Descrição', footer: 'Total' },
+  {
+    accessorKey: 'amount',
+    header: 'Valor',
+    cell: ({ row }) => brl(row.original.amount),
+    footer: () => brl(CHARGES.reduce((sum, charge) => sum + charge.amount, 0)),
+    meta: { className: 'text-right' },
+  },
+];
+
+export const TotalRow: Story = {
+  name: 'Linha de total',
+  render: () => (
+    <DataTable columns={chargeColumns} data={CHARGES} hidePagination />
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`footer` em ao menos uma coluna desenha o `<tfoot>` com uma célula por coluna visível; sem `footer` em nenhuma, não há rodapé. Some no carregamento e convive com o estado vazio. O total é calculado por quem usa (a tabela é server-side e só conhece a página).',
+      },
+    },
+  },
+};
+
 export const ColumnVisibility: Story = {
   name: 'Colunas',
   render: () => <ColumnVisibilityShowcase />,

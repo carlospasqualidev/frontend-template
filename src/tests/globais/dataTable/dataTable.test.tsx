@@ -993,4 +993,69 @@ describe('DataTable', () => {
       expect(handleRowClick).toHaveBeenCalledWith(data[1]);
     });
   });
+
+  describe('linha de total (footer)', () => {
+    interface Item {
+      id: string;
+      name: string;
+      amount: number;
+    }
+    const items: Item[] = [
+      { id: '1', name: 'a', amount: 10 },
+      { id: '2', name: 'b', amount: 5 },
+    ];
+    const withFooter: DataTableColumnDef<Item>[] = [
+      { accessorKey: 'name', header: 'Nome', footer: 'Total' },
+      { accessorKey: 'amount', header: 'Valor', footer: () => '15' },
+    ];
+    const withoutFooter: DataTableColumnDef<Item>[] = [
+      { accessorKey: 'name', header: 'Nome' },
+      { accessorKey: 'amount', header: 'Valor' },
+    ];
+
+    it('só desenha o tfoot com footer, uma célula por coluna visível', () => {
+      const { container, rerender } = render(
+        <DataTable columns={withoutFooter} data={items} hidePagination />
+      );
+      expect(container.querySelector('tfoot')).toBeNull();
+
+      rerender(<DataTable columns={withFooter} data={items} hidePagination />);
+      const cells = container.querySelectorAll('tfoot td');
+      const visible = container.querySelectorAll('thead th').length;
+      expect(cells).toHaveLength(visible);
+      expect(cells[0]).toHaveTextContent('Total');
+      expect(cells[1]).toHaveTextContent('15');
+      // A coluna do menu de colunas não tem footer: célula vazia.
+      expect(cells[2]).toBeEmptyDOMElement();
+    });
+
+    it('coluna oculta não ganha célula no tfoot', () => {
+      const { container } = render(
+        <DataTable
+          columns={withFooter}
+          data={items}
+          hidePagination
+          defaultHiddenColumnIds={['amount']}
+        />
+      );
+      const cells = container.querySelectorAll('tfoot td');
+
+      expect(cells).toHaveLength(container.querySelectorAll('thead th').length);
+      expect(cells[0]).toHaveTextContent('Total');
+      expect(screen.queryByText('15')).not.toBeInTheDocument();
+    });
+
+    it('some no carregamento e convive com o estado vazio', () => {
+      const { container, rerender } = render(
+        <DataTable columns={withFooter} data={[]} hidePagination />
+      );
+      expect(screen.getByText('Nenhum resultado.')).toBeInTheDocument();
+      expect(container.querySelector('tfoot')).not.toBeNull();
+
+      rerender(
+        <DataTable columns={withFooter} data={items} isLoading hidePagination />
+      );
+      expect(container.querySelector('tfoot')).toBeNull();
+    });
+  });
 });

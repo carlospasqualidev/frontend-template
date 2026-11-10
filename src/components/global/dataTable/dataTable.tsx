@@ -21,7 +21,6 @@ import {
   type DataTableColumn,
   type DataTableColumnDef,
 } from './tableFeatures';
-import { isPageSizeOption, PAGE_SIZE_OPTIONS } from './pageSizeStorage';
 import { useColumnVisibility } from './useColumnVisibility';
 import {
   DataTableFilters,
@@ -31,19 +30,14 @@ import {
 
 import { Empty } from '@/components/global/empty/empty';
 import { SkeletonText } from '@/components/global/skeleton/skeleton';
+import { PaginationFooter } from '@/components/global/paginationFooter/paginationFooter';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -413,7 +407,9 @@ export function DataTable<TData extends RowData>({
   });
 
   const columnCount = table.getVisibleLeafColumns().length;
-  const pageSizeLabelId = React.useId();
+  const hasFooter = table
+    .getVisibleLeafColumns()
+    .some((column) => column.columnDef.footer !== undefined);
 
   return (
     <div>
@@ -615,61 +611,43 @@ export function DataTable<TData extends RowData>({
               </TableRow>
             )}
           </TableBody>
+          {hasFooter && !isLoading ? (
+            <TableFooter>
+              {table.getFooterGroups().map((footerGroup) => (
+                <TableRow key={footerGroup.id} className="hover:bg-transparent">
+                  {footerGroup.headers.map((header) => (
+                    <TableCell
+                      key={header.id}
+                      className={header.column.columnDef.meta?.className}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.footer,
+                            header.getContext()
+                          )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableFooter>
+          ) : null}
         </Table>
       </div>
 
       {hidePagination ? null : (
-        <div className="flex flex-wrap items-center justify-end gap-2 py-4">
-          {onPageSizeChange && isPageSizeOption(pageSize) ? (
-            <div className="mr-2 flex items-center gap-2">
-              <span
-                id={pageSizeLabelId}
-                className="text-sm whitespace-nowrap text-muted-foreground"
-              >
-                Itens por página
-              </span>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(value) => onPageSizeChange(Number(value))}
-                disabled={isLoading}
-              >
-                <SelectTrigger size="sm" aria-labelledby={pageSizeLabelId}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(pageIndex - 1)}
-              disabled={pageIndex === 0 || isLoading}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(pageIndex + 1)}
-              disabled={
-                isLoading ||
-                (rowCount != null
-                  ? (pageIndex + 1) * pageSize >= rowCount
-                  : data.length < pageSize)
-              }
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
+        <PaginationFooter
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPageChange={(next) => onPageChange?.(next)}
+          onPageSizeChange={onPageSizeChange}
+          hasNextPage={
+            rowCount != null
+              ? (pageIndex + 1) * pageSize < rowCount
+              : data.length >= pageSize
+          }
+          isLoading={isLoading}
+        />
       )}
     </div>
   );

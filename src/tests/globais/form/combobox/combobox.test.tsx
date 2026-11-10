@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Combobox } from '@/components/global/form/combobox';
+import { Combobox, ComboboxInput } from '@/components/global/form/combobox';
 import { useZodForm } from '@/lib/forms/useZodForm';
 
 const OPTIONS = [
@@ -143,5 +143,99 @@ describe('Combobox (global)', () => {
     expect(onValid).toHaveBeenCalledWith(
       expect.objectContaining({ matrixId: 'a' })
     );
+  });
+
+  describe('busca no servidor (onSearchChange)', () => {
+    it('desliga o filtro local, sobe o texto e limpa ao fechar', async () => {
+      const user = userEvent.setup();
+      const onSearchChange = vi.fn();
+      render(
+        <ComboboxInput
+          options={OPTIONS}
+          value=""
+          onValueChange={() => undefined}
+          onSearchChange={onSearchChange}
+        />
+      );
+
+      await user.click(screen.getByRole('combobox'));
+      await user.type(screen.getByPlaceholderText('Buscar...'), 'bet');
+
+      expect(onSearchChange).toHaveBeenLastCalledWith('bet');
+      expect(screen.getByRole('option', { name: 'Alpha' })).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+      expect(onSearchChange).toHaveBeenLastCalledWith('');
+    });
+
+    it('escolher uma opção também limpa o termo no servidor', async () => {
+      const user = userEvent.setup();
+      const onSearchChange = vi.fn();
+      render(
+        <ComboboxInput
+          options={OPTIONS}
+          value=""
+          onValueChange={() => undefined}
+          onSearchChange={onSearchChange}
+        />
+      );
+
+      await user.click(screen.getByRole('combobox'));
+      await user.type(screen.getByPlaceholderText('Buscar...'), 'bet');
+      await user.click(screen.getByRole('option', { name: 'Beta' }));
+
+      expect(onSearchChange).toHaveBeenLastCalledWith('');
+    });
+
+    it('termo curto sem opções pede mais caracteres; a partir do mínimo mostra emptyText', async () => {
+      const user = userEvent.setup();
+      render(
+        <ComboboxInput
+          options={[]}
+          value=""
+          onValueChange={() => undefined}
+          onSearchChange={() => undefined}
+          minChars={3}
+          emptyText="Nada."
+        />
+      );
+
+      await user.click(screen.getByRole('combobox'));
+      await user.type(screen.getByPlaceholderText('Buscar...'), 'ab');
+      expect(
+        screen.getByText('Digite ao menos 3 caracteres.')
+      ).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText('Buscar...'), 'c');
+      expect(screen.getByText('Nada.')).toBeInTheDocument();
+    });
+
+    it('"Buscando..." só com a lista vazia; com opções a lista fica e marca aria-busy', async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ComboboxInput
+          options={[]}
+          value=""
+          onValueChange={() => undefined}
+          onSearchChange={() => undefined}
+          loading
+        />
+      );
+      await user.click(screen.getByRole('combobox'));
+      expect(screen.getByText('Buscando...')).toBeInTheDocument();
+
+      rerender(
+        <ComboboxInput
+          options={OPTIONS}
+          value=""
+          onValueChange={() => undefined}
+          onSearchChange={() => undefined}
+          loading
+        />
+      );
+      expect(screen.queryByText('Buscando...')).not.toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Alpha' })).toBeInTheDocument();
+      expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'true');
+    });
   });
 });

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronDownIcon, SearchIcon, XIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,6 +35,12 @@ type MultiSelectProps = {
   onSearchChange?: (search: string) => void;
   /** Busca em andamento (com `onSearchChange`): a lista vazia diz "Buscando...". */
   loading?: boolean;
+  /**
+   * Com `onSearchChange`: caracteres antes de a busca disparar (quem chama
+   * respeita o mesmo número). Abaixo disso, a lista vazia diz "Digite ao menos
+   * N caracteres." em vez de `emptyText`.
+   */
+  minChars?: number;
   searchPlaceholder?: string;
   /** Texto exibido quando a busca não retorna opções. */
   emptyText?: string;
@@ -97,6 +103,7 @@ function MultiSelect({
   searchable = false,
   onSearchChange,
   loading = false,
+  minChars,
   searchPlaceholder = 'Buscar...',
   emptyText = 'Nenhuma opção encontrada.',
   maxDisplay = 3,
@@ -196,7 +203,7 @@ function MultiSelect({
   const showClear = Boolean(clearable && selected.length > 0 && !disabled);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredOptions = React.useMemo(() => {
+  const filteredOptions = React.useMemo((): MultiSelectOption[] => {
     if (serverSearch) return [...pinnedSelected, ...options];
     return searchable && normalizedSearch
       ? options.filter((option) =>
@@ -204,6 +211,30 @@ function MultiSelect({
         )
       : options;
   }, [options, pinnedSelected, serverSearch, searchable, normalizedSearch]);
+
+  // O que "Selecionar tudo" alcança: o que está à vista (resultado da busca
+  // local ou do servidor), habilitado e ainda não marcado.
+  const markableOptions = React.useMemo(
+    () =>
+      filteredOptions.filter(
+        (option) => !option.disabled && !selectedSet.has(option.value)
+      ),
+    [filteredOptions, selectedSet]
+  );
+
+  const belowMinChars =
+    serverSearch && minChars !== undefined && search.trim().length < minChars;
+
+  const selectAll = () => {
+    setPinnedLabels((previous) => {
+      const next = new Map(previous);
+      for (const option of markableOptions) {
+        next.set(option.value, option.label);
+      }
+      return next;
+    });
+    commit([...selected, ...markableOptions.map((option) => option.value)]);
+  };
 
   const changeSearch = (next: string) => {
     setSearch(next);
@@ -285,7 +316,11 @@ function MultiSelect({
           >
             {filteredOptions.length === 0 ? (
               <p className="px-1.5 py-6 text-center text-sm text-muted-foreground">
-                {serverSearch && loading ? 'Buscando...' : emptyText}
+                {serverSearch && loading
+                  ? 'Buscando...'
+                  : belowMinChars
+                    ? `Digite ao menos ${minChars} caracteres.`
+                    : emptyText}
               </p>
             ) : (
               filteredOptions.map((option) => (
@@ -300,15 +335,29 @@ function MultiSelect({
           </div>
         </ScrollArea>
 
-        {selected.length > 0 && (
-          <button
-            type="button"
-            onClick={() => commit([])}
-            className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <XIcon className="size-3.5" />
-            Limpar seleção
-          </button>
+        {(markableOptions.length > 0 || selected.length > 0) && (
+          <div className="flex items-center justify-center gap-1 border-t pt-1.5">
+            {markableOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={selectAll}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <CheckIcon className="size-3.5" />
+                Selecionar tudo
+              </button>
+            )}
+            {selected.length > 0 && (
+              <button
+                type="button"
+                onClick={() => commit([])}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <XIcon className="size-3.5" />
+                Limpar seleção
+              </button>
+            )}
+          </div>
         )}
       </PopoverContent>
     </Popover>

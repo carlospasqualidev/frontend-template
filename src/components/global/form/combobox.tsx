@@ -55,6 +55,19 @@ export interface ComboboxInputProps {
    * valor selecionado e o campo não está desabilitado. Use em campos opcionais.
    */
   clearable?: boolean;
+  /**
+   * Busca no SERVIDOR: recebe o texto digitado (e `''` ao fechar a lista), e a
+   * lista mostra `options` como vieram, sem filtrar aqui. Quem chama busca e
+   * troca as opções (com debounce).
+   */
+  onSearchChange?: (search: string) => void;
+  /** Busca em andamento (com `onSearchChange`): a lista vazia diz "Buscando...". */
+  loading?: boolean;
+  /**
+   * Com `onSearchChange`: caracteres antes de a busca disparar. Abaixo disso, a
+   * lista vazia diz "Digite ao menos N caracteres." em vez de `emptyText`.
+   */
+  minChars?: number;
   'aria-invalid'?: boolean;
 }
 
@@ -73,6 +86,9 @@ export function ComboboxInput({
   disabled,
   portal,
   clearable,
+  onSearchChange,
+  loading = false,
+  minChars,
   'aria-invalid': ariaInvalid,
 }: ComboboxInputProps) {
   const [open, setOpen] = React.useState(false);
@@ -81,21 +97,28 @@ export function ComboboxInput({
   const selectedLabel =
     options.find((option) => option.value === value)?.label ?? null;
   const showClear = Boolean(clearable && value && !disabled);
-  const normalized = search.trim().toLowerCase();
-  const filtered = normalized
-    ? options.filter((option) =>
-        option.label.toLowerCase().includes(normalized)
-      )
-    : options;
+  const serverSearch = onSearchChange !== undefined;
+  const trimmedSearch = search.trim();
+  const normalized = trimmedSearch.toLowerCase();
+  const belowMinChars =
+    serverSearch && minChars !== undefined && trimmedSearch.length < minChars;
+  const filtered =
+    normalized && !serverSearch
+      ? options.filter((option) =>
+          option.label.toLowerCase().includes(normalized)
+        )
+      : options;
+
+  const changeOpen = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      if (search) onSearchChange?.('');
+      setSearch('');
+    }
+  };
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setSearch('');
-      }}
-    >
+    <Popover open={open} onOpenChange={changeOpen}>
       <div className="relative">
         <PopoverTrigger
           id={id}
@@ -142,7 +165,10 @@ export function ComboboxInput({
           <input
             autoFocus={shouldAutoFocusSearch()}
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              onSearchChange?.(event.target.value);
+            }}
             placeholder={searchPlaceholder}
             className="h-8 w-full rounded-md border border-input bg-transparent pr-2.5 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
           />
@@ -151,10 +177,18 @@ export function ComboboxInput({
         {/* Scroll NATIVO (não o ScrollArea do Radix): dentro de um Dialog/Drawer o
             react-remove-scroll só libera a roda do mouse em containers de overflow
             nativo — com o ScrollArea a lista não rola no wheel. */}
-        <div role="listbox" className="max-h-72 overflow-y-auto">
+        <div
+          role="listbox"
+          aria-busy={serverSearch && loading ? true : undefined}
+          className="max-h-72 overflow-y-auto"
+        >
           {filtered.length === 0 ? (
             <p className="px-1.5 py-6 text-center text-sm text-muted-foreground">
-              {emptyText}
+              {serverSearch && loading
+                ? 'Buscando...'
+                : belowMinChars
+                  ? `Digite ao menos ${minChars} caracteres.`
+                  : emptyText}
             </p>
           ) : (
             filtered.map((option) => (
@@ -166,7 +200,7 @@ export function ComboboxInput({
                 disabled={option.disabled}
                 onClick={() => {
                   onValueChange(option.value);
-                  setOpen(false);
+                  changeOpen(false);
                 }}
                 className={cn(
                   'flex w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 pl-1.5 text-left text-sm select-none hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50',

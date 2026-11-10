@@ -230,6 +230,164 @@ describe('MultiSelect (primitive)', () => {
     });
   });
 
+  describe('Selecionar tudo', () => {
+    it('marca o que está à vista, ignora desabilitadas e não duplica marcadas', async () => {
+      const handleChange = vi.fn();
+      render(
+        <MultiSelect
+          options={[
+            ...FRUITS,
+            { value: 'pear', label: 'Pera', disabled: true },
+          ]}
+          defaultValue={['banana']}
+          onValueChange={handleChange}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Selecionar tudo' })
+      );
+
+      expect(handleChange).toHaveBeenLastCalledWith([
+        'banana',
+        'apple',
+        'orange',
+      ]);
+    });
+
+    it('marca só o resultado da busca local', async () => {
+      const handleChange = vi.fn();
+      render(
+        <MultiSelect
+          options={FRUITS}
+          searchable
+          onValueChange={handleChange}
+          searchPlaceholder="Buscar fruta..."
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'ban'
+      );
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Selecionar tudo' })
+      );
+
+      expect(handleChange).toHaveBeenLastCalledWith(['banana']);
+    });
+
+    it('some quando não há o que marcar', async () => {
+      render(
+        <MultiSelect
+          options={FRUITS}
+          value={['apple', 'banana', 'orange']}
+          onValueChange={() => undefined}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+
+      expect(
+        screen.queryByRole('button', { name: 'Selecionar tudo' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /limpar sele/i })
+      ).toBeInTheDocument();
+    });
+
+    it('no modo servidor mantém no gatilho o rótulo do que marcou e saiu do resultado', async () => {
+      function Harness() {
+        const [value, setValue] = useState<string[]>([]);
+        const [search, setSearch] = useState('');
+        return (
+          <MultiSelect
+            options={FRUITS.filter((fruit) =>
+              fruit.label.toLowerCase().startsWith(search.toLowerCase())
+            )}
+            value={value}
+            onValueChange={setValue}
+            onSearchChange={setSearch}
+            searchPlaceholder="Buscar fruta..."
+          />
+        );
+      }
+      render(<Harness />);
+
+      await userEvent.click(screen.getByRole('combobox'));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Selecionar tudo' })
+      );
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'zzz'
+      );
+
+      expect(screen.getByRole('combobox', { hidden: true })).toHaveTextContent(
+        'Maçã, Banana, Laranja'
+      );
+    });
+  });
+
+  describe('minChars (modo servidor)', () => {
+    it('com termo curto e sem opções pede mais caracteres; a partir do mínimo mostra emptyText', async () => {
+      render(
+        <MultiSelect
+          options={[]}
+          onSearchChange={() => undefined}
+          minChars={3}
+          emptyText="Nada por aqui."
+          searchPlaceholder="Buscar fruta..."
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+      expect(
+        screen.getByText('Digite ao menos 3 caracteres.')
+      ).toBeInTheDocument();
+
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'ma'
+      );
+      expect(
+        screen.getByText('Digite ao menos 3 caracteres.')
+      ).toBeInTheDocument();
+
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Buscar fruta...' }),
+        'c'
+      );
+      expect(screen.getByText('Nada por aqui.')).toBeInTheDocument();
+    });
+
+    it('sem onSearchChange o minChars não age', async () => {
+      render(<MultiSelect options={[]} minChars={3} emptyText="Nada." />);
+
+      await userEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByText('Nada.')).toBeInTheDocument();
+    });
+
+    it('com opções na tela e busca em andamento mantém a lista e marca aria-busy', async () => {
+      render(
+        <MultiSelect
+          options={FRUITS}
+          onSearchChange={() => undefined}
+          loading
+        />
+      );
+
+      await userEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByText('Banana')).toBeInTheDocument();
+      expect(screen.queryByText('Buscando...')).not.toBeInTheDocument();
+      expect(screen.getByRole('group')).toHaveAttribute('aria-busy', 'true');
+    });
+  });
+
   it('permite limpar a seleção via botão "Limpar seleção"', async () => {
     const handleChange = vi.fn();
     render(

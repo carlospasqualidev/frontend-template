@@ -142,7 +142,7 @@ screens/users/
 
 No `routes.ts`, cada rota aponta para a pasta da sua sub-tela: `lazyRouteComponent(() => import('./list'), 'UsersPage')`, `lazyRouteComponent(() => import('./create'), 'UserCreatePage')` e `lazyRouteComponent(() => import('./details'), 'UserDetailsPage')`. (Chamadas de API continuam fora de `screens/`, em `services/<módulo>/` — ver [HTTP](http-and-state.md); as chaves de cache dos usuários ficam em `services/users/queryKeys.ts`, porque a home também as usa.)
 
-**Não embrulhe a tela inteira num wrapper de spacing/padding.** O [`Layout`](../../src/components/global/layout/layout.tsx) global já aplica `space-y-4` ao container que recebe `children`, então os filhos diretos do componente da tela (`<PageHeader />`, `<section>`, `<Tabs>`, grids) **já ficam espaçados automaticamente**. Adicionar `<div className="space-y-6">…</div>` (ou outro `space-y-*` / `p-*`) na raiz da tela é redundante, descalibra o ritmo visual entre telas e empilha uma `<div>` à toa.
+**Não embrulhe a tela inteira num wrapper de spacing/padding.** O [`Layout`](../../src/components/global/layout/layout.tsx) global já aplica `flex flex-col gap-4` (e `p-4 pt-2`) ao container que recebe `children`, então os filhos diretos do componente da tela (`<PageHeader />`, `<section>`, `<Tabs>`, grids) **já ficam espaçados automaticamente**. Adicionar `<div className="space-y-6">…</div>` (ou outro `space-y-*` / `p-*`) na raiz da tela é redundante (o `h1` `sr-only` da tela é absoluto e não entra no `gap` do flex), descalibra o ritmo visual entre telas e empilha uma `<div>` à toa.
 
 ❌ Wrapper redundante:
 

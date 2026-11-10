@@ -100,6 +100,17 @@ afterEach(() => {
 });
 
 describe('SettingsPage — carregando', () => {
+  it('o `h1` existe no esqueleto, antes da leitura voltar', async () => {
+    vi.mocked(fetchSystemConfigs).mockReturnValue(new Promise(() => {}));
+    renderSettings();
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Configurações',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   // O skeleton segue o formato esperado da tela (`SETTINGS_OUTLINE`), sem
   // depender da leitura: um card por grupo, sem descrição, e uma
   // linha por chave. Cada linha tem três blocos (rótulo, descrição, campo).
@@ -126,6 +137,27 @@ describe('SettingsPage — carregando', () => {
     expect(
       document.querySelector('[data-slot="card-description"]')
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage — `h1` em todos os estados', () => {
+  it('o `h1` existe no estado vazio', async () => {
+    vi.mocked(fetchSystemConfigs).mockResolvedValue({ systemConfigs: [] });
+    renderSettings();
+
+    await screen.findByText('Nenhuma configuração disponível');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Configurações' })
+    ).toBeInTheDocument();
+  });
+
+  it('o `h1` existe no formulário carregado', async () => {
+    renderSettings();
+
+    await screen.findByLabelText('Nome da aplicação');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Configurações' })
+    ).toBeInTheDocument();
   });
 });
 

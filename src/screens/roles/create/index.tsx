@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
 import { PageActions } from '@/components/global/layout/pageActions';
+import { Typography } from '@/components/ui/typography';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -84,6 +85,9 @@ export function RoleCreatePage() {
 
   return (
     <>
+      <Typography as="h1" variant="h3" className="sr-only">
+        Novo cargo
+      </Typography>
       <PageActions>
         <Button
           key="cancel-action"

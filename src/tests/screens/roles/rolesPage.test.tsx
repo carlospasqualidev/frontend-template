@@ -135,6 +135,16 @@ afterEach(() => {
 });
 
 describe('RolesPage — listagem', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderList();
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Cargos',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('lista os cargos do servidor com as contagens e o de sistema marcado', async () => {
     renderList();
 

@@ -79,6 +79,16 @@ afterEach(() => {
 });
 
 describe('UserCreatePage — formulário', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderCreate();
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Novo usuário',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('só mostra "Criar usuário" depois de preencher algo', async () => {
     const user = userEvent.setup();
     renderCreate();

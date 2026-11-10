@@ -16,6 +16,7 @@ import {
 import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTableUrlQuery';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Link } from '@/components/global/link/link';
+import { Typography } from '@/components/ui/typography';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { isUuid } from '@/lib/ids';
 import { listParam } from '@/lib/listQueryParams';
@@ -180,6 +181,10 @@ export function UsersPage() {
           </Button>
         </PageActions>
       )}
+
+      <Typography as="h1" variant="h3" className="sr-only">
+        Usuários
+      </Typography>
 
       <DataTable
         columns={columns}

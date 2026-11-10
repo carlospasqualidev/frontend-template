@@ -200,6 +200,16 @@ afterEach(() => {
 });
 
 describe('UsersPage — listagem', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderUsers();
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Usuários',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('mostra os usuários do servidor com cargos, status e último acesso', async () => {
     renderUsers();
 

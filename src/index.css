@@ -16,6 +16,9 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-brand-text: var(--brand-text);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-line: var(--brand-line);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -101,15 +104,31 @@
   --brand: oklch(0.488 0.243 264.376);
   --brand-foreground: oklch(0.97 0.014 254.604);
 
+  /* Derivados da marca para texto, fundo suave e linha (`text-brand-text`,
+     `bg-brand-surface`, `border-brand-line`). Razões medidas (WCAG, sRGB):
+       brand-text   6,82:1 sobre background e card, 6,20:1 sobre muted,
+                    6,15:1 sobre brand-surface
+       brand-line   1,44:1 sobre background — decorativa (divisor), não
+                    delimita controle, então não responde pelo mínimo de 3:1 */
+  --brand-text: oklch(0.488 0.243 264.376);
+  --brand-surface: oklch(0.965 0.02 264);
+  --brand-line: oklch(0.88 0.05 264);
+
   /* ── paleta SEQUENCIAL de gráficos (5 tons do MESMO hue da marca) ──
      Para UMA medida em intensidades: barra empilhada, área, mapa de calor.
      NÃO serve para séries diferentes — tons do mesmo hue não se distinguem.
-     Ao trocar a marca do projeto, regere estes 5 no hue novo. */
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
+     Ao trocar a marca do projeto, regere estes 5 no hue novo.
+
+     MEDIDO (WCAG 1.4.11, objeto gráfico pede 3:1) contra background, card e
+     muted do tema claro (razões nessa ordem, ao lado de cada passo). A rampa
+     anterior reprovava: o passo mais claro dava 1,81:1 no card branco. No pior
+     caso esta dá 3,42:1 (muted) e passos vizinhos se separam por 1,28 a 1,40.
+     `--chart-1` é o mais CLARO, `--chart-5` o mais escuro. */
+  --chart-1: oklch(0.623 0.214 259.815); /* 3,76 / 3,76 / 3,42 */
+  --chart-2: oklch(0.546 0.245 262.881); /* 5,26 / 5,26 / 4,78 */
+  --chart-3: oklch(0.488 0.243 264.376); /* 6,82 / 6,82 / 6,20 */
+  --chart-4: oklch(0.424 0.199 265.638); /* 8,84 / 8,84 / 8,03 */
+  --chart-5: oklch(0.36 0.16 266); /* 11,35 / 11,35 / 10,31 */
 
   /* ── paleta CATEGÓRICA de gráficos (hues distintos) ──
      Para séries DIFERENTES no mesmo gráfico, onde o leitor precisa separar uma
@@ -143,7 +162,9 @@
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  /* 4,61:1 sobre muted e 5,08:1 sobre background (o 0.552 original dava 4,39:1
+     sobre muted e reprovava no cabeçalho de tabela, que é texto sobre `bg-muted`) */
+  --muted-foreground: oklch(0.54 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   /* ────────────────────────────────────────────────────────────────
@@ -191,7 +212,25 @@
   --brand: oklch(0.424 0.199 265.638);
   --brand-foreground: oklch(0.97 0.014 254.604);
 
-  /* --primary / --sidebar-primary / --chart-1..5 herdam de :root via cascade — não duplicar */
+  /* A marca escura (0.424) não serve para texto no escuro; os derivados usam um
+     passo mais claro. Razões medidas: brand-text 9,53:1 sobre background, 7,89:1
+     sobre card, 7,13:1 sobre muted e 6,57:1 sobre brand-surface. brand-line
+     (1,76:1 sobre card) é decorativa. */
+  --brand-text: oklch(0.78 0.15 262);
+  --brand-surface: oklch(0.3 0.06 265);
+  --brand-line: oklch(0.4 0.1 265);
+
+  /* --primary / --sidebar-primary herdam de :root via cascade. A sequencial
+     `--chart-1..5` é redeclarada abaixo: a do claro é escura de propósito (3:1
+     no branco) e sumiria sobre o card escuro. */
+  /* Mesmo hue da marca, passos para o fundo escuro. Razões contra background,
+     card e muted escuros (nessa ordem); pior caso 4,32:1, vizinhos separados por
+     1,21 a 1,24. `--chart-1` segue sendo o mais claro. */
+  --chart-1: oklch(0.86 0.07 258); /* 13,00 / 10,76 / 9,74 */
+  --chart-2: oklch(0.8 0.1 259); /* 10,63 / 8,80 / 7,96 */
+  --chart-3: oklch(0.74 0.13 260); /* 8,57 / 7,10 / 6,42 */
+  --chart-4: oklch(0.69 0.16 261); /* 7,07 / 5,86 / 5,30 */
+  --chart-5: oklch(0.64 0.19 262); /* 5,76 / 4,77 / 4,32 */
 
   /* A paleta categórica, ao contrário, É redeclarada: são os MESMOS hues em passos
      escolhidos para o fundo escuro, não um flip automático dos de cima. Os passos
@@ -238,8 +277,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
+  }
+
+  /* Números alinhados em coluna: valores lidos empilhados (tabelas, totais). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
   }
 }

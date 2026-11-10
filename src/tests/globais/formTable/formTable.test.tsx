@@ -39,12 +39,15 @@ describe('FormTable (global)', () => {
     expect(screen.getByRole('cell', { name: 'GC-MS/MS' })).toBeInTheDocument();
   });
 
-  it('a linha do cabeçalho usa a cor da marca', () => {
+  it('o cabeçalho herda o tom neutro do TableHeader base, sem cor própria na linha', () => {
     renderTable();
-    const headerRow = screen
-      .getByRole('columnheader', { name: 'Método' })
-      .closest('tr');
-    expect(headerRow).toHaveClass('bg-primary/35');
+    const head = screen.getByRole('columnheader', { name: 'Método' });
+    const headerRow = head.closest('tr');
+    const thead = head.closest('thead');
+    expect(thead).toHaveClass('[&_tr]:bg-muted');
+    expect(thead).not.toHaveClass('[&_tr]:bg-primary/35');
+    expect(headerRow?.className ?? '').not.toMatch(/(^|\s)bg-/);
+    expect(head).toHaveClass('text-muted-foreground');
   });
 
   it('o container recorta os cantos arredondados (overflow-hidden)', () => {

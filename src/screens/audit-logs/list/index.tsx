@@ -192,6 +192,9 @@ export function AuditLogsPage() {
 
   return (
     <>
+      <Typography as="h1" variant="h3" className="sr-only">
+        Auditoria
+      </Typography>
       <DataTable
         columns={columns}
         data={data?.logs ?? []}

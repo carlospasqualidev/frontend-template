@@ -65,20 +65,25 @@ export function SettingsPage() {
     staleTime: 30_000,
   });
 
-  if (isPending) {
-    return <SettingsSkeleton />;
-  }
+  // O `h1` fica fora dos três estados: a tela nunca fica sem título.
+  return (
+    <>
+      <Typography as="h1" variant="h3" className="sr-only">
+        Configurações
+      </Typography>
 
-  if (!data || data.systemConfigs.length === 0) {
-    return (
-      <Empty
-        title="Nenhuma configuração disponível"
-        description="Não há parâmetros de sistema para exibir."
-      />
-    );
-  }
-
-  return <SettingsForm configs={data.systemConfigs} />;
+      {isPending ? (
+        <SettingsSkeleton />
+      ) : !data || data.systemConfigs.length === 0 ? (
+        <Empty
+          title="Nenhuma configuração disponível"
+          description="Não há parâmetros de sistema para exibir."
+        />
+      ) : (
+        <SettingsForm configs={data.systemConfigs} />
+      )}
+    </>
+  );
 }
 
 // Só os itens alterados, na ordem da tela: é o lote que vai ao servidor.

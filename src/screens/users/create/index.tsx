@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
 import { PageActions } from '@/components/global/layout/pageActions';
+import { Typography } from '@/components/ui/typography';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
@@ -85,6 +86,9 @@ export function UserCreatePage() {
 
   return (
     <>
+      <Typography as="h1" variant="h3" className="sr-only">
+        Novo usuário
+      </Typography>
       <PageActions>
         <Button
           key="cancel-action"

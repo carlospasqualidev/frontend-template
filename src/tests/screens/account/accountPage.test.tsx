@@ -63,6 +63,16 @@ afterEach(() => {
 // As abas sem servidor são exemplo de tela: o aviso fica no topo, e as
 // ações não simulam confirmação.
 describe('Minha conta — abas de demonstração', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderAccount('notifications');
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Conta',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('"Notificações" mostra o aviso e não grava as preferências', async () => {
     const user = userEvent.setup();
     renderAccount('notifications');

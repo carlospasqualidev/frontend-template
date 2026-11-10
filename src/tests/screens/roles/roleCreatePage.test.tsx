@@ -99,6 +99,16 @@ afterEach(() => {
 });
 
 describe('RoleCreatePage — árvore de permissões', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderCreate();
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Novo cargo',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('mostra módulo, grupos e ações com os rótulos do servidor', async () => {
     renderCreate();
 

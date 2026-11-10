@@ -15,6 +15,14 @@ describe('Button (global)', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
+  it('a variante `brand` pinta o botão em soft-tint da marca, sem o fundo cheio do default', () => {
+    render(<Button variant="brand">Importar</Button>);
+
+    const button = screen.getByRole('button', { name: 'Importar' });
+    expect(button).toHaveClass('bg-primary/10', 'text-primary');
+    expect(button).not.toHaveClass('bg-primary');
+  });
+
   it('exibe spinner e desabilita o botão quando loading=true', () => {
     render(<Button loading>Salvar</Button>);
 

@@ -48,8 +48,10 @@ export interface RowAction {
 // sobre 10% do tom (20% no dark, onde o fundo é escuro).
 const toneClasses = new Map<RowActionTone, string>([
   [
+    // `accent`, e não `muted`: a ação neutra também mora sobre superfície clara
+    // (cabeçalho de card, linha em `bg-muted/40`), e ali um fundo `muted` sumia.
     'neutral',
-    'bg-muted text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-muted/50',
+    'bg-accent text-muted-foreground hover:bg-accent hover:text-foreground dark:bg-accent/60',
   ],
   [
     'brand',

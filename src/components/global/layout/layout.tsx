@@ -41,8 +41,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             modais) e sim o `collisionPadding` de topo deles —
             `FLOATING_COLLISION_TOP` (68px) casa com o `h-16` daqui. Ao mudar a
             altura do header, ajuste `lib/constants/layers.ts` junto. O
-            `bg-background` mantém o header opaco sobre o conteúdo que rola. */}
-        <header className="relative z-(--z-header) flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+            `bg-card` (claro) e `bg-background` (escuro) mantêm o header opaco
+            sobre o conteúdo que rola. */}
+        <header className="relative z-(--z-header) flex h-16 shrink-0 items-center gap-2 bg-card transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-background">
           <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1 cursor-pointer" />
             <Separator orientation="vertical" className="mr-2 h-5" />
@@ -50,11 +51,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <PageActionsSlot />
         </header>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex min-h-full flex-col gap-4 p-4 pt-0">
-            <div className="flex-1 space-y-4 rounded-xl bg-muted/50 p-4">
-              <Suspense fallback={<SuspenseFallback />}>{children}</Suspense>
-            </div>
+        <ScrollArea className="min-h-0 flex-1 bg-muted/50">
+          {/* O tom do painel mora no `ScrollArea`, que ocupa a altura toda: o
+              wrapper de conteúdo só tem a altura do que renderiza (o Viewport
+              do Radix o embrulha numa `display: table`), e o tom nele terminava
+              abaixo do último card. O painel vai de ponta a ponta; o `p-4` do
+              conteúdo alinha os cards ao `px-4` do header. `flex flex-col gap-4`
+              (não `space-y-4`): o `<h1 sr-only>` da tela é absoluto, não é item
+              de flex e não abre um gap extra acima do primeiro card. */}
+          <div className="flex min-h-full flex-col gap-4 p-4 pt-2">
+            <Suspense fallback={<SuspenseFallback />}>{children}</Suspense>
           </div>
         </ScrollArea>
       </SidebarInset>

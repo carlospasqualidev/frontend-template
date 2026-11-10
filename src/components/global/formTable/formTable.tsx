@@ -38,18 +38,14 @@ interface IFormTableHeader {
 }
 
 /**
- * Cabeçalho da `FormTable`: linha na cor da marca (primária sólida) com labels
- * brancas. O estilo já vem embutido no `TableHeader` base (`components/ui/table.tsx`)
- * — aplicado a TODA tabela; a classe abaixo é redundante de propósito, para o
- * cabeçalho da FormTable continuar na marca mesmo se o padrão da base mudar. Passe
- * os `TableHead` como filhos.
+ * Cabeçalho da `FormTable`. O estilo (`bg-muted`, rótulo em `text-muted-foreground`)
+ * vem do `TableHeader` base (`components/ui/table.tsx`), igual ao de toda tabela.
+ * Passe os `TableHead` como filhos.
  */
 export function FormTableHeader({ children }: IFormTableHeader) {
   return (
     <TableHeader>
-      <TableRow className="bg-primary/35 hover:bg-primary/35">
-        {children}
-      </TableRow>
+      <TableRow>{children}</TableRow>
     </TableHeader>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { useDataTableUrlQuery } from '@/components/global/dataTable/useDataTableUrlQuery';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Link } from '@/components/global/link/link';
+import { Typography } from '@/components/ui/typography';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { hasPermission } from '@/lib/permissions';
 import { buildRoleColumns } from '@/screens/roles/list/roleColumns';
@@ -89,6 +90,10 @@ export function RolesPage() {
           </Button>
         </PageActions>
       )}
+
+      <Typography as="h1" variant="h3" className="sr-only">
+        Cargos
+      </Typography>
 
       <DataTable
         columns={columns}

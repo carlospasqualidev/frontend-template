@@ -18,12 +18,21 @@ A cor primária do sistema vive em **uma única variável** no topo de [`src/ind
 
 `--primary`, `--primary-foreground`, `--sidebar-primary` e `--sidebar-primary-foreground` são apenas aliases (`var(--brand)`) — não duplicar valores. Pra trocar a marca em um novo projeto, mude apenas `--brand` (light + dark).
 
+**Derivados da marca para texto, fundo suave e linha** — `--brand-text`, `--brand-surface` e `--brand-line`, mapeados no `@theme` como `text-brand-text`, `bg-brand-surface` e `border-brand-line`. Existem porque a `--brand` do escuro (`0.424`) é escura demais para texto: no `.dark`, `--brand-text` é um passo mais claro. `--brand-text` mede, no pior caso, 6,15:1 (claro) e 6,57:1 (escuro) sobre `--brand-surface`, e 6,20:1 (claro) e 7,13:1 (escuro) sobre `--muted`; `--brand-line` é decorativa (divisor), não delimita controle. Ao trocar a marca, regere os três nos dois temas e meça.
+
+**Variante `brand` do `Button`**: soft-tint da marca (`bg-primary/10 text-primary`) para o botão auxiliar que precisa de corpo sem competir com o `default` (cheio). Divergência do shadcn, registrada no comentário de `ui/button.tsx`.
+
+**Números em coluna**: a classe utilitária `.tabular` (`index.css`, `@layer base`) liga `tabular-nums`/`'tnum'`; use em células e totais numéricos para os dígitos alinharem.
+
 **Há DUAS paletas de gráfico, com papéis diferentes — não as confunda:**
 
 - **`--chart-1..5` (SEQUENCIAL) faz parte da marca**: um ramp de 5 tons harmonizados com `--brand` (mesmo hue, luminosidade escalonada). Serve para **uma** medida em intensidades — barra empilhada, área, mapa de calor. Ao trocar a marca, regere o ramp no novo hue, senão os gráficos destoam do resto da UI (mantenha a estrutura de luminosidade: mais claro no `--chart-1`, mais escuro no `--chart-5`).
+  - **O ramp é MEDIDO, não escolhido no olho**: objeto gráfico pede 3:1 (WCAG 1.4.11) contra `--background`, `--card` e `--muted` do tema. O `.dark` **redeclara** o ramp (o do claro é escuro de propósito e sumiria sobre o card escuro). Razões atuais (pior superfície): claro 3,42:1 (`--chart-1`, sobre muted) a 10,31:1; escuro 4,32:1 (`--chart-5`, sobre muted) a 9,74:1. As razões de cada passo estão ao lado do valor em `index.css`; ao regerar o ramp, meça de novo e atualize-as.
 - **`--series-1..5` (CATEGÓRICA) NÃO faz parte da marca**: hues distintos, para **séries diferentes** no mesmo gráfico, onde o leitor precisa separar uma linha da outra. **Não regere ao trocar a identidade** — os valores são validados como conjunto (contraste entre pares adjacentes em visão normal **e** em deficiência de cor, nas duas superfícies). A **ordem dos slots é o mecanismo de segurança**: use sempre na sequência, nunca ciclando nem escolhendo "a que combina". Como dois dos tons ficam abaixo de 3:1 no fundo claro, a legenda e o traçado de cada série carregam a identidade **junto** com a cor (nunca só a cor).
 
 Tons do mesmo hue não se distinguem entre si: usar o ramp sequencial para séries diferentes é o erro clássico.
+
+**Texto secundário**: `--muted-foreground` do claro (`oklch(0.54 …)`) mede 4,61:1 sobre `--muted` e 5,08:1 sobre `--background`; o cabeçalho de tabela (`bg-muted` + `text-muted-foreground`) depende disso. No escuro, 5,66:1 sobre `--muted`. O `0.54` **diverge do padrão do shadcn (`0.552`) de propósito, por contraste** (o padrão dá 4,39:1 sobre `--muted` e reprova): não desfaça numa atualização do shadcn.
 
 **Não fazem parte da marca**: `--ring`/`--sidebar-ring` (neutros, convenção shadcn) e os tokens neutros (background, border, muted, etc.).
 

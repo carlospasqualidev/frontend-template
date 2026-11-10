@@ -111,6 +111,16 @@ afterEach(() => {
 });
 
 describe('AuditLogsPage — filtro "Usuário"', () => {
+  it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
+    renderAuditLogs({});
+
+    const title = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Auditoria',
+    });
+    expect(title).toHaveClass('sr-only');
+  });
+
   it('com `backoffice.users.read`, filtra pelo `userId` da URL', async () => {
     useSessionStore.setState({
       user: sessionUser(['backoffice.users.read']),

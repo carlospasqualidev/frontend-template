@@ -39,7 +39,7 @@ Telas de **listagem / consulta / relatório** seguem o MESMO padrão visual da b
 - **`w-full sm:w-60` é a largura de TODO campo de filtro** — texto, `Select`, `Combobox`, `MultiSelect`, numérico, data. Larguras variadas na mesma barra desalinham a linha e fazem a tela parecer improvisada. O tamanho **não** acompanha o conteúdo esperado: um campo de 2 dígitos tem a mesma largura de um de código.
   - **Sem exceção, nem para `DateTimeField`.** Ele cabe em `sm:w-60`: os três adornos (limpar/relógio/calendário) ficam AGRUPADOS num flex à direita e o input reserva `pr-22`. Se um campo novo não couber, **conserte o campo** (agrupe adornos, reduza padding) em vez de alargar a coluna.
   - Filtro de **faixa** (data/número) são dois campos `sm:w-60` lado a lado — não um campo largo.
-- **Sem bloco de título/descrição no corpo da tela.** Não use `PageHeader` em tela de listagem/consulta/relatório — o **breadcrumb global** (via `staticData.breadcrumb`) já identifica a tela. (O `PageHeader` é reservado a telas tipo dashboard/`home`.) Ações da tela vão no `PageActions` (topo).
+- **Sem bloco de título/descrição no corpo da tela.** Não use `PageHeader` em tela de listagem/consulta/relatório — o **breadcrumb global** (via `staticData.breadcrumb`) já identifica a tela, e a tela leva um `<Typography as="h1" variant="h3" className="sr-only">` com o mesmo nome da trilha (para leitor de tela). (O `PageHeader` é reservado a telas tipo dashboard/`home`.) Ações da tela vão no `PageActions` (topo).
 - **Botões da barra = padrão da `DataTable`**: alinhados à direita, **"Limpar"** (`variant="ghost"`) + **"Buscar"** (`variant="default"`), ambos com **altura padrão** — **NUNCA** `size="sm"` nesses dois.
 - **Ícones padrão (todas as telas):** "Buscar" leva **lupa** (`Search`) e "Limpar"/"Limpar filtros" leva **borracha** (`Eraser`), sempre antes do texto. Não crie botão de buscar/limpar sem esses ícones.
 - **O texto do botão que aplica os filtros é "Buscar"** — nunca "Filtrar", "Aplicar" ou similar. O que limpa é "Limpar".
@@ -60,15 +60,14 @@ Por quê: misturar campos que filtram na hora com campos que esperam o botão é
 
 Exceção: filtro puramente **client-side de refino instantâneo** dentro de um resultado já carregado só é aceitável se **não houver** botão "Buscar" na tela — nunca conviva os dois comportamentos na mesma barra.
 
-## Tabelas — cabeçalho na cor da marca (regra dura)
+## Tabelas — cabeçalho neutro (regra dura)
 
-**Toda tabela do sistema tem o cabeçalho num tom claro da marca (`bg-primary/35`) com texto escuro (`text-foreground`, o padrão do `TableHead`).** O estilo está **embutido na base** ([`components/ui/table.tsx`](../../src/components/ui/table.tsx) → `TableHeader`), então **toda** tabela que usa o primitivo `Table` herda o cabeçalho na marca **automaticamente** — `DataTable`, `FormTable` e qualquer tabela montada à mão com `Table`/`TableHeader`. Numa tela nova não há o que configurar.
+**Toda tabela do sistema tem o cabeçalho neutro (`bg-muted`) com o rótulo em `text-muted-foreground` (o padrão do `TableHead`; 4,61:1 no claro e 5,66:1 no escuro).** O estilo está **embutido na base** ([`components/ui/table.tsx`](../../src/components/ui/table.tsx) → `TableHeader`), então **toda** tabela que usa o primitivo `Table` herda o cabeçalho **automaticamente** — `DataTable`, `FormTable` e qualquer tabela montada à mão com `Table`/`TableHeader`. Numa tela nova não há o que configurar.
 
 - **Nunca monte tabela com `<table>`/`<thead>` cru** (HTML nativo). Isso pula o cabeçalho tonado **e** todo o estilo do primitivo (padding, borda, truncamento, scroll horizontal). Use `Table`/`TableHeader`/`TableRow`/`TableCell` de [`@/components/ui/table`](../../src/components/ui/table.tsx), ou uma das abstrações:
   - **`DataTable`** ([`components/global/dataTable`](../../src/components/global/dataTable)) — listagens paginadas/filtráveis server-side.
-  - **`FormTable` + `FormTableHeader`** ([`components/global/formTable/formTable.tsx`](../../src/components/global/formTable/formTable.tsx)) — tabelas de **formulário/coleção editável inline**. Dão o container com cantos arredondados + o cabeçalho da marca; componha com `TableBody`/`TableRow`/`TableCell` (reexportados).
-- **Não sobrescreva o fundo do cabeçalho para um tom neutro** (`bg-muted`, ou sem fundo). O tom claro da marca é o padrão do sistema — trocá-lo é regressão.
-- `bg-primary/35` é calibrado para light e dark, com o texto escuro padrão (contraste AA). Se precisar montar o cabeçalho manualmente, replique `bg-primary/35 hover:bg-primary/35` na linha do cabeçalho (padrão do `FormTableHeader`).
+  - **`FormTable` + `FormTableHeader`** ([`components/global/formTable/formTable.tsx`](../../src/components/global/formTable/formTable.tsx)) — tabelas de **formulário/coleção editável inline**. Dão o container com cantos arredondados + o cabeçalho neutro; componha com `TableBody`/`TableRow`/`TableCell` (reexportados).
+- **Não sobrescreva o fundo do cabeçalho** (cor de marca, ou sem fundo): o neutro é o padrão do sistema e o `FormTableHeader` não põe cor própria na linha. A base mantém o `hover` e o `has-aria-expanded` do cabeçalho em `bg-muted`, o que impede o "pisca" no hover e com o menu de colunas aberto.
 
 ## DataTable
 

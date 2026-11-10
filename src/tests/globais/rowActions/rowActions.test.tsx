@@ -34,6 +34,28 @@ describe('RowActions', () => {
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeInTheDocument();
   });
 
+  it('o tom neutro (padrão) usa `bg-accent`; os demais mantêm o soft-tint do próprio tom', () => {
+    render(
+      <RowActions
+        actions={[
+          action({ key: 'a', label: 'Neutra' }),
+          action({ key: 'b', label: 'Marca', tone: 'brand' }),
+          action({ key: 'c', label: 'Perigo', tone: 'destructive' }),
+        ]}
+      />
+    );
+
+    const neutral = screen.getByRole('button', { name: 'Neutra' });
+    expect(neutral).toHaveClass('bg-accent', 'dark:bg-accent/60');
+    expect(neutral).not.toHaveClass('bg-muted');
+    expect(screen.getByRole('button', { name: 'Marca' })).toHaveClass(
+      'bg-primary/10'
+    );
+    expect(screen.getByRole('button', { name: 'Perigo' })).toHaveClass(
+      'bg-destructive/10'
+    );
+  });
+
   it('dispara onSelect ao clicar na ação', async () => {
     const onSelect = vi.fn();
     render(<RowActions actions={[action({ onSelect })]} />);

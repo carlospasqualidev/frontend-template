@@ -34,13 +34,13 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
     <thead
       data-slot="table-header"
-      // Cabeçalho num tom claro da marca (`bg-primary/35`) com texto escuro em TODA
-      // tabela do sistema. O seletor de descendente do hover tem especificidade
-      // maior que o `hover:bg-muted/50` do `TableRow`, então não "pisca" no hover.
-      // Idem para o `has-aria-expanded:bg-muted/50`: um menu aberto no cabeçalho
-      // (colunas, ordenação) não pode apagar o tom da marca.
+      // Cabeçalho neutro (`bg-muted`) em TODA tabela do sistema. O seletor de
+      // descendente do hover tem especificidade maior que o `hover:bg-muted/50`
+      // do `TableRow`, então não "pisca" no hover. Idem para o
+      // `has-aria-expanded:bg-muted/50`: um menu aberto no cabeçalho (colunas,
+      // ordenação) não pode trocar o tom do cabeçalho.
       className={cn(
-        '[&_tr]:border-b [&_tr]:bg-primary/35 [&_tr]:hover:bg-primary/35 [&_tr]:has-aria-expanded:bg-primary/35',
+        '[&_tr]:border-b [&_tr]:bg-muted [&_tr]:hover:bg-muted [&_tr]:has-aria-expanded:bg-muted',
         className
       )}
       {...props}
@@ -89,7 +89,9 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'h-10 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
+        // `text-muted-foreground`: sobre o `bg-muted` do cabeçalho o rótulo se
+        // distingue do dado pelo tom e pelo peso (4,61:1 no claro, 5,66:1 no escuro).
+        'h-10 px-3 text-left align-middle font-medium whitespace-nowrap text-muted-foreground [&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}

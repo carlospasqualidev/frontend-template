@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { parseFileName } from '@/services/api/download';
+import { axiosApi } from '@/services/api/api';
+import { fetchFileObjectUrl, parseFileName } from '@/services/api/download';
+import { respondWith } from '@/tests/helpers/axiosAdapter';
 
 const FALLBACK = 'relatorio.pdf';
 
@@ -40,5 +42,66 @@ describe('parseFileName', () => {
       'attachment; filename="recall.pdf"; filename*=UTF-8\'\'%E0%A4%A';
 
     expect(parseFileName(header, FALLBACK)).toBe('recall.pdf');
+  });
+});
+
+describe('fetchFileObjectUrl', () => {
+  const defaultAdapter = axiosApi.defaults.adapter;
+  const createObjectURL = vi.fn((blob: Blob) => `blob:fake/${blob.type}`);
+
+  beforeEach(() => {
+    URL.createObjectURL = createObjectURL;
+  });
+
+  afterEach(() => {
+    axiosApi.defaults.adapter = defaultAdapter;
+    createObjectURL.mockClear();
+  });
+
+  function answerWith(data: Blob) {
+    const adapter = vi.fn(respondWith(200, data));
+    axiosApi.defaults.adapter = adapter;
+    return adapter;
+  }
+
+  function blobGiven(): Blob {
+    return createObjectURL.mock.calls[0][0];
+  }
+
+  it('pede o arquivo como blob e devolve o endereço blob:', async () => {
+    const adapter = answerWith(new Blob(['x'], { type: 'image/png' }));
+
+    const address = await fetchFileObjectUrl('/files/1', 'image', 'a.png');
+
+    expect(adapter.mock.lastCall?.[0].responseType).toBe('blob');
+    expect(adapter.mock.lastCall?.[0].url).toBe('/files/1');
+    expect(address).toBe('blob:fake/image/png');
+  });
+
+  it('PDF e texto saem com MIME fixo, nunca o da resposta', async () => {
+    answerWith(new Blob(['<script>'], { type: 'text/html' }));
+
+    await fetchFileObjectUrl('/files/1', 'pdf', 'a.pdf');
+    expect(blobGiven().type).toBe('application/pdf');
+
+    createObjectURL.mockClear();
+    await fetchFileObjectUrl('/files/1', 'text', 'a.txt');
+    expect(blobGiven().type).toBe('text/plain');
+  });
+
+  it('imagem sai pelo MIME da extensão, nunca pelo da resposta', async () => {
+    answerWith(new Blob(['<svg/>'], { type: 'image/svg+xml' }));
+
+    await fetchFileObjectUrl('/files/1', 'image', 'Foto.WEBP');
+
+    expect(blobGiven().type).toBe('image/webp');
+  });
+
+  it('imagem com extensão fora da lista sai com MIME neutro', async () => {
+    answerWith(new Blob(['<svg/>'], { type: 'text/html' }));
+
+    await fetchFileObjectUrl('/files/1', 'image', 'desenho.svg');
+
+    expect(blobGiven().type).toBe('application/octet-stream');
   });
 });

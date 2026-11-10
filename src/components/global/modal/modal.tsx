@@ -214,7 +214,7 @@ export function Modal({
   };
 
   // Dialog: o `headerAction` vem antes do corpo no DOM e levaria o foco inicial;
-  // com ele, o foco vai ao primeiro campo utilizável do corpo. O padrão só é
+  // com ele, o foco vai ao primeiro campo utilizável do corpo (ou ao diálogo, sem campo). O padrão só é
   // cancelado se o campo de fato recebeu o foco. O Drawer segue o padrão do vaul
   // (não força foco, para não abrir o teclado virtual).
   const bodyRef = React.useRef<HTMLDivElement>(null);
@@ -225,9 +225,13 @@ export function Modal({
             'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [role="combobox"]:not([disabled]):not([tabindex="-1"])'
           ) ?? []
         ).find((candidate) => isRendered(candidate));
-        if (!field) return;
-        field.focus();
-        if (document.activeElement === field) event.preventDefault();
+        // Sem campo, o foco vai ao próprio diálogo (não ao botão do cabeçalho,
+        // cujo tooltip consumiria o primeiro Esc).
+        const target =
+          field ?? bodyRef.current?.closest<HTMLElement>('[role="dialog"]');
+        if (!target) return;
+        target.focus();
+        if (document.activeElement === target) event.preventDefault();
       }
     : undefined;
   // Defensivo: o Radix/vaul instalados não avisam nem ligam `aria-describedby`

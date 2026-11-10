@@ -196,6 +196,19 @@ describe('Modal (global)', () => {
     );
   });
 
+  it('com headerAction e sem campo no corpo, o foco vai ao diálogo e não ao botão do cabeçalho', async () => {
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+        body={<p>Sem campos</p>}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Baixar' })).not.toHaveFocus();
+  });
+
   it('o foco inicial pula file input oculto, hidden e tabindex=-1 e vai ao primeiro campo real', async () => {
     render(
       <Harness

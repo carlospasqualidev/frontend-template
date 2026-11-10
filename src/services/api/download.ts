@@ -1,4 +1,4 @@
-import { type AxiosRequestConfig } from 'axios';
+import { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 
 import { axiosApi } from './api';
 
@@ -27,6 +27,14 @@ export function parseFileName(
   return ascii ? ascii[1].trim() : fallback;
 }
 
+/** `GET` do arquivo como blob, pela instância crua para manter os headers. */
+function getBlob(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<AxiosResponse<Blob>> {
+  return axiosApi.get<Blob>(url, { ...config, responseType: 'blob' });
+}
+
 /**
  * Baixa um arquivo servido pela API e dispara o "salvar como" do navegador.
  *
@@ -38,10 +46,7 @@ export async function downloadFile(
   fallbackFileName: string,
   config?: AxiosRequestConfig
 ): Promise<void> {
-  const response = await axiosApi.get<Blob>(url, {
-    ...config,
-    responseType: 'blob',
-  });
+  const response = await getBlob(url, config);
 
   const objectUrl = URL.createObjectURL(response.data);
   const link = document.createElement('a');
@@ -54,4 +59,54 @@ export async function downloadFile(
   link.click();
   link.remove();
   URL.revokeObjectURL(objectUrl);
+}
+
+/** Tipos que o visualizador de anexos sabe mostrar. */
+export type PreviewBlobKind = 'image' | 'pdf' | 'text';
+
+const IMAGE_MIME_BY_EXTENSION = new Map([
+  ['.png', 'image/png'],
+  ['.jpg', 'image/jpeg'],
+  ['.jpeg', 'image/jpeg'],
+  ['.gif', 'image/gif'],
+  ['.webp', 'image/webp'],
+  ['.bmp', 'image/bmp'],
+  ['.avif', 'image/avif'],
+]);
+
+/** MIME neutro: o navegador não renderiza o conteúdo. */
+const NEUTRAL_MIME = 'application/octet-stream';
+
+function mimeTypeFor(kind: PreviewBlobKind, fileName: string): string {
+  switch (kind) {
+    case 'pdf':
+      return 'application/pdf';
+    case 'text':
+      return 'text/plain';
+    case 'image': {
+      const extension = /\.[a-z0-9]+$/i.exec(fileName)?.[0].toLowerCase();
+      return (
+        (extension && IMAGE_MIME_BY_EXTENSION.get(extension)) || NEUTRAL_MIME
+      );
+    }
+  }
+}
+
+/**
+ * Busca o arquivo pela API (com a sessão) e devolve um `blob:` para o
+ * visualizador. O MIME nunca é o do servidor: PDF e texto têm MIME fixo e a
+ * imagem sai pelo da extensão do `fileName`, numa lista fechada (fora dela, MIME
+ * neutro, que não se pré-visualiza). Quem chama revoga o endereço
+ * (`URL.revokeObjectURL`) ao fechar.
+ */
+export async function fetchFileObjectUrl(
+  url: string,
+  kind: PreviewBlobKind,
+  fileName: string
+): Promise<string> {
+  const { data } = await getBlob(url);
+
+  return URL.createObjectURL(
+    new Blob([data], { type: mimeTypeFor(kind, fileName) })
+  );
 }

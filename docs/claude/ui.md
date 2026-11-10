@@ -65,6 +65,18 @@ A versão enxuta mostra **o que** o bloco é (uma seção de resumo com 3 elemen
 ❌ `z.string().min(1, 'Campo obrigatorio.')`
 ✓ `z.string().min(1, 'Campo obrigatório.')`
 
+## Nomes de rótulos
+
+O nome de botão, coluna, aba, filtro e opção é o que o usuário lê para decidir. Cinco critérios:
+
+1. **Sem jargão de implementação.** `inactive` cru, `payload`, `flag` e nome de campo do banco não vão para a tela: `inactive` vira "Inativo".
+2. **Sem coloquialismo nem termo vago.** "Mexer", "Coisas", "Diversos" e "Ajustes" não dizem o que acontece.
+3. **Sem metáfora nem apelido.** Use o nome que o próprio sistema dá à coisa, não uma imagem dela.
+4. **Específico.** "Excluir registro" diz mais que "Remover"; "Salvar alterações" diz mais que "OK". Exceção: o `confirmLabel` de confirmação é só o verbo curto ("Excluir"), pois o título já diz o objeto.
+5. **Consistente.** Procure o termo já usado na tela vizinha e repita-o: o mesmo conceito tem o mesmo nome em toda parte (o projeto não tem um arquivo central de rótulos, então a busca é no código). Abrir é "Novo X" e enviar é "Criar X".
+
+Na dúvida, vence o termo que o usuário entenderia sem explicação e que caberia num documento formal, não num chat.
+
 ## Acessibilidade (a11y)
 
 Radix (via shadcn) dá a base de a11y — foco, ARIA, navegação por teclado. Mas as regressões comuns vêm de **remover** ou **ignorar** o que Radix já entrega. As regras abaixo são o mínimo para uma tela nova não degradar.

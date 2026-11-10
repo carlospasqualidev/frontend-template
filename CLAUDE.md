@@ -68,13 +68,14 @@ As regras que valem para toda tarefa ficam neste arquivo. As de cada área vivem
 | [`docs/conventions/filters-and-tables.md`](docs/conventions/filters-and-tables.md) | Antes de criar listagem, filtro, cabeçalho de tela com filtros ou `DataTable`                                  |
 | [`docs/dates.md`](docs/dates.md)                                                   | Antes de exibir, preencher, gravar ou filtrar data                                                             |
 | [`docs/claude/ui.md`](docs/claude/ui.md)                                           | Antes de escrever JSX, skeleton, carregamento, texto com acento, tabela larga, foco, ícone ou modal            |
+| [`docs/claude/usabilidade.md`](docs/claude/usabilidade.md)                         | Antes de criar formulário, lista, ação de item, seletor, anexo ou modal: o detalhe dos seis princípios         |
 | [`docs/claude/erros-e-seguranca.md`](docs/claude/erros-e-seguranca.md)             | Ao indexar por variável, logar/reportar erro, pôr dado na URL ou filtro, ou PII em toast, mock, story ou form  |
 | [`docs/claude/dependencias.md`](docs/claude/dependencias.md)                       | Antes de atualizar `@tanstack/*` ou Storybook, ou mexer em `overrides` do `pnpm-workspace.yaml`                |
 | [`docs/claude/estrutura-e-scripts.md`](docs/claude/estrutura-e-scripts.md)         | Antes de criar pasta ou arquivo novo em `src/`, ou rodar um script que não seja o `pnpm run check`             |
 
 ## Linguagem de código
 
-- Todo código-fonte em **inglês**.
+- Todo identificador em **inglês**: variável, função, parâmetro, tipo, constante, nome de arquivo de código em `src/`, rota, chave de query/cache, valor de enum e de aba na URL, chave de permissão. A única exceção é o texto que o usuário lê, em pt-BR.
 - `camelCase` para variáveis, funções e arquivos `.ts`/`.tsx` próprios.
 - `kebab-case` apenas em `components/ui/` (padrão shadcn).
 - Nomes claros e que revelem intenção. Sem abreviações desnecessárias.
@@ -165,6 +166,17 @@ PII (identificadores pessoais como nome completo e CPF, contato, credenciais e s
 - Husky + lint-staged rodam no `pre-commit` `eslint --fix` em ts/tsx/js/jsx e Prettier em json/css/md (o Prettier de ts/tsx fica no `format:check`). O `pre-push` roda `typecheck + test`. Não pule hooks (`--no-verify`) — se um teste/typecheck quebra, conserte; não bypasse.
 - Antes de empurrar manualmente, rode `pnpm run check` (lint + format:check + typecheck + test).
 
+## Facilitar sempre a vida do usuário final
+
+Em toda tela, escolha o caminho que dá menos trabalho a quem usa. Seis princípios, cada um com o componente que o resolve (detalhe, exemplo e anti-padrão em [`docs/claude/usabilidade.md`](docs/claude/usabilidade.md)):
+
+- **Atalho onde a escolha é previsível:** [`FieldShortcuts`](src/components/global/form/fieldShortcuts.tsx) (data de hoje, +7 dias, percentuais comuns).
+- **Ação indisponível fica visível, com o motivo:** `disabledReason` em [`RowActions`](src/components/global/rowActions/rowActions.tsx) (catálogo em `actions.tsx`), [`ActionMenu`](src/components/global/actionMenu/actionMenu.tsx) e [`FilePickerButton`](src/components/global/filePickerButton/filePickerButton.tsx).
+- **"Selecionar tudo" onde se marcam vários:** [`MultiSelect`](src/components/global/form/multiSelectPrimitive.tsx), já com "Selecionar tudo".
+- **Padrões sensatos:** `defaultHiddenColumnIds` no [`DataTable`](src/components/global/dataTable/dataTable.tsx); [`MirrorField`](src/components/global/form/mirrorField.tsx) para valor derivado que o usuário só lê, com visual de campo.
+- **Não perder o contexto:** [`useUnsavedChangesGuard`](src/hooks/useUnsavedChangesGuard.ts), `onRetry` no `DataTable` e visualizador de anexo ([`AttachmentRow`](src/components/global/attachmentRow/attachmentRow.tsx)), que não tira o usuário da tela.
+- **Menos cliques no caminho frequente:** salvar sempre visível em modal; busca no servidor com `minChars` ([`AsyncCombobox`](src/components/global/form/asyncCombobox.tsx)).
+
 ## Texto de interface (UI)
 
 Todo texto exposto ao usuário em **português brasileiro (pt-BR)**.
@@ -178,6 +190,8 @@ Todo texto exposto ao usuário em **português brasileiro (pt-BR)**.
 - **Copy de tela: o padrão é sem descrição.** Modal, sheet, card e página não ganham subtítulo por reflexo (`description` é opcional no `Modal`, `Card` e `PageHeader`): só escreva quando ela trouxer algo que título e campos não dizem (regra que muda a decisão, risco, irreversibilidade, formato, unidade).
   - **Não escreva:** subtítulo que repete o título ou lista o que a tela já mostra ("Escolha as colunas que vão na exportação"); aviso sob botão que narra o fluxo ("Salve o usuário para configurar…"); "Aqui você pode…", "Gerencie…", "Tudo o que você precisa…"; frase de efeito, travessão retórico, tom de marketing.
   - **Mantém:** validação e erro, aviso de risco, regra de negócio que o rótulo não revela, empty state que orienta o próximo passo, texto de acessibilidade (a `DialogDescription` exigida pelo Radix vai `sr-only`). Na dúvida, corte o que só repete e pergunte pelo resto.
+
+- **Nomes de rótulos:** o texto de botão, coluna, aba e opção segue cinco critérios e uma regra de desempate — detalhe em `docs/claude/ui.md`.
 
 ### Ordem das ações
 
@@ -228,7 +242,8 @@ Nada de spinner gigante nem skeleton genérico no lugar da tela: monte a estrutu
 
 Citação antiga por título ("`CLAUDE.md`, seção X") se resolve aqui. "Versão curta aqui" quer dizer que o título continua neste arquivo, só com a regra curta, e o texto inteiro está no arquivo indicado.
 
-- [`docs/claude/ui.md`](docs/claude/ui.md): Regras e Exemplo (de **JSX e markup — menos é mais**); Acentuação e codificação (evitar mojibake), Acessibilidade (a11y), Design responsivo e Loading e estados intermediários (versão curta aqui); Por quê; Padrões corretos (já no projeto — reuse antes de criar); Anti-padrões a evitar; Exceções legítimas.
+- [`docs/claude/ui.md`](docs/claude/ui.md): Regras e Exemplo (de **JSX e markup — menos é mais**); Acentuação e codificação (evitar mojibake), Acessibilidade (a11y), Design responsivo e Loading e estados intermediários (versão curta aqui); Nomes de rótulos (linha-resumo em **Texto de interface (UI)**); Por quê; Padrões corretos (já no projeto — reuse antes de criar); Anti-padrões a evitar; Exceções legítimas.
+- [`docs/claude/usabilidade.md`](docs/claude/usabilidade.md): os seis princípios de **Facilitar sempre a vida do usuário final** (versão curta aqui).
 - [`docs/claude/erros-e-seguranca.md`](docs/claude/erros-e-seguranca.md): Object injection — nunca indexe objeto/array com variável e LGPD e dados pessoais (PII), de **Segurança** (versão curta aqui).
 - [`docs/claude/dependencias.md`](docs/claude/dependencias.md): o Pin do router, de **Ambiente** (versão curta aqui).
 - [`docs/claude/estrutura-e-scripts.md`](docs/claude/estrutura-e-scripts.md): Estrutura de pastas; Scripts (versão curta dos scripts em **Ambiente**).

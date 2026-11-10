@@ -211,6 +211,8 @@ export function Field(props: FieldProps<...>) {
 />
 ```
 
+**Texto de confirmação:** a mesma operação usa o mesmo texto em toda tela. O título é uma pergunta ("Excluir registro?"); `confirmLabel` é só o verbo curto ("Excluir"), sem repetir o título; `cancelLabel` fica no padrão; `destructive` vale para tudo que apaga ou desfaz.
+
 O dialog fica aberto enquanto `onConfirm` resolve (botão com spinner via `loading`), fecha em sucesso e permanece aberto se a promise lançar — deixe o erro propagar pro interceptor do `api` (que já mostra o toast). A rejeição é só o sinal de "não deu certo": o `ConfirmDialog` a absorve (não vira rejeição solta no clique), então quem rejeita precisa já ter dado a resposta ao usuário (o toast do interceptor ou o `onError` da mutation). Com `useMutation`, use `mutateAsync` no `onConfirm`. Referência: [`screens/users/list/userActionDialog.tsx`](../../src/screens/users/list/userActionDialog.tsx).
 
 **Confirmação dupla para ações críticas:** Para ações mais sérias (bloquear/banir usuário, apagar dados sensíveis, reverter cobrança), exija uma confirmação adicional antes de executar. Padrões recomendados:

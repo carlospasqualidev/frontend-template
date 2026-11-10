@@ -100,6 +100,64 @@ describe('UrlTabs', () => {
     expect(router.state.location.search).toEqual({});
   });
 
+  describe('separador entre abas', () => {
+    it('desenha um pipe decorativo entre abas consecutivas, nunca antes da primeira', async () => {
+      const router = setupRouter('/');
+      render(<RouterProvider router={router} />);
+
+      const tablist = await screen.findByRole('tablist');
+      const pipes = tablist.querySelectorAll('span[aria-hidden="true"]');
+      expect(pipes).toHaveLength(2);
+      pipes.forEach((pipe) => expect(pipe).toHaveTextContent('|'));
+      expect(tablist.firstElementChild).toBe(
+        screen.getByRole('tab', { name: 'Perfil' })
+      );
+      expect(screen.getByRole('tab', { name: 'Segurança' })).toBe(
+        pipes[0]?.nextElementSibling
+      );
+    });
+
+    it('o pipe fica fora do teclado: sem foco e sem papel, a seta vai direto à próxima aba', async () => {
+      const router = setupRouter('/');
+      render(<RouterProvider router={router} />);
+      const user = userEvent.setup();
+
+      const tablist = await screen.findByRole('tablist');
+      tablist.querySelectorAll('span[aria-hidden="true"]').forEach((pipe) => {
+        expect(pipe).not.toHaveAttribute('tabindex');
+        expect(pipe).not.toHaveAttribute('role');
+      });
+      expect(screen.getAllByRole('tab')).toHaveLength(3);
+
+      await user.click(screen.getByRole('tab', { name: 'Perfil' }));
+      await user.keyboard('{ArrowRight}');
+
+      expect(screen.getByRole('tab', { name: 'Segurança' })).toHaveFocus();
+    });
+
+    it('com uma só aba não há pipe', async () => {
+      const rootRoute = createRootRoute({ component: () => <Outlet /> });
+      const indexRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/',
+        component: () => (
+          <UrlTabs
+            defaultValue="only"
+            items={[{ value: 'only', label: 'Única', content: <span>x</span> }]}
+          />
+        ),
+      });
+      const router = createRouter({
+        routeTree: rootRoute.addChildren([indexRoute]),
+        history: createMemoryHistory({ initialEntries: ['/'] }),
+      });
+      render(<RouterProvider router={router} />);
+
+      const tablist = await screen.findByRole('tablist');
+      expect(tablist.querySelector('[aria-hidden="true"]')).toBeNull();
+    });
+  });
+
   it('abre a aba em nova guia no clique do meio sem trocar a aba ativa', async () => {
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     const router = setupRouter('/');

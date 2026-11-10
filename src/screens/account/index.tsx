@@ -1,5 +1,3 @@
-import { Bell, CreditCard, Shield, UserCog } from 'lucide-react';
-
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
 import { Typography } from '@/components/ui/typography';
 import { BillingTab } from '@/screens/account/billing/billingTab';
@@ -28,30 +26,14 @@ export function AccountPage() {
       <UrlTabs
         defaultValue="profile"
         items={[
-          {
-            value: 'profile',
-            icon: <UserCog />,
-            label: 'Perfil',
-            content: <ProfileTab />,
-          },
-          {
-            value: 'security',
-            icon: <Shield />,
-            label: 'Segurança',
-            content: <SecurityTab />,
-          },
+          { value: 'profile', label: 'Perfil', content: <ProfileTab /> },
+          { value: 'security', label: 'Segurança', content: <SecurityTab /> },
           {
             value: 'notifications',
-            icon: <Bell />,
             label: 'Notificações',
             content: <NotificationsTab />,
           },
-          {
-            value: 'billing',
-            icon: <CreditCard />,
-            label: 'Pagamento',
-            content: <BillingTab />,
-          },
+          { value: 'billing', label: 'Pagamento', content: <BillingTab /> },
         ]}
       />
     </>

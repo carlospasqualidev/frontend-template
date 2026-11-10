@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { UserDetailSkeleton } from '@/screens/users/details/userDetailSkeleton';
 
 const TABS = [
-  { value: 'overview', icon: null, label: 'Visão geral' },
-  { value: 'roles', icon: null, label: 'Cargos' },
+  { value: 'overview', label: 'Visão geral' },
+  { value: 'roles', label: 'Cargos' },
 ];
 
 describe('UserDetailSkeleton', () => {
@@ -18,6 +18,14 @@ describe('UserDetailSkeleton', () => {
       'Cargos',
     ]);
     for (const tab of tabs) expect(tab).toBeDisabled();
+
+    // Como as abas reais: um pipe decorativo entre elas, sem ícone.
+    const pipes = container.querySelectorAll(
+      '[role="tablist"] > [aria-hidden]'
+    );
+    expect(pipes).toHaveLength(1);
+    expect(pipes[0]).toHaveTextContent('|');
+    expect(container.querySelector('[role="tab"] svg')).toBeNull();
 
     const titles = [
       ...container.querySelectorAll('[data-slot="card-title"]'),

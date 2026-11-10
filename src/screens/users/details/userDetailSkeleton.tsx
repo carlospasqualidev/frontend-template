@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from 'react';
+import { Fragment, type JSX, type ReactNode } from 'react';
 
 import { Card } from '@/components/global/card/card';
 import {
@@ -6,13 +6,13 @@ import {
   SkeletonText,
   SkeletonValue,
 } from '@/components/global/skeleton/skeleton';
+import { UrlTabsSeparator } from '@/components/global/tabs/urlTabs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Typography } from '@/components/ui/typography';
 
 export interface UserDetailSkeletonTab {
   value: string;
   label: string;
-  icon: ReactNode;
 }
 
 function FieldSkeleton({ label }: { label: string }) {
@@ -57,11 +57,13 @@ export function UserDetailSkeleton({
     <Tabs value={first?.value}>
       <div className="-mb-2 overflow-x-auto pb-2">
         <TabsList variant="line" className="w-max">
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} disabled>
-              {tab.icon}
-              {tab.label}
-            </TabsTrigger>
+          {tabs.map((tab, index) => (
+            <Fragment key={tab.value}>
+              {index > 0 && <UrlTabsSeparator />}
+              <TabsTrigger value={tab.value} disabled>
+                {tab.label}
+              </TabsTrigger>
+            </Fragment>
           ))}
         </TabsList>
       </div>

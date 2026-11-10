@@ -7,7 +7,7 @@ export default {
 };
 
 export const Default = () => (
-  <Card title="Linha do tempo">
+  <Card title="Atividade">
     <ActivityTimelineSkeleton />
   </Card>
 );

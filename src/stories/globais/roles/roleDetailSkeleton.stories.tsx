@@ -1,5 +1,3 @@
-import { Shield, Users } from 'lucide-react';
-
 import { RoleDetailSkeleton } from '@/screens/roles/details/roleDetailSkeleton';
 
 export default {
@@ -8,8 +6,8 @@ export default {
 };
 
 const TABS = [
-  { value: 'overview', icon: <Shield />, label: 'Visão geral' },
-  { value: 'users', icon: <Users />, label: 'Usuários' },
+  { value: 'overview', label: 'Visão geral' },
+  { value: 'users', label: 'Usuários' },
 ];
 
 /** O detalhe do cargo enquanto ele e os usuários dele carregam. */

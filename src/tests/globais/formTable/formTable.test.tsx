@@ -56,6 +56,11 @@ describe('FormTable (global)', () => {
     expect(wrapper).toHaveClass('overflow-hidden', 'border');
   });
 
+  it('ancora a célula do corpo no topo para o erro de campo não empurrar as vizinhas', () => {
+    renderTable();
+    expect(screen.getByRole('table')).toHaveClass('[&_td]:align-top');
+  });
+
   it('encaminha className para o container', () => {
     const { container } = render(
       <FormTable className="mt-4">

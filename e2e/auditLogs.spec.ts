@@ -328,7 +328,7 @@ test.describe('Atividade do usuário', () => {
     expect((await timeline).status()).toBe(200);
 
     const events = page
-      .locator('[data-slot="card"]', { hasText: 'Linha do tempo' })
+      .locator('[data-slot="card"]', { hasText: 'Atividade' })
       .locator('ol > li');
     await expect(events).toHaveCount(10);
     await expect(events.first()).toContainText(

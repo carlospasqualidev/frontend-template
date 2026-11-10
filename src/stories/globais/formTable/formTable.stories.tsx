@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@/components/global/formTable/formTable';
 import { Card } from '@/components/global/card/card';
+import { InputField } from '@/components/global/form/inputField';
 
 const meta = {
   title: 'Globais/FormTable',
@@ -73,6 +74,45 @@ export const Vitrine: Story = {
               <TableCell>Cu</TableCell>
               <TableCell>0,00000</TableCell>
               <TableCell>400,00000</TableCell>
+            </TableRow>
+          </TableBody>
+        </FormTable>
+      </Card>
+
+      <Card
+        title="Com erro de campo"
+        description="A célula do corpo fica ancorada no topo: o erro de um campo não empurra as colunas vizinhas."
+      >
+        <FormTable>
+          <FormTableHeader>
+            <TableHead className="min-w-56">Método</TableHead>
+            <TableHead className="w-40">Unidade de medida</TableHead>
+            <TableHead className="w-24">Casas decimais</TableHead>
+          </FormTableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>
+                <InputField
+                  label="Método"
+                  srOnlyLabel
+                  defaultValue=""
+                  errors={{ message: 'Informe o nome do método.' }}
+                />
+              </TableCell>
+              <TableCell>
+                <InputField
+                  label="Unidade de medida"
+                  srOnlyLabel
+                  defaultValue="mg/kg"
+                />
+              </TableCell>
+              <TableCell>
+                <InputField
+                  label="Casas decimais"
+                  srOnlyLabel
+                  defaultValue="2"
+                />
+              </TableCell>
             </TableRow>
           </TableBody>
         </FormTable>

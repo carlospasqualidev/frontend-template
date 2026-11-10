@@ -8,7 +8,7 @@ import {
 import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { Check, Copy, Shield, ShieldOff, Trash2, Users, X } from 'lucide-react';
+import { Check, Copy, ShieldOff, Trash2, X } from 'lucide-react';
 
 import { Alert } from '@/components/global/alert/alert';
 import { Button } from '@/components/global/button/button';
@@ -102,10 +102,8 @@ function detailTabs({
   canReadUsers,
 }: DetailPermissions): RoleDetailSkeletonTab[] {
   return [
-    { value: 'overview', icon: <Shield />, label: 'Visão geral' },
-    ...(canReadUsers
-      ? [{ value: 'users', icon: <Users />, label: 'Usuários' }]
-      : []),
+    { value: 'overview', label: 'Visão geral' },
+    ...(canReadUsers ? [{ value: 'users', label: 'Usuários' }] : []),
   ];
 }
 

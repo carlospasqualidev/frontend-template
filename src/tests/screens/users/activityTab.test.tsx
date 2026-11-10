@@ -99,7 +99,7 @@ describe('ActivityTab', () => {
     renderActivity();
 
     // O card (título e descrição) já aparece; só os itens ficam no esqueleto.
-    const card = (await screen.findByText('Linha do tempo')).closest(
+    const card = (await screen.findByText('Atividade')).closest(
       '[data-slot="card"]'
     );
     expect(card).not.toBeNull();

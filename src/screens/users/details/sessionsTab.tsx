@@ -38,7 +38,7 @@ export function SessionsTab({ user }: SessionsTabProps) {
         />
       ) : (
         <Card
-          title="Sessões ativas"
+          title="Sessões"
           description="Encerre sessões suspeitas para forçar o reenvio do login."
         >
           <ul className="space-y-3">

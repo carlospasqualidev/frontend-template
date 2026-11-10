@@ -1,5 +1,3 @@
-import { Activity, MonitorSmartphone, Shield, UserCog } from 'lucide-react';
-
 import { UserDetailSkeleton } from '@/screens/users/details/userDetailSkeleton';
 
 export default {
@@ -8,10 +6,10 @@ export default {
 };
 
 const TABS = [
-  { value: 'overview', icon: <UserCog />, label: 'Visão geral' },
-  { value: 'activity', icon: <Activity />, label: 'Atividade' },
-  { value: 'roles', icon: <Shield />, label: 'Cargos' },
-  { value: 'sessions', icon: <MonitorSmartphone />, label: 'Sessões' },
+  { value: 'overview', label: 'Visão geral' },
+  { value: 'activity', label: 'Atividade' },
+  { value: 'roles', label: 'Cargos' },
+  { value: 'sessions', label: 'Sessões' },
 ];
 
 /** O detalhe do usuário enquanto o cadastro carrega. */

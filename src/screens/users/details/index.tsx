@@ -1,17 +1,14 @@
-import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import {
-  Activity,
-  Check,
-  MonitorSmartphone,
-  Shield,
-  Trash2,
-  UserCog,
-  UserX,
-  X,
-} from 'lucide-react';
+import { Check, Trash2, UserX, X } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
 import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
@@ -49,6 +46,7 @@ import {
   invalidateRoleMemberships,
   storeSavedUser,
   useDeleteUser,
+  useSetUserActive,
 } from '@/screens/users/utils/userMutations';
 import { userKeys } from '@/services/users/queryKeys';
 import { type CompanyUser } from '@/services/users/types';
@@ -91,12 +89,10 @@ function detailTabs({
   canReadAudit,
 }: DetailPermissions): UserDetailSkeletonTab[] {
   return [
-    { value: 'overview', icon: <UserCog />, label: 'Visão geral' },
-    ...(canReadAudit
-      ? [{ value: 'activity', icon: <Activity />, label: 'Atividade' }]
-      : []),
-    { value: 'roles', icon: <Shield />, label: 'Cargos' },
-    { value: 'sessions', icon: <MonitorSmartphone />, label: 'Sessões' },
+    { value: 'overview', label: 'Visão geral' },
+    ...(canReadAudit ? [{ value: 'activity', label: 'Atividade' }] : []),
+    { value: 'roles', label: 'Cargos' },
+    { value: 'sessions', label: 'Sessões' },
   ];
 }
 
@@ -330,6 +326,29 @@ function UserDetails({
 
   const isSaving = profileMutation.isPending || rolesMutation.isPending;
 
+  // A confirmação de bloquear/desbloquear é irmã das abas: a aba só a abre, e
+  // trocar de aba com ela aberta não a fecha.
+  const setActive = useSetUserActive();
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const statusTriggerRef = useRef<HTMLElement | null>(null);
+
+  // Sem `trigger`, o foco cairia no `body`: volta ao botão que abriu, ou ao
+  // painel da aba ativa se a aba trocou e o botão desmontou.
+  const returnFocusToStatusTrigger = (event: Event) => {
+    event.preventDefault();
+    const trigger = statusTriggerRef.current;
+    const target = trigger?.isConnected
+      ? trigger
+      : document.querySelector<HTMLElement>(
+          '[role="tabpanel"][data-state="active"]'
+        );
+    target?.focus();
+  };
+  const statusCopy = userActionCopy(
+    user.isActive ? 'block' : 'unblock',
+    user.name
+  );
+
   const tabContent = new Map<string, ReactNode>([
     [
       'overview',
@@ -338,6 +357,10 @@ function UserDetails({
         control={control}
         readOnly={readOnly}
         onSubmit={submitForm}
+        onRequestStatusChange={(trigger) => {
+          statusTriggerRef.current = trigger;
+          setStatusDialogOpen(true);
+        }}
       />,
     ],
     ['activity', <ActivityTab userId={user.id} />],
@@ -392,6 +415,22 @@ function UserDetails({
           ...tab,
           content: tabContent.get(tab.value),
         }))}
+      />
+
+      <ConfirmDialog
+        open={statusDialogOpen}
+        setOpen={setStatusDialogOpen}
+        onCloseAutoFocus={returnFocusToStatusTrigger}
+        title={statusCopy.title}
+        description={statusCopy.description}
+        confirmLabel={statusCopy.confirmLabel}
+        destructive={statusCopy.destructive}
+        onConfirm={async () => {
+          await setActive.mutateAsync({
+            userId: user.id,
+            isActive: !user.isActive,
+          });
+        }}
       />
     </>
   );

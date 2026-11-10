@@ -140,7 +140,7 @@ export function UsersTab({
 
   return (
     <Card
-      title="Quem tem o cargo"
+      title="Usuários"
       description={readOnly ? undefined : 'A troca vale depois de salvar.'}
     >
       <div className="space-y-4">
@@ -191,7 +191,7 @@ export function UsersTab({
             <TableBody>
               {rows.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>
+                  <TableCell className="align-middle!">
                     <div className="flex items-center gap-3">
                       <UserAvatar name={user.name} imageUrl={user.image} />
                       <Typography as="span" variant="small">
@@ -199,12 +199,12 @@ export function UsersTab({
                       </Typography>
                     </div>
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
+                  <TableCell className="align-middle!">{user.email}</TableCell>
+                  <TableCell className="align-middle!">
                     <UserStatusBadge isActive={user.isActive} />
                   </TableCell>
                   {!readOnly && (
-                    <TableCell className="text-center">
+                    <TableCell className="text-center align-middle!">
                       <Button
                         type="button"
                         variant="ghost"
@@ -220,7 +220,10 @@ export function UsersTab({
               ))}
               {Array.from({ length: loadingRows }, (_, index) => (
                 <TableRow key={`loading-${index}`} aria-busy>
-                  <TableCell colSpan={readOnly ? 3 : 4}>
+                  <TableCell
+                    colSpan={readOnly ? 3 : 4}
+                    className="align-middle!"
+                  >
                     <SkeletonText className="w-48" />
                   </TableCell>
                 </TableRow>

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RoleDetailSkeleton } from '@/screens/roles/details/roleDetailSkeleton';
 
-const TABS = [{ value: 'overview', label: 'Visão geral', icon: null }];
+const TABS = [{ value: 'overview', label: 'Visão geral' }];
 const WRITE_RULE =
   'Marcar uma ação de escrita marca também a de visualizar do mesmo grupo.';
 

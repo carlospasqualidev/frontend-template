@@ -4,13 +4,10 @@ import { UserCheck, UserX } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
 import { Card } from '@/components/global/card/card';
-import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
-import { userActionCopy } from '@/screens/users/utils/userActionCopy';
 import { type UserFormValues } from '@/screens/users/utils/userForm';
 import { UserFormFields } from '@/screens/users/utils/userFormFields';
-import { useSetUserActive } from '@/screens/users/utils/userMutations';
 import { UserStatusBadge } from '@/screens/users/utils/userStatusBadge';
 import { type CompanyUser } from '@/services/users/types';
 
@@ -32,39 +29,17 @@ function DefinitionItem({ label, children }: DefinitionItemProps) {
   );
 }
 
-/** Bloquear/desbloquear no cabeçalho do card "Situação", com confirmação. */
-function UserStatusAction({ user }: { user: CompanyUser }) {
-  const setActive = useSetUserActive();
-  const copy = userActionCopy(user.isActive ? 'block' : 'unblock', user.name);
-
-  return (
-    <ConfirmDialog
-      title={copy.title}
-      description={copy.description}
-      confirmLabel={copy.confirmLabel}
-      destructive={copy.destructive}
-      onConfirm={async () => {
-        await setActive.mutateAsync({
-          userId: user.id,
-          isActive: !user.isActive,
-        });
-      }}
-      trigger={
-        <Button type="button" variant="outline">
-          {user.isActive ? <UserX /> : <UserCheck />}
-          {user.isActive ? 'Bloquear' : 'Desbloquear'}
-        </Button>
-      }
-    />
-  );
-}
-
 interface OverviewTabProps {
   user: CompanyUser;
   control: Control<UserFormValues>;
   /** Sem `backoffice.users.update`: campos em leitura e sem bloquear. */
   readOnly: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  /**
+   * Abre a confirmação de bloquear/desbloquear, que vive na tela, fora da aba;
+   * recebe o botão que abriu, para o foco voltar a ele ao fechar.
+   */
+  onRequestStatusChange: (trigger: HTMLElement) => void;
 }
 
 /**
@@ -76,6 +51,7 @@ export function OverviewTab({
   control,
   readOnly,
   onSubmit,
+  onRequestStatusChange,
 }: OverviewTabProps) {
   return (
     <form
@@ -87,7 +63,18 @@ export function OverviewTab({
 
       <Card
         title="Situação"
-        action={readOnly ? undefined : <UserStatusAction user={user} />}
+        action={
+          readOnly ? undefined : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={(event) => onRequestStatusChange(event.currentTarget)}
+            >
+              {user.isActive ? <UserX /> : <UserCheck />}
+              {user.isActive ? 'Bloquear' : 'Desbloquear'}
+            </Button>
+          )
+        }
       >
         <dl className="grid gap-4 sm:grid-cols-2">
           <DefinitionItem label="Status">

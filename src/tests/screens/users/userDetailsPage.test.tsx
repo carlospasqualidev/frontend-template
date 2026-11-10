@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -959,6 +959,76 @@ describe('UserDetailsPage — ações', () => {
     expect(
       screen.getByRole('button', { name: 'Desbloquear' })
     ).toBeInTheDocument();
+  });
+
+  // A confirmação é irmã das abas: trocar de aba com ela aberta não a perde.
+  it('a confirmação de bloquear sobrevive à troca de aba', async () => {
+    const user = userEvent.setup();
+    const { router } = renderDetail();
+
+    await user.click(await screen.findByRole('button', { name: 'Bloquear' }));
+    await screen.findByRole('alertdialog');
+
+    // Com o diálogo aberto o ponteiro não alcança as abas; o que muda a aba é
+    // a navegação do roteador para `?tab=` (link, voltar do navegador).
+    await act(async () => {
+      await router.navigate({ to: '.', search: { tab: 'roles' } });
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('tab', { name: 'Cargos', hidden: true })
+      ).toHaveAttribute('data-state', 'active')
+    );
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(setUserActive).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'Cancelar',
+      (user: UserEvent) =>
+        user.click(screen.getByRole('button', { name: 'Cancelar' })),
+    ],
+    ['Esc', (user: UserEvent) => user.keyboard('{Escape}')],
+  ])(
+    '%s devolve o foco ao botão que abriu a confirmação',
+    async (_name, close) => {
+      const user = userEvent.setup();
+      renderDetail();
+
+      const trigger = await screen.findByRole('button', { name: 'Bloquear' });
+      await user.click(trigger);
+      await screen.findByRole('alertdialog');
+      await close(user);
+
+      await waitFor(() =>
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      );
+      await waitFor(() => expect(trigger).toHaveFocus());
+    }
+  );
+
+  it('com a aba trocada e o botão desmontado, o foco vai ao painel da aba', async () => {
+    const user = userEvent.setup();
+    const { router } = renderDetail();
+
+    await user.click(await screen.findByRole('button', { name: 'Bloquear' }));
+    await screen.findByRole('alertdialog');
+    await act(async () => {
+      await router.navigate({ to: '.', search: { tab: 'roles' } });
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('tab', { name: 'Cargos', hidden: true })
+      ).toHaveAttribute('data-state', 'active')
+    );
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    );
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus());
   });
 
   // O status aparece na aba "Usuários" de cada cargo da pessoa.

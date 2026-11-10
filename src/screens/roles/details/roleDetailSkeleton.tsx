@@ -1,10 +1,11 @@
-import type { JSX, ReactNode } from 'react';
+import { Fragment, type JSX } from 'react';
 
 import { Card } from '@/components/global/card/card';
 import {
   SkeletonText,
   SkeletonValue,
 } from '@/components/global/skeleton/skeleton';
+import { UrlTabsSeparator } from '@/components/global/tabs/urlTabs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Typography } from '@/components/ui/typography';
 import { PermissionTreeSkeleton } from '@/screens/roles/utils/permissionTreeSkeleton';
@@ -12,7 +13,6 @@ import { PermissionTreeSkeleton } from '@/screens/roles/utils/permissionTreeSkel
 export interface RoleDetailSkeletonTab {
   value: string;
   label: string;
-  icon: ReactNode;
 }
 
 function FieldSkeleton({
@@ -66,11 +66,13 @@ export function RoleDetailSkeleton({
     <Tabs value={first?.value}>
       <div className="-mb-2 overflow-x-auto pb-2">
         <TabsList variant="line" className="w-max">
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} disabled>
-              {tab.icon}
-              {tab.label}
-            </TabsTrigger>
+          {tabs.map((tab, index) => (
+            <Fragment key={tab.value}>
+              {index > 0 && <UrlTabsSeparator />}
+              <TabsTrigger value={tab.value} disabled>
+                {tab.label}
+              </TabsTrigger>
+            </Fragment>
           ))}
         </TabsList>
       </div>

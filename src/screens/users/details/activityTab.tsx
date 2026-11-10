@@ -32,7 +32,7 @@ interface ActivityTabProps {
 
 const PAGE_SIZE = 10;
 
-const TIMELINE_TITLE = 'Linha do tempo';
+const TIMELINE_TITLE = 'Atividade';
 
 // Ícone de cada ação da trilha (Map: sem indexar objeto por variável).
 const ACTION_ICON = new Map<string, LucideIcon>([

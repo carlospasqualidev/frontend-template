@@ -21,6 +21,22 @@ interface IUrlTabs {
 }
 
 /**
+ * Pipe entre abas consecutivas (nunca antes da primeira). Decorativo: fora da
+ * navegação por teclado e do leitor de tela. Os esqueletos de tela com abas
+ * usam o mesmo, para não haver salto de layout.
+ */
+export function UrlTabsSeparator(): React.JSX.Element {
+  return (
+    <span
+      aria-hidden
+      className="self-center px-0.5 text-muted-foreground/40 select-none"
+    >
+      |
+    </span>
+  );
+}
+
+/**
  * Abas com valor ativo sincronizado a um search param da URL.
  *
  * Quando `value === defaultValue`, a chave é removida da URL (deixa a aba
@@ -81,36 +97,38 @@ export function UrlTabs({
           aba ativa não ser cortado pelo overflow, sem alterar o ritmo vertical. */}
       <div className="-mb-2 overflow-x-auto pb-2">
         <TabsList variant="line" className={cn('w-max', listClassName)}>
-          {items.map((item) => (
-            <TabsTrigger
-              key={item.value}
-              value={item.value}
-              onClick={(event) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey) {
-                  // Mantém a aba atual e abre a clicada em nova guia.
-                  event.preventDefault();
-                  openInNewTab(item.value);
-                }
-              }}
-              onAuxClick={(event) => {
-                // Botão do meio (scroll) → nova guia.
-                if (event.button === 1) {
-                  event.preventDefault();
-                  openInNewTab(item.value);
-                }
-              }}
-              onMouseDown={(event) => {
-                const opensNewTab =
-                  event.button === 0 && (event.metaKey || event.shiftKey);
-                // Botão do meio: evita o cursor de autoscroll. Cmd/Shift+clique:
-                // o Radix troca a aba já no mousedown (só poupa o Ctrl+clique),
-                // e esses cliques só abrem a nova guia, no `onClick`.
-                if (event.button === 1 || opensNewTab) event.preventDefault();
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </TabsTrigger>
+          {items.map((item, index) => (
+            <React.Fragment key={item.value}>
+              {index > 0 && <UrlTabsSeparator />}
+              <TabsTrigger
+                value={item.value}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey) {
+                    // Mantém a aba atual e abre a clicada em nova guia.
+                    event.preventDefault();
+                    openInNewTab(item.value);
+                  }
+                }}
+                onAuxClick={(event) => {
+                  // Botão do meio (scroll) → nova guia.
+                  if (event.button === 1) {
+                    event.preventDefault();
+                    openInNewTab(item.value);
+                  }
+                }}
+                onMouseDown={(event) => {
+                  const opensNewTab =
+                    event.button === 0 && (event.metaKey || event.shiftKey);
+                  // Botão do meio: evita o cursor de autoscroll. Cmd/Shift+clique:
+                  // o Radix troca a aba já no mousedown (só poupa o Ctrl+clique),
+                  // e esses cliques só abrem a nova guia, no `onClick`.
+                  if (event.button === 1 || opensNewTab) event.preventDefault();
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            </React.Fragment>
           ))}
         </TabsList>
       </div>

@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import {
-  Activity,
-  Bell,
-  CreditCard,
-  KeyRound,
-  Plug,
-  Receipt,
-  Shield,
-  UserCog,
-  Users,
-} from 'lucide-react';
+import { Activity, UserCog } from 'lucide-react';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -35,7 +25,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Abas com o valor ativo sincronizado a um search param da URL (`?tab=...`). Quando o valor é o `defaultValue`, a chave é removida (mantém a URL limpa). A lista rola horizontalmente quando não cabe na largura (responsivo, sem esconder abas) e cada aba pode ser aberta em nova guia do navegador com o clique do meio (scroll) ou Ctrl/Cmd/Shift+clique.',
+          'Abas com o valor ativo sincronizado a um search param da URL (`?tab=...`). Quando o valor é o `defaultValue`, a chave é removida (mantém a URL limpa). As abas são separadas por um pipe decorativo e, por padrão, sem ícone. A lista rola horizontalmente quando não cabe na largura (responsivo, sem esconder abas) e cada aba pode ser aberta em nova guia do navegador com o clique do meio (scroll) ou Ctrl/Cmd/Shift+clique.',
       },
     },
   },
@@ -67,14 +57,13 @@ export const Vitrine: Story = {
     <div className="grid gap-6">
       <Card
         title="Padrão de página com abas"
-        description="Ícone + label no trigger, conteúdo correspondente abaixo. Sincroniza com `?tab=...` (a aba padrão fica sem param na URL)."
+        description="Rótulo no trigger, pipe entre as abas e conteúdo correspondente abaixo. Sincroniza com `?tab=...` (a aba padrão fica sem param na URL)."
       >
         <UrlTabs
           defaultValue="profile"
           items={[
             {
               value: 'profile',
-              icon: <UserCog />,
               label: 'Perfil',
               content: (
                 <Typography variant="muted">
@@ -84,7 +73,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'security',
-              icon: <Shield />,
               label: 'Segurança',
               content: (
                 <Typography variant="muted">
@@ -94,7 +82,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'notifications',
-              icon: <Bell />,
               label: 'Notificações',
               content: (
                 <Typography variant="muted">
@@ -104,7 +91,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'billing',
-              icon: <Receipt />,
               label: 'Pagamento',
               content: (
                 <Typography variant="muted">
@@ -117,8 +103,8 @@ export const Vitrine: Story = {
       </Card>
 
       <Card
-        title="Sem ícones"
-        description="Os ícones são opcionais — útil quando as labels já são curtas e auto-explicativas."
+        title="Com ícone (opcional)"
+        description="O `icon` continua aceito na API e é desenhado antes do rótulo, mas o padrão das telas é sem ícone."
       >
         <UrlTabs
           defaultValue="overview"
@@ -126,6 +112,7 @@ export const Vitrine: Story = {
           items={[
             {
               value: 'overview',
+              icon: <UserCog />,
               label: 'Visão geral',
               content: (
                 <Typography variant="muted">
@@ -135,6 +122,7 @@ export const Vitrine: Story = {
             },
             {
               value: 'activity',
+              icon: <Activity />,
               label: 'Atividade',
               content: (
                 <Typography variant="muted">
@@ -156,7 +144,6 @@ export const Vitrine: Story = {
           items={[
             {
               value: 'general',
-              icon: <UserCog />,
               label: 'Geral',
               content: (
                 <Typography variant="muted">Configurações gerais.</Typography>
@@ -164,7 +151,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'members',
-              icon: <Users />,
               label: 'Membros',
               content: (
                 <Typography variant="muted">Membros do espaço.</Typography>
@@ -172,7 +158,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'security',
-              icon: <Shield />,
               label: 'Segurança',
               content: (
                 <Typography variant="muted">Políticas de acesso.</Typography>
@@ -180,7 +165,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'access',
-              icon: <KeyRound />,
               label: 'Chaves de acesso',
               content: (
                 <Typography variant="muted">Tokens e chaves de API.</Typography>
@@ -188,7 +172,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'integrations',
-              icon: <Plug />,
               label: 'Integrações',
               content: (
                 <Typography variant="muted">Apps conectados.</Typography>
@@ -196,7 +179,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'activity',
-              icon: <Activity />,
               label: 'Atividade',
               content: (
                 <Typography variant="muted">Eventos recentes.</Typography>
@@ -204,7 +186,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'billing',
-              icon: <Receipt />,
               label: 'Faturamento',
               content: (
                 <Typography variant="muted">Plano e faturas.</Typography>
@@ -212,7 +193,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'payment',
-              icon: <CreditCard />,
               label: 'Métodos de pagamento',
               content: (
                 <Typography variant="muted">Cartões e cobrança.</Typography>
@@ -220,7 +200,6 @@ export const Vitrine: Story = {
             },
             {
               value: 'notifications',
-              icon: <Bell />,
               label: 'Notificações',
               content: (
                 <Typography variant="muted">Preferências de aviso.</Typography>
@@ -270,13 +249,11 @@ function ConfirmBeforeChangeDemo() {
         items={[
           {
             value: 'profile',
-            icon: <UserCog />,
             label: 'Perfil',
             content: <DirtyTabContent />,
           },
           {
             value: 'security',
-            icon: <Shield />,
             label: 'Segurança',
             content: (
               <Typography variant="muted">

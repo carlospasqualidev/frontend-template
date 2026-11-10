@@ -17,6 +17,23 @@ describe('useDataTableQuery', () => {
     expect(result.current.tableProps.pageSize).toBe(100);
   });
 
+  it('`tableProps.sorting` acompanha a ordenação escolhida', () => {
+    const { result } = renderHook(() =>
+      useDataTableQuery({ defaultSorting: [{ id: 'name', desc: false }] })
+    );
+    expect(result.current.tableProps.sorting).toEqual([
+      { id: 'name', desc: false },
+    ]);
+
+    act(() =>
+      result.current.tableProps.onSortingChange([{ id: 'email', desc: true }])
+    );
+
+    expect(result.current.tableProps.sorting).toEqual([
+      { id: 'email', desc: true },
+    ]);
+  });
+
   it('trocar itens por página grava no storage e volta para a primeira página', () => {
     const { result } = renderHook(() => useDataTableQuery());
 

@@ -45,6 +45,21 @@ describe('validateDataTableSearch', () => {
     );
   });
 
+  it('`sort` inválido é descartado sem derrubar page e filters', () => {
+    const filters = { status: 'active' };
+
+    expect(validateDataTableSearch({ page: 2, sort: 'abc', filters })).toEqual({
+      page: 2,
+      filters,
+    });
+    expect(
+      validateDataTableSearch(
+        { byUserPage: 2, byUserSort: [{ id: 1 }], byUserFilters: filters },
+        'byUser'
+      )
+    ).toEqual({ byUserPage: 2, byUserFilters: filters });
+  });
+
   it('reverte para vazio se a URL contém algo inválido', () => {
     expect(validateDataTableSearch({ page: 'abc' })).toEqual({});
     expect(validateDataTableSearch({ sort: 'invalid' })).toEqual({});

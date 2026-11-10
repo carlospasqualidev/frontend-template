@@ -16,7 +16,11 @@ import {
   MENU_COLUMN_ID,
   withColumnVisibilityMenu,
 } from './columnVisibilityMenu';
-import { dataTableFeatures, type DataTableColumnDef } from './tableFeatures';
+import {
+  dataTableFeatures,
+  type DataTableColumn,
+  type DataTableColumnDef,
+} from './tableFeatures';
 import { isPageSizeOption, PAGE_SIZE_OPTIONS } from './pageSizeStorage';
 import { useColumnVisibility } from './useColumnVisibility';
 import {
@@ -93,6 +97,25 @@ function hideableColumnIds<TData extends RowData>(
   });
 }
 
+/**
+ * `aria-sort` do `<th>`: o leitor de tela anuncia a direção da coluna ordenada.
+ * Só em coluna que ordena: um `sort` na URL para coluna com `enableSorting:
+ * false` não deve anunciar uma ordenação que a tela não oferece.
+ */
+function ariaSortOf<TData extends RowData>(
+  column: DataTableColumn<TData>
+): 'ascending' | 'descending' | undefined {
+  if (!column.getCanSort()) return undefined;
+  switch (column.getIsSorted()) {
+    case 'asc':
+      return 'ascending';
+    case 'desc':
+      return 'descending';
+    default:
+      return undefined;
+  }
+}
+
 type DataTablePaginationProps =
   | {
       /** Remove o rodapé de paginação (tabela com tudo em memória). */
@@ -140,6 +163,12 @@ type DataTableBaseProps<TData extends RowData> = {
   /** Mensagem exibida quando não há resultados. */
   emptyMessage?: string;
   /**
+   * Ordenação atual, **controlada** por fora (ex.: o `sort` da URL, já fiado em
+   * `tableProps` pelos hooks). O indicador do cabeçalho e o `aria-sort` seguem
+   * este valor. Sem ela, a tabela guarda a ordenação sozinha.
+   */
+  sorting?: SortingState;
+  /**
    * Chamado quando o usuário clica num cabeçalho ordenável (`SortableHeader`).
    * Use o estado de ordenação para refazer a busca no backend (a tabela não
    * ordena localmente).
@@ -169,6 +198,12 @@ type DataTableBaseProps<TData extends RowData> = {
    */
   onRowClick?: (row: TData) => void;
   /**
+   * Decide por linha se `onRowClick` vale. Falso: a linha não ganha `role`,
+   * foco por teclado nem cursor de clique e não dispara `onRowClick`. Sem a
+   * prop, toda linha é clicável quando há `onRowClick`. Não afeta `getRowHref`.
+   */
+  isRowClickable?: (row: TData) => boolean;
+  /**
    * URL de destino da linha (ex.: `/users/${row.id}`). Complementa `onRowClick`
    * para dar à linha o comportamento de um link nativo: clique do meio (scroll)
    * ou Ctrl/Cmd/Shift+clique abrem a URL em nova aba; o clique normal continua
@@ -197,6 +232,23 @@ type DataTableBaseProps<TData extends RowData> = {
    * em estado inconsistente.
    */
   isLoading?: boolean;
+  /**
+   * Id estável de cada linha (ex.: `(row) => row.id`). Sem ele, o TanStack usa
+   * o índice da linha na página, e a linha 0 da página 2 herdaria a marca da
+   * linha 0 da página 1. Com seleção controlada, passe sempre: é por este id que
+   * `rowSelection` identifica as linhas marcadas. Ids repetidos marcam juntos.
+   */
+  getRowId?: (row: TData, index: number) => string;
+  /**
+   * Seleção atual, **controlada** por fora (`{ [rowId]: true }`, ids vindos de
+   * `getRowId`). Com ela, a tabela reflete o valor recebido, avisa a mudança e
+   * não guarda cópia própria. A tabela **não** limpa a seleção ao paginar,
+   * filtrar ou ordenar: quem limpa é o consumidor. Sem ela, a seleção fica num
+   * estado interno.
+   */
+  rowSelection?: RowSelectionState;
+  /** Chamado a cada marcar/desmarcar com a seleção inteira nova. */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
   /**
    * Guarda a escolha do menu "Configurar colunas" **neste navegador**
    * (`localStorage`) sob esta chave — use um identificador único e estável por
@@ -255,7 +307,12 @@ export function DataTable<TData extends RowData>({
   onPageSizeChange,
   rowCount,
   emptyMessage = 'Nenhum resultado.',
+  sorting: controlledSorting,
   onSortingChange,
+  isRowClickable,
+  getRowId,
+  rowSelection: controlledRowSelection,
+  onRowSelectionChange,
   filters,
   onSearch,
   defaultFilterValues,
@@ -272,8 +329,13 @@ export function DataTable<TData extends RowData>({
   onColumnVisibilityChange,
   hidePagination = false,
 }: DataTableProps<TData>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>(
+    []
+  );
+  const [internalRowSelection, setInternalRowSelection] =
+    React.useState<RowSelectionState>({});
+  const sorting = controlledSorting ?? internalSorting;
+  const rowSelection = controlledRowSelection ?? internalRowSelection;
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
   const isVisibilityControlled = controlledVisibility !== undefined;
   const [storedVisibility, setStoredVisibility] = useColumnVisibility(
@@ -328,10 +390,18 @@ export function DataTable<TData extends RowData>({
     manualSorting: true,
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
-      setSorting(next);
+      // Controlada, quem guarda é o consumidor: gravar aqui criaria uma
+      // segunda fonte da verdade que divergiria da URL.
+      if (controlledSorting === undefined) setInternalSorting(next);
       onSortingChange?.(next);
     },
-    onRowSelectionChange: setRowSelection,
+    getRowId,
+    onRowSelectionChange: (updater) => {
+      const next =
+        typeof updater === 'function' ? updater(rowSelection) : updater;
+      if (controlledRowSelection === undefined) setInternalRowSelection(next);
+      onRowSelectionChange?.(next);
+    },
     onExpandedChange: setExpanded,
     onColumnVisibilityChange: handleColumnVisibilityChange,
     state: {
@@ -368,7 +438,11 @@ export function DataTable<TData extends RowData>({
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
                   return (
-                    <TableHead key={header.id} className={meta?.className}>
+                    <TableHead
+                      key={header.id}
+                      className={meta?.className}
+                      aria-sort={ariaSortOf(header.column)}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -410,7 +484,9 @@ export function DataTable<TData extends RowData>({
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const href = getRowHref?.(row.original);
-                const interactive = !!onRowClick || !!href;
+                const clickable =
+                  !!onRowClick && (isRowClickable?.(row.original) ?? true);
+                const interactive = clickable || !!href;
 
                 const openInNewTab = () => {
                   if (href) {
@@ -439,7 +515,7 @@ export function DataTable<TData extends RowData>({
                                 openInNewTab();
                                 return;
                               }
-                              onRowClick?.(row.original);
+                              if (clickable) onRowClick?.(row.original);
                             }
                           : undefined
                       }
@@ -471,12 +547,12 @@ export function DataTable<TData extends RowData>({
                               if (event.target !== event.currentTarget) return;
                               if (event.key === 'Enter' || event.key === ' ') {
                                 event.preventDefault();
-                                onRowClick?.(row.original);
+                                if (clickable) onRowClick?.(row.original);
                               }
                             }
                           : undefined
                       }
-                      role={href ? 'link' : onRowClick ? 'button' : undefined}
+                      role={href ? 'link' : clickable ? 'button' : undefined}
                       tabIndex={interactive ? 0 : undefined}
                       className={cn(
                         interactive &&

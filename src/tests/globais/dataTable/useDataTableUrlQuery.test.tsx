@@ -257,6 +257,27 @@ describe('useDataTableUrlQuery', () => {
     expect(search.sort).toEqual([{ id: 'email', desc: false }]);
   });
 
+  it('`tableProps.sorting` espelha o `sort` da URL', () => {
+    search = { sort: [{ id: 'name', desc: true }] };
+    const { result } = renderHook(() => useDataTableUrlQuery());
+
+    expect(result.current.tableProps.sorting).toEqual([
+      { id: 'name', desc: true },
+    ]);
+  });
+
+  it.each([
+    ['texto solto (`?sort=abc`)', 'abc'],
+    ['objeto sem colchetes', { id: 'name', desc: true }],
+    ['`id` que não é texto', [{ id: 1 }]],
+  ])('`sort` inválido na URL (%s) vira `[]` e não quebra', (_name, invalid) => {
+    search = { sort: invalid };
+    const { result } = renderHook(() => useDataTableUrlQuery());
+
+    expect(result.current.query.sort).toEqual([]);
+    expect(result.current.tableProps.sorting).toEqual([]);
+  });
+
   // O hook não pode engolir params de outras coisas da rota (aba ativa, etc.).
   it('preserva os demais search params da rota', () => {
     search = { tab: 'ativos' };

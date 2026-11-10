@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   type ColumnVisibilityState,
+  type RowSelectionState,
   type SortingState,
 } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -573,6 +574,99 @@ function ControlledColumnVisibilityShowcase() {
     </Card>
   );
 }
+
+const sortableRoleColumns: DataTableColumnDef<Role>[] = [
+  {
+    accessorKey: 'name',
+    header: ({ column }) => (
+      <SortableHeader column={column}>Nome</SortableHeader>
+    ),
+  },
+  {
+    accessorKey: 'users',
+    sortDescFirst: true,
+    header: ({ column }) => (
+      <SortableHeader column={column}>Usuários</SortableHeader>
+    ),
+  },
+  { accessorKey: 'description', header: 'Descrição', enableSorting: false },
+];
+
+function ControlledSortingShowcase() {
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: 'name', desc: true },
+  ]);
+
+  return (
+    <Card
+      title="Ordenação controlada"
+      description={`Estado recebido pela tela (como o sort da URL): ${JSON.stringify(sorting)}`}
+    >
+      <DataTable
+        columns={sortableRoleColumns}
+        data={ROLES}
+        hidePagination
+        disableColumnVisibility
+        sorting={sorting}
+        onSortingChange={setSorting}
+      />
+    </Card>
+  );
+}
+
+export const ControlledSorting: Story = {
+  name: 'Ordenação controlada',
+  render: () => <ControlledSortingShowcase />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Com `sorting`, a seta e o `aria-sort` do cabeçalho seguem o valor recebido (quem abre a lista com `?sort=` na URL já vê a coluna ordenada). Usuários começa em descendente (`sortDescFirst`); Descrição não ordena e nunca anuncia ordenação. Os dados não são reordenados: o dono dos dados ordena.',
+      },
+    },
+  },
+};
+
+function ControlledSelectionShowcase() {
+  const [selection, setSelection] = React.useState<RowSelectionState>({
+    '2': true,
+  });
+
+  return (
+    <Card
+      title="Seleção controlada"
+      description={`Estado recebido pela tela: ${JSON.stringify(selection)}. Cargos com um só usuário não abrem o detalhe.`}
+    >
+      <DataTable
+        columns={[
+          selectColumn<Role>({ rowLabel: (role) => `Selecionar ${role.name}` }),
+          ...roleColumns,
+        ]}
+        data={ROLES}
+        hidePagination
+        disableColumnVisibility
+        getRowId={(role) => role.id}
+        rowSelection={selection}
+        onRowSelectionChange={setSelection}
+        onRowClick={(role) => toast.info(`Abriu ${role.name}`)}
+        isRowClickable={(role) => role.users > 1}
+      />
+    </Card>
+  );
+}
+
+export const ControlledSelection: Story = {
+  name: 'Seleção controlada',
+  render: () => <ControlledSelectionShowcase />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Com `getRowId`, `rowSelection` e `onRowSelectionChange`, a tela guarda a seleção e a tabela só reflete e avisa. `isRowClickable` tira o foco e o clique das linhas que não abrem nada.',
+      },
+    },
+  },
+};
 
 export const ControlledColumnVisibility: Story = {
   name: 'Colunas controladas',

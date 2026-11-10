@@ -13,7 +13,9 @@ const filterValueSchema = z.union([
   z.object({ from: z.string(), to: z.string() }),
 ]);
 
-const sortSchema = z.array(z.object({ id: z.string(), desc: z.boolean() }));
+export const sortSchema = z.array(
+  z.object({ id: z.string(), desc: z.boolean() })
+);
 
 // `?pageSize=` fora das opções é descartado sozinho (vale o storage), sem
 // derrubar page/sort/filters da mesma URL.
@@ -26,7 +28,8 @@ const pageSizeSchema = z
 export const dataTableSearchSchema = z.object({
   page: z.number().optional(),
   pageSize: pageSizeSchema,
-  sort: sortSchema.optional(),
+  // `?sort=` inválido é descartado sozinho, sem derrubar page/filters.
+  sort: sortSchema.optional().catch(undefined),
   filters: z.record(z.string(), filterValueSchema).optional(),
 });
 
@@ -77,7 +80,7 @@ export function validateDataTableSearch(
   const prefixedSchema = z.object({
     [keys.page]: z.number().optional(),
     [keys.pageSize]: pageSizeSchema,
-    [keys.sort]: sortSchema.optional(),
+    [keys.sort]: sortSchema.optional().catch(undefined),
     [keys.filters]: z.record(z.string(), filterValueSchema).optional(),
   });
 

@@ -36,22 +36,35 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+interface SelectColumnOptions<TData> {
+  /**
+   * Rótulo acessível da caixa de cada linha, derivado da linha (ex.:
+   * `(user) => 'Selecionar ' + user.name`). Padrão: `'Selecionar linha'`,
+   * que não diz qual linha: prefira passar.
+   */
+  rowLabel?: (row: TData) => string;
+  /** Rótulo acessível da caixa do cabeçalho. Padrão: `'Selecionar todas as linhas da página'`. */
+  headerLabel?: string;
+}
+
 /**
- * Coluna de seleção com checkbox (cabeçalho "selecionar todas" + checkbox por
- * linha). Espalhe no início da lista de `columns` para habilitar a seleção e o
- * rodapé de contagem da `DataTable`.
+ * Coluna de seleção com checkbox (cabeçalho "selecionar todas da página" +
+ * checkbox por linha). Espalhe no início da lista de `columns`; para ler a
+ * seleção, passe `getRowId`, `rowSelection` e `onRowSelectionChange` à
+ * `DataTable`.
  *
  * ```tsx
  * export const columns: DataTableColumnDef<Payment>[] = [
- *   selectColumn(),
+ *   selectColumn({ rowLabel: (payment) => `Selecionar ${payment.email}` }),
  *   { accessorKey: 'status', header: 'Status' },
  * ];
  * ```
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function selectColumn<
-  TData extends RowData,
->(): DataTableColumnDef<TData> {
+export function selectColumn<TData extends RowData>({
+  rowLabel,
+  headerLabel = 'Selecionar todas as linhas da página',
+}: SelectColumnOptions<TData> = {}): DataTableColumnDef<TData> {
   return {
     id: 'select',
     header: ({ table }) => (
@@ -61,7 +74,7 @@ export function selectColumn<
           (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Selecionar todas"
+        aria-label={headerLabel}
       />
     ),
     cell: ({ row }) => (
@@ -75,7 +88,7 @@ export function selectColumn<
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Selecionar linha"
+          aria-label={rowLabel?.(row.original) ?? 'Selecionar linha'}
         />
       </div>
     ),
@@ -159,16 +172,17 @@ interface SortableHeaderProps<TData extends RowData, TValue> {
  * O primeiro clique ordena em ascendente; a coluna com `sortDescFirst: true`
  * começa em descendente (ex.: um booleano de status que o servidor ordena
  * `false` antes de `true`, quando a tela quer os ativos primeiro). Os cliques
- * seguintes alternam a direção.
+ * seguintes alternam a direção. A seta mostra a direção ativa (para cima,
+ * ascendente; para baixo, descendente); sem ordenação nesta coluna, a seta dupla.
  */
 export function SortableHeader<TData extends RowData, TValue>({
   column,
   children,
 }: SortableHeaderProps<TData, TValue>) {
+  const direction = column.getIsSorted();
   const toggle = () => {
-    const sorted = column.getIsSorted();
     column.toggleSorting(
-      sorted ? sorted === 'asc' : column.columnDef.sortDescFirst === true
+      direction ? direction === 'asc' : column.columnDef.sortDescFirst === true
     );
   };
 
@@ -182,7 +196,13 @@ export function SortableHeader<TData extends RowData, TValue>({
       onClick={toggle}
     >
       {children}
-      <ArrowUpDownIcon />
+      {direction === 'asc' ? (
+        <ArrowUpIcon />
+      ) : direction === 'desc' ? (
+        <ArrowDownIcon />
+      ) : (
+        <ArrowUpDownIcon />
+      )}
     </Button>
   );
 }

@@ -36,6 +36,7 @@ export interface UseDataTableQueryResult {
     onPageChange: (pageIndex: number) => void;
     pageSize: number;
     onPageSizeChange: (pageSize: number) => void;
+    sorting: SortingState;
     onSortingChange: (sorting: SortingState) => void;
     onSearch: (filters: DataTableFilterValues) => void;
     defaultFilterValues?: DataTableFilterValues;
@@ -78,6 +79,7 @@ export function buildDataTableResult(
       onPageChange: (page) => patch({ page }),
       // Novo tamanho de página também volta para a primeira página.
       onPageSizeChange: (pageSize) => patch({ pageSize, page: 0 }),
+      sorting: state.sort,
       // Nova ordenação/busca sempre volta para a primeira página.
       onSortingChange: (sort) => patch({ sort, page: 0 }),
       onSearch: (filters) => patch({ filters, page: 0 }),

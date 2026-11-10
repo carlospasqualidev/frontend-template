@@ -47,6 +47,19 @@ describe('SortableHeader (global)', () => {
     expect(toggleSorting).toHaveBeenCalledWith(true);
   });
 
+  it.each([
+    [false, 'lucide-arrow-up-down'],
+    ['asc', 'lucide-arrow-up'],
+    ['desc', 'lucide-arrow-down'],
+  ] as const)('com ordenação %s, mostra a seta %s', (sorted, iconClass) => {
+    const { column } = makeColumn({ sorted });
+    render(<SortableHeader column={column}>Status</SortableHeader>);
+
+    expect(
+      screen.getByRole('button', { name: 'Status' }).querySelector('svg')
+    ).toHaveClass(iconClass);
+  });
+
   it('os cliques seguintes alternam a direção, com ou sem `sortDescFirst`', async () => {
     const ascending = makeColumn({ sorted: 'asc', sortDescFirst: true });
     await clickHeader(ascending.column);

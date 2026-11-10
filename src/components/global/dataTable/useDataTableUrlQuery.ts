@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { type SortingState } from '@tanstack/react-table';
 
-import { dataTableSearchKeys } from './dataTableSearch';
+import { dataTableSearchKeys, sortSchema } from './dataTableSearch';
 import { type DataTableFilterValues } from './filters';
 import {
   isPageSizeOption,
@@ -14,6 +14,20 @@ import {
   type DataTableQueryPatch,
   type UseDataTableQueryResult,
 } from './useDataTableQuery';
+
+/**
+ * `sort` da URL só é aceito no formato `[{ id, desc }]`. O router faz
+ * `JSON.parse` de cada valor: `?sort=abc` chega como string e
+ * `?sort={"id":"name","desc":true}` como objeto, e o `sorting` da `DataTable`
+ * quebraria no render com qualquer coisa que não seja array. Formato inválido
+ * cai em `[]` (sem ordenação); ausente continua `undefined`, para os defaults
+ * ainda poderem ser semeados.
+ */
+function parseSort(value: unknown): SortingState | undefined {
+  if (value === undefined) return undefined;
+  const parsed = sortSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
 
 interface UseDataTableUrlQueryOptions {
   /**
@@ -64,7 +78,7 @@ export function useDataTableUrlQuery({
   const rawPage = params.get(keys.page);
   const rawPageSize = params.get(keys.pageSize);
   const urlPageSize = isPageSizeOption(rawPageSize) ? rawPageSize : undefined;
-  const rawSort = params.get(keys.sort) as SortingState | undefined;
+  const rawSort = parseSort(params.get(keys.sort));
   const rawFilters = params.get(keys.filters) as
     DataTableFilterValues | undefined;
 

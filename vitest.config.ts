@@ -35,6 +35,7 @@ export default defineConfig({
     env: {
       VITE_API_URL: 'http://localhost:8080/api',
       VITE_PROJECT_NAME: 'Frontend',
+      VITE_BUSINESS_TIME_ZONE: 'America/Sao_Paulo',
       VITE_PROJECT_ENVIRONMENT: 'Test',
       VITE_PROJECT_SIDE: 'Client',
       // Vazio de propósito: o schema normaliza '' para `undefined`, então o

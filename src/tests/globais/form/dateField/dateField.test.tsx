@@ -1,10 +1,17 @@
 import * as React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DateField } from '@/components/global/form/dateField';
 import { Modal } from '@/components/global/modal/modal';
+
+// Fuso distante (UTC+14): com o relógio abaixo, o dia dele (31/03) difere do dia local e do UTC
+// (30/03) em qualquer máquina fora de UTC+12/+13, então ali o teste só passa se o campo usar o
+// fuso do negócio.
+vi.mock('@/lib/env', () => ({
+  env: { VITE_BUSINESS_TIME_ZONE: 'Pacific/Kiritimati' },
+}));
 
 /**
  * Espelha o uso real numa barra de filtros: o valor do campo é guardado pelo pai
@@ -289,5 +296,28 @@ describe('DateField — rótulo oculto', () => {
 
     expect(screen.getByLabelText('Vencimento')).toBeInTheDocument();
     expect(screen.getByText('Vencimento')).toHaveClass('sr-only');
+  });
+});
+
+describe('DateField — Definir data atual', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('grava o dia do fuso do negócio, não o do aparelho', async () => {
+    // 2026-03-30T12:00Z: 31/03 02h em Kiritimati (UTC+14); 30/03 em UTC e nas Américas.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-03-30T12:00:00Z'));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ControlledHarness />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Definir data atual' })
+    );
+
+    expect(screen.getByText('valor:2026-03-31')).toBeInTheDocument();
+    expect(screen.getByLabelText('Data de fabricação (de)')).toHaveValue(
+      '31/03/2026'
+    );
   });
 });

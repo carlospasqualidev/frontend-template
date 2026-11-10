@@ -74,13 +74,14 @@ As variáveis são validadas na inicialização em [`src/lib/env.ts`](src/lib/en
 Se algo estiver ausente ou malformado, o app falha rápido com mensagem clara.
 Ao adicionar uma env, declare-a no schema **e** em [`.env.example`](.env.example).
 
-| Variável                   | Obrigatória | Descrição                                 |
-| -------------------------- | ----------- | ----------------------------------------- |
-| `VITE_API_URL`             | sim         | URL base da API                           |
-| `VITE_PROJECT_NAME`        | não         | Nome do projeto (logs de erro)            |
-| `VITE_PROJECT_ENVIRONMENT` | não         | Ambiente lógico (ex.: Sandbox/Production) |
-| `VITE_PROJECT_SIDE`        | não         | Lado da app (ex.: Client/Backoffice)      |
-| `VITE_ERROR_LOG_URL`       | não         | Endpoint de reporte de erros (só em PROD) |
+| Variável                   | Obrigatória | Descrição                                                |
+| -------------------------- | ----------- | -------------------------------------------------------- |
+| `VITE_API_URL`             | sim         | URL base da API                                          |
+| `VITE_PROJECT_NAME`        | não         | Nome do projeto (logs de erro)                           |
+| `VITE_PROJECT_ENVIRONMENT` | não         | Ambiente lógico (ex.: Sandbox/Production)                |
+| `VITE_PROJECT_SIDE`        | não         | Lado da app (ex.: Client/Backoffice)                     |
+| `VITE_ERROR_LOG_URL`       | não         | Endpoint de reporte de erros (só em PROD)                |
+| `VITE_BUSINESS_TIME_ZONE`  | não         | Fuso IANA do dia do negócio (padrão `America/Sao_Paulo`) |
 
 ## Modo híbrido
 

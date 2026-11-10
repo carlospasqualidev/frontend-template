@@ -4,6 +4,7 @@ Utilitários em `dateTime/`. Regra de ouro: **a natureza do valor decide o trata
 
 - **Dia de calendário** — representa um _dia_, sem hora útil (nascimento, vencimento, competência, data de recebimento). Use `hasTimeStamp: false`. Gravado/exibido **sem fuso** (UTC), pra não "andar" para frente/trás na virada da meia-noite.
 - **Instante** — um _momento_ no tempo (`createdAt`/`updatedAt`, agendamento com hora). Use `hasTimeStamp: true`. Gravado/exibido respeitando o **fuso local** do usuário.
+- **Dia do negócio** — o dia de calendário no fuso do projeto (`VITE_BUSINESS_TIME_ZONE`, padrão `America/Sao_Paulo`), não o do aparelho. Perto da meia-noite os dois diferem (23h30 em São Paulo já é o dia seguinte em UTC). Use `businessToday()` e `businessDatePlusDays(n)` de [`businessDate.ts`](../src/lib/dateTime/businessDate.ts): devolvem `aaaa-mm-dd`, e é o que o "Definir data atual" do `DateField` e os atalhos de data usam. Em teste, relógio falso + fuso por parâmetro (`businessToday('America/Sao_Paulo')`), nunca o `TZ` da máquina.
 
 > ⚠️ A mesma flag `hasTimeStamp` que decide a **gravação** decide a **exibição**. Misturar (ex.: salvar como dia de calendário e exibir como instante) faz o dia pular ±1.
 

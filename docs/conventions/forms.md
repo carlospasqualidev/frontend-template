@@ -43,6 +43,16 @@ Há **duas** situações de `readOnly` num `InputField`/`TextArea` — não as c
 - **Travado por permissão** (o form inteiro em modo leitura por falta de `update`): o campo continua **focável e selecionável** de propósito — o usuário precisa **copiar** o valor (CNPJ, código do lote, etc.). É o `readOnly` documentado em "Detalhe = Edição". **Não** o torne inerte.
 - **Campo-espelho de exibição** (mostra um valor **derivado** que o usuário nunca digita — ex.: "Cliente" espelhando o pedido de origem, "Peso líquido" calculado): renderizar como `<input readOnly>` deixa ele **focável e com realce de seleção**, o que parece um bug ("o campo disabled ainda seleciona texto"). Torne-o **inerte** com o [`MirrorField`](../../src/components/global/form/mirrorField.tsx) (`readOnly` + `tabIndex={-1}` + `pointer-events-none select-none`; `children` para valor que não é texto, como um link). Fica com o visual de campo (alinha no grid), mas sem foco nem seleção. Julgue pelo campo: se o valor vale a pena copiar (código de lote/corrida), mantenha selecionável; se é só um espelho de contexto, deixe inerte.
 
+### Atalhos de preenchimento (`FieldShortcuts`)
+
+Botões de atalho ("1 dia", "7 dias", "10%") entre o rótulo e o campo: use o [`FieldShortcuts`](../../src/components/global/form/fieldShortcuts.tsx) em vez de montar a fileira na tela.
+
+- O `FieldShortcuts` recebe o `label` e o `htmlFor` e **renderiza o rótulo**; o campo filho (`DateField`, `NumberField`) vai com `label=""` e o **mesmo `id`**. Filho com rótulo próprio duplica o `<label>`.
+- Ele não importa `react-hook-form` nem guarda estado: o `onSelect` de cada atalho é da tela, que grava com `setValue(nome, valor, { shouldDirty: true, shouldValidate: formState.isSubmitted })` (sobrescreve o que foi digitado à mão).
+- Atalho indisponível (base do percentual ausente ou zero) fica visível: a tela passa `disabled` e `disabledReason` (o botão fica com `aria-disabled`, focável, com o clique bloqueado e o motivo no tooltip, no hover e no foco). `disabled` no grupo desabilita todos, sem mostrar o `disabledReason` dos atalhos; o motivo do grupo é o `disabledReason` dele, opcional. O componente não decide a base.
+- Atalho de data soma sobre o dia do negócio: `businessDatePlusDays(n)` (ver [`dates.md`](../dates.md)), nunca `new Date()` do aparelho.
+- O filho mantém o `placeholder`. Os botões são `size="xs"`; não misture com outras alturas na mesma linha.
+
 ### Campos com popover (`Combobox`/`Select`/`MultiSelect`/`DateField`/`DateTimeField`): nada a configurar
 
 Todo campo que abre um popover herda o comportamento certo do próprio [`PopoverContent`](../../src/components/ui/popover.tsx) — **não passe `portal` e não escreva `z-index`**. Duas mecânicas independentes, ambas centralizadas:

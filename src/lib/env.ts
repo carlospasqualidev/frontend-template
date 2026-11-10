@@ -26,6 +26,27 @@ const envSchema = z.object({
     }),
   /** Nome do projeto, usado em logs de erro. */
   VITE_PROJECT_NAME: z.string().min(1).default('Frontend'),
+  /**
+   * Fuso IANA do dia do negócio (`businessToday`). Opcional; o padrão é o do
+   * template pt-BR. Fuso inválido derruba o boot, não o clique.
+   */
+  VITE_BUSINESS_TIME_ZONE: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .default('America/Sao_Paulo')
+      .refine(
+        (value) => {
+          try {
+            new Intl.DateTimeFormat('en-CA', { timeZone: value });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: 'Informe um fuso IANA válido (ex.: America/Sao_Paulo).' }
+      )
+  ),
   /** Ambiente lógico do projeto (ex.: Sandbox, Production). */
   VITE_PROJECT_ENVIRONMENT: z.string().optional(),
   /** Lado da aplicação (ex.: Client, Backoffice). */

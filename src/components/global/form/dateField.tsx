@@ -39,6 +39,7 @@ import {
   parseDisplayValueToFormValue,
   resolveDateInMonth,
 } from '@/lib/dateTime/dateFieldUtils';
+import { businessToday } from '@/lib/dateTime/businessDate';
 import { getCalendarMonthBounds } from '@/lib/dateTime/utils';
 
 type CalendarProps = Omit<
@@ -202,10 +203,10 @@ function DateFieldBase({
   }, [commitValue, onBlur]);
 
   const handleSetNow = React.useCallback(() => {
-    const now = new Date();
+    const today = businessToday();
 
-    setDisplayValue(formatDateForDisplay(now));
-    commitValue(formatDateForForm(now));
+    setDisplayValue(formatDisplayValue(today));
+    commitValue(today);
     onBlur?.();
   }, [commitValue, onBlur]);
 

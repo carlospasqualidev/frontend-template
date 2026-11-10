@@ -17,6 +17,8 @@ import { Empty } from '@/components/global/empty/empty';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Link } from '@/components/global/link/link';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
+import { Typography } from '@/components/ui/typography';
+import { useBreadcrumbExtra } from '@/hooks/useBreadcrumbExtra';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -138,68 +140,94 @@ export function RoleDetailsPage() {
   const role = roleQuery.data;
   const members = permissions.canReadUsers ? membersQuery.data : NO_MEMBERS;
 
+  const notFound =
+    (roleQuery.isError && isNotFound(roleQuery.error)) ||
+    (membersQuery.isError && isNotFound(membersQuery.error));
+
+  // O nome do cargo no lugar de "Detalhes do cargo" só quando a tela mostra o
+  // cargo: com o cargo e os membros (se lê usuários) chegados. Carregando,
+  // não encontrado e erro mantêm a trilha estática.
+  useBreadcrumbExtra(
+    role && members && !notFound
+      ? { title: role.name, pathname: `/roles/${roleId}` }
+      : null
+  );
+
+  const heading = (
+    <Typography as="h1" variant="h3" className="sr-only">
+      Detalhes do cargo
+    </Typography>
+  );
+
   if (
     roleQuery.isPending ||
     (permissions.canReadUsers && membersQuery.isPending)
   ) {
     return (
-      <RoleDetailSkeleton
-        tabs={detailTabs(permissions)}
-        readOnly={!permissions.canUpdate}
-      />
+      <>
+        {heading}
+        <RoleDetailSkeleton
+          tabs={detailTabs(permissions)}
+          readOnly={!permissions.canUpdate}
+        />
+      </>
     );
   }
 
   // Sem o cargo (a primeira leitura falhou) ou ele não existe mais (404 numa
   // releitura): a tela diz o que houve. A releitura que falha por outro
   // motivo mantém o formulário, com o que a pessoa editou.
-  const notFound =
-    (roleQuery.isError && isNotFound(roleQuery.error)) ||
-    (membersQuery.isError && isNotFound(membersQuery.error));
-
   if (!role || !members || notFound) {
-    return notFound ? (
-      <Empty
-        title="Cargo não encontrado"
-        description="O identificador é inválido ou o cargo foi excluído."
-        icon={<ShieldOff />}
-      >
-        <Button asChild variant="outline">
-          <Link
-            href="/roles"
-            newTabIcon={false}
-            className="text-foreground no-underline hover:text-foreground"
+    return (
+      <>
+        {heading}
+        {notFound ? (
+          <Empty
+            title="Cargo não encontrado"
+            description="O identificador é inválido ou o cargo foi excluído."
+            icon={<ShieldOff />}
           >
-            Voltar para a lista
-          </Link>
-        </Button>
-      </Empty>
-    ) : (
-      <Empty
-        title="Não foi possível carregar o cargo"
-        description="Tente de novo em instantes."
-        icon={<ShieldOff />}
-      >
-        <Button
-          variant="outline"
-          onClick={() => {
-            void roleQuery.refetch();
-            if (permissions.canReadUsers) void membersQuery.refetch();
-          }}
-        >
-          Tentar novamente
-        </Button>
-      </Empty>
+            <Button asChild variant="outline">
+              <Link
+                href="/roles"
+                newTabIcon={false}
+                className="text-foreground no-underline hover:text-foreground"
+              >
+                Voltar para a lista
+              </Link>
+            </Button>
+          </Empty>
+        ) : (
+          <Empty
+            title="Não foi possível carregar o cargo"
+            description="Tente de novo em instantes."
+            icon={<ShieldOff />}
+          >
+            <Button
+              variant="outline"
+              onClick={() => {
+                void roleQuery.refetch();
+                if (permissions.canReadUsers) void membersQuery.refetch();
+              }}
+            >
+              Tentar novamente
+            </Button>
+          </Empty>
+        )}
+      </>
     );
   }
 
   return (
-    <RoleDetails
-      key={role.id}
-      role={role}
-      members={members}
-      permissions={permissions}
-    />
+    <>
+      {heading}
+      <RoleDetails
+        key={role.id}
+        role={role}
+        members={members}
+        permissions={permissions}
+      />
+    </>
   );
 }
 

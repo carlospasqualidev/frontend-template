@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useBreadcrumbExtra } from '@/hooks/useBreadcrumbExtra';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { UserDetailsPage } from '@/screens/users/details';
 import { UNEXPECTED_USER_ERROR_MESSAGE } from '@/screens/users/utils/userMutations';
@@ -36,6 +37,13 @@ import type { IUser } from '@/types/user/types';
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
+
+// A trilha é do `Layout`; aqui só o que a tela entrega a ela.
+vi.mock('@/hooks/useBreadcrumbExtra', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/hooks/useBreadcrumbExtra')>();
+  return { ...actual, useBreadcrumbExtra: vi.fn(actual.useBreadcrumbExtra) };
+});
 
 vi.mock('@/services/users/userDetailApi', () => ({ fetchUser: vi.fn() }));
 
@@ -268,6 +276,28 @@ describe('UserDetailsPage — leitura', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('entrega o nome do usuário à trilha e mantém o h1 estático', async () => {
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Detalhes do usuário',
+      })
+    ).toBeInTheDocument();
+    // Carregando: trilha estática.
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+
+    await screen.findByLabelText('Nome');
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith({
+      title: 'Camila Oliveira',
+      pathname: '/users/u-camila',
+    });
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Detalhes do usuário' })
+    ).toBeInTheDocument();
+  });
+
   it('mostra "não encontrado" no 404, com o link de volta', async () => {
     vi.mocked(fetchUser).mockRejectedValue(
       axiosFailure(404, { message: 'Usuário não existe na base de dados.' })
@@ -276,6 +306,10 @@ describe('UserDetailsPage — leitura', () => {
 
     expect(
       await screen.findByText('Usuário não encontrado')
+    ).toBeInTheDocument();
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Detalhes do usuário' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Voltar para a lista' })

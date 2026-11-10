@@ -1,11 +1,11 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NavUser } from '@/components/global/sidebar/navUser';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { useSessionStore } from '@/hooks/useSessionStore';
-// O menu do usuário embute o `ToggleTheme`, que exige o provider de tema.
+// O rodapé da sidebar embute o `ToggleTheme`, que exige o provider de tema.
 import { ThemeProvider } from '@/hooks/useThemeProvider';
 
 const navigate = vi.fn();
@@ -64,6 +64,8 @@ async function clickSignOut() {
 }
 
 afterEach(() => {
+  document.documentElement.classList.remove('dark', 'light');
+  localStorage.clear();
   useSessionStore.setState({ user: null });
 });
 
@@ -85,19 +87,37 @@ describe('NavUser', () => {
     expect(screen.getAllByText('maria@example.com').length).toBeGreaterThan(0);
   });
 
-  it('abre o menu com Conta, Sair e o alternador de tema', async () => {
+  it('abre o menu com Conta e Sair, sem o alternador de tema dentro', async () => {
     setUser();
     renderNavUser();
 
     await userEvent.click(screen.getByRole('button', { name: /Maria Silva/ }));
 
+    const menu = await screen.findByRole('menu');
     expect(
-      await screen.findByRole('menuitem', { name: /Conta/ })
+      within(menu).getByRole('menuitem', { name: /Conta/ })
     ).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /Sair/ })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Alternar tema' })
+      within(menu).getByRole('menuitem', { name: /Sair/ })
     ).toBeInTheDocument();
+    expect(
+      within(menu).queryByRole('button', { name: 'Alternar tema' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('mantém o alternador de tema à vista, fora do menu, e ele troca o tema', async () => {
+    setUser();
+    renderNavUser();
+
+    const toggle = screen.getByRole('button', { name: 'Alternar tema' });
+    expect(toggle).toHaveAttribute('data-variant', 'ghost');
+
+    await userEvent.click(toggle);
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Escuro' })
+    );
+
+    expect(document.documentElement).toHaveClass('dark');
   });
 
   it('"Conta" navega para a tela de conta', async () => {

@@ -1,4 +1,4 @@
-import { BadgeCheckIcon, ChevronsUpDownIcon, LogOutIcon } from 'lucide-react';
+import { BadgeCheckIcon, EllipsisVerticalIcon, LogOutIcon } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 
 import { UserAvatar } from '@/components/global/avatar/userAvatar';
@@ -48,24 +48,30 @@ export function NavUser() {
 
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
+      {/* Linha de perfil: o gatilho abre o menu da conta e o alternador de tema
+          (ghost) fica sempre à vista ao lado, empilhado quando a sidebar recolhe. */}
+      <SidebarMenuItem className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col-reverse group-data-[collapsible=icon]:justify-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="flex-1 group-data-[collapsible=icon]:flex-none data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <UserAvatar
                 name={user.name}
                 imageUrl={user.image}
-                className="rounded-lg"
-                fallbackClassName="rounded-lg"
+                className="rounded-full"
+                fallbackClassName="rounded-full font-bold"
               />
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-semibold">{user.name}</span>
+                {/* Contraste medido (WCAG): sidebar-foreground a 70% sobre
+                    sidebar, 7,55:1 no claro e 8,76:1 no escuro (mínimo 4,5:1). */}
+                <span className="truncate text-xs text-sidebar-foreground/70">
+                  {user.email}
+                </span>
               </div>
-              <ChevronsUpDownIcon className="ml-auto size-4" />
+              <EllipsisVerticalIcon className="ml-auto size-5" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -79,14 +85,15 @@ export function NavUser() {
                 <UserAvatar
                   name={user.name}
                   imageUrl={user.image}
-                  className="rounded-lg"
-                  fallbackClassName="rounded-lg"
+                  className="rounded-full"
+                  fallbackClassName="rounded-full font-bold"
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-semibold">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </span>
                 </div>
-                <ToggleTheme />
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -112,6 +119,8 @@ export function NavUser() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <ToggleTheme variant="ghost" />
       </SidebarMenuItem>
     </SidebarMenu>
   );

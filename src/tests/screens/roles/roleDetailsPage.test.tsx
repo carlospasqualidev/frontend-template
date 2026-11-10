@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useBreadcrumbExtra } from '@/hooks/useBreadcrumbExtra';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { RoleDetailsPage } from '@/screens/roles/details';
 import { axiosApi } from '@/services/api/api';
@@ -34,6 +35,13 @@ import type { IUser } from '@/types/user/types';
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
+
+// A trilha é do `Layout`; aqui só o que a tela entrega a ela.
+vi.mock('@/hooks/useBreadcrumbExtra', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/hooks/useBreadcrumbExtra')>();
+  return { ...actual, useBreadcrumbExtra: vi.fn(actual.useBreadcrumbExtra) };
+});
 
 vi.mock('@/services/roles/roleDetailApi', () => ({
   fetchRoleDetail: vi.fn(),
@@ -273,6 +281,55 @@ describe('RoleDetailsPage — leitura', () => {
     ).toBeDisabled();
   });
 
+  it('entrega o nome do cargo à trilha e mantém o h1 estático', async () => {
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Detalhes do cargo',
+      })
+    ).toBeInTheDocument();
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+
+    await screen.findByLabelText('Nome');
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith({
+      title: 'Suporte',
+      pathname: '/roles/role-suporte',
+    });
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Detalhes do cargo' })
+    ).toBeInTheDocument();
+  });
+
+  it('mantém a trilha estática enquanto os membros carregam', async () => {
+    vi.mocked(fetchAllRoleUsers).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+
+    await screen.findByRole('heading', { level: 1, name: 'Detalhes do cargo' });
+    await waitFor(() =>
+      expect(fetchRoleDetail).toHaveBeenCalledWith('role-suporte')
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(useBreadcrumbExtra).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Suporte' })
+    );
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+  });
+
+  it('mantém a trilha estática se a leitura dos membros falha', async () => {
+    vi.mocked(fetchAllRoleUsers).mockRejectedValue(
+      axiosFailure(500, 'Falha ao listar os usuários do cargo.')
+    );
+    renderDetail();
+
+    await screen.findByText('Não foi possível carregar o cargo');
+    expect(useBreadcrumbExtra).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Suporte' })
+    );
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+  });
+
   it('mostra "não encontrado" no 404, com o link de volta', async () => {
     vi.mocked(fetchRoleDetail).mockRejectedValue(
       axiosFailure(404, 'Cargo não existe na base de dados.')
@@ -283,6 +340,10 @@ describe('RoleDetailsPage — leitura', () => {
     renderDetail();
 
     expect(await screen.findByText('Cargo não encontrado')).toBeInTheDocument();
+    expect(useBreadcrumbExtra).toHaveBeenLastCalledWith(null);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Detalhes do cargo' })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Voltar para a lista' })
     ).toHaveAttribute('href', '/roles');

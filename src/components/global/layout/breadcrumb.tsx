@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Link, useMatches } from '@tanstack/react-router';
+import { Link, useLocation, useMatches } from '@tanstack/react-router';
 
 import {
   BreadcrumbList,
@@ -9,6 +9,7 @@ import {
   BreadcrumbPage,
   Breadcrumb as BaseBreadCrumb,
 } from '@/components/ui/breadcrumb';
+import { useBreadcrumbExtraCrumbs } from '@/hooks/useBreadcrumbExtra';
 import { getRememberedSearch } from '@/lib/navigation/searchMemory';
 
 function normalizeRoutePath(pathname: string) {
@@ -21,6 +22,8 @@ function normalizeRoutePath(pathname: string) {
 
 export function Breadcrumb() {
   const matches = useMatches();
+  const location = useLocation();
+  const extraCrumbs = useBreadcrumbExtraCrumbs(location.pathname);
 
   const items = matches.reduce<
     Array<{ routeId: string; pathname: string; title: string }>
@@ -50,8 +53,31 @@ export function Breadcrumb() {
     return acc;
   }, []);
 
-  const visibleItems =
+  const baseItems =
     items.length > 1 && items[0]?.pathname === '/' ? items.slice(1) : items;
+
+  // O crumb que aponta para a própria página substitui o rótulo do último item;
+  // os demais entram antes dele.
+  let visibleItems = baseItems;
+  if (extraCrumbs.length > 0 && baseItems.length > 0) {
+    const last = baseItems[baseItems.length - 1];
+    const override = extraCrumbs.find(
+      (crumb) => crumb.pathname === last.pathname
+    );
+    const inserted = extraCrumbs.filter(
+      (crumb) => crumb.pathname !== last.pathname
+    );
+
+    visibleItems = [
+      ...baseItems.slice(0, -1),
+      ...inserted.map((crumb) => ({
+        routeId: `extra:${crumb.pathname}`,
+        pathname: crumb.pathname,
+        title: crumb.title,
+      })),
+      override ? { ...last, title: override.title } : last,
+    ];
+  }
 
   if (!visibleItems.length) {
     return null;

@@ -73,6 +73,8 @@ Quando um campo (`InputField`/`NumberField`/`Combobox`/…) exibe mensagem de er
 - **Sem permissão de update** (ou entidade protegida/de sistema): a tela cai em **modo leitura** — os campos ficam `readOnly`/`disabled` e não há fluxo de salvar; só o `Excluir` (se houver permissão de delete). Ou seja, `readOnly` é derivado **da permissão**, não de um toggle de UI.
 - **Criação (`/create`)** é sempre editável: **`Cancelar`** (volta à lista) sempre visível + **`Criar`** que aparece quando há mudança (form dirty).
 
+**Trilha com o nome do registro.** A rota de detalhe só conhece "Detalhes do usuário"; a tela chama [`useBreadcrumbExtra`](../../src/hooks/useBreadcrumbExtra.ts) com `{ title: nome, pathname: '/users/<id>' }` assim que o dado chega, e o `Breadcrumb` troca o rótulo do último item (mesmo `pathname`, sem barra final). Carregando, não encontrado e erro passam `null` e a trilha fica estática; desmontar limpa. Um crumb de outro `pathname` entra antes do item da página atual. O `h1` sr-only ("Detalhes do usuário") fica fora dos `return` antecipados.
+
 Gate por permissão: o fluxo de salvar/descartar só existe com a permissão de update; `Excluir` só com a de delete. A rota de detalhe e a de criação reusam **o mesmo componente de formulário** (não duplique).
 
 Implementação (aprendizados que evitam bugs sutis — seguir à risca):

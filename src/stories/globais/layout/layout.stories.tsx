@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Peças de "chrome" do layout que uma tela nunca monta à mão: o alternador de tema (vive no menu do usuário), o fallback de carregamento de ROTA e a tela de 404. Aparecem aqui para ficarem no radar — reuse em vez de recriar.',
+          'Peças de "chrome" do layout que uma tela nunca monta à mão: o alternador de tema (fica ao lado do menu do usuário, no rodapé da sidebar), o fallback de carregamento de ROTA e a tela de 404. Aparecem aqui para ficarem no radar — reuse em vez de recriar.',
       },
     },
   },
@@ -28,13 +28,14 @@ export const Vitrine: Story = {
     <div className="space-y-4">
       <Card
         title="ToggleTheme"
-        description="Botão-ícone com menu de 3 opções (Claro / Escuro / Sistema). Já vive no menu do usuário da sidebar — não duplique um seletor de tema na tela."
+        description="Botão-ícone com menu de 3 opções (Claro / Escuro / Sistema). Já fica ao lado do menu do usuário, no rodapé da sidebar (variante `ghost`) — não duplique um seletor de tema na tela."
       >
         <div className="flex items-center gap-3">
           <ToggleTheme />
+          <ToggleTheme variant="ghost" />
           <Typography variant="muted">
-            O sol/lua troca conforme o tema ativo; o rótulo acessível e o
-            tooltip são "Alternar tema".
+            O sol/lua troca conforme o tema ativo (padrão `outline`; `ghost` na
+            sidebar); o rótulo acessível e o tooltip são "Alternar tema".
           </Typography>
         </div>
       </Card>

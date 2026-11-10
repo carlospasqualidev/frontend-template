@@ -1,3 +1,4 @@
+import { type ComponentProps } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
@@ -15,7 +16,11 @@ import {
 } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/useThemeProvider';
 
-export function ToggleTheme() {
+interface ToggleThemeProps {
+  variant?: ComponentProps<typeof Button>['variant'];
+}
+
+export function ToggleTheme({ variant = 'outline' }: ToggleThemeProps) {
   const { setTheme } = useTheme();
 
   return (
@@ -26,7 +31,7 @@ export function ToggleTheme() {
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Alternar tema">
+              <Button variant={variant} size="icon" aria-label="Alternar tema">
                 <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
                 <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
               </Button>

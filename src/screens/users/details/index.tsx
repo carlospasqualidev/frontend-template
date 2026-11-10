@@ -19,6 +19,8 @@ import { Empty } from '@/components/global/empty/empty';
 import { PageActions } from '@/components/global/layout/pageActions';
 import { Link } from '@/components/global/link/link';
 import { UrlTabs } from '@/components/global/tabs/urlTabs';
+import { Typography } from '@/components/ui/typography';
+import { useBreadcrumbExtra } from '@/hooks/useBreadcrumbExtra';
 import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -117,49 +119,79 @@ export function UserDetailsPage() {
     staleTime: 30_000,
   });
 
+  const notFound = isError && isNotFound(error);
+
+  // O nome do usuário no lugar de "Detalhes do usuário": carregando, não
+  // encontrado e erro mantêm a trilha estática.
+  useBreadcrumbExtra(
+    data && !notFound
+      ? { title: data.user.name, pathname: `/users/${userId}` }
+      : null
+  );
+
+  const heading = (
+    <Typography as="h1" variant="h3" className="sr-only">
+      Detalhes do usuário
+    </Typography>
+  );
+
   if (isPending) {
-    return <UserDetailSkeleton tabs={detailTabs(permissions)} />;
+    return (
+      <>
+        {heading}
+        <UserDetailSkeleton tabs={detailTabs(permissions)} />
+      </>
+    );
   }
 
   // Sem o usuário (a primeira leitura falhou) ou ele não existe mais (404
   // numa releitura): a tela diz o que houve. A releitura que falha por outro
   // motivo mantém o formulário, com o que a pessoa editou.
-  if (!data || (isError && isNotFound(error))) {
+  if (!data || notFound) {
     return isNotFound(error) ? (
-      <Empty
-        title="Usuário não encontrado"
-        description="O identificador é inválido ou o usuário foi removido."
-        icon={<UserX />}
-      >
-        <Button asChild variant="outline">
-          <Link
-            href="/users"
-            newTabIcon={false}
-            className="text-foreground no-underline hover:text-foreground"
-          >
-            Voltar para a lista
-          </Link>
-        </Button>
-      </Empty>
+      <>
+        {heading}
+        <Empty
+          title="Usuário não encontrado"
+          description="O identificador é inválido ou o usuário foi removido."
+          icon={<UserX />}
+        >
+          <Button asChild variant="outline">
+            <Link
+              href="/users"
+              newTabIcon={false}
+              className="text-foreground no-underline hover:text-foreground"
+            >
+              Voltar para a lista
+            </Link>
+          </Button>
+        </Empty>
+      </>
     ) : (
-      <Empty
-        title="Não foi possível carregar o usuário"
-        description="Tente de novo em instantes."
-        icon={<UserX />}
-      >
-        <Button variant="outline" onClick={() => void refetch()}>
-          Tentar novamente
-        </Button>
-      </Empty>
+      <>
+        {heading}
+        <Empty
+          title="Não foi possível carregar o usuário"
+          description="Tente de novo em instantes."
+          icon={<UserX />}
+        >
+          <Button variant="outline" onClick={() => void refetch()}>
+            Tentar novamente
+          </Button>
+        </Empty>
+      </>
     );
   }
 
   return (
-    <UserDetails
-      key={data.user.id}
-      user={data.user}
-      permissions={permissions}
-    />
+    <>
+      {heading}
+      <UserDetails
+        key={data.user.id}
+        user={data.user}
+        permissions={permissions}
+      />
+    </>
   );
 }
 

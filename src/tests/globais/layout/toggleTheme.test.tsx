@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ToggleTheme } from '@/components/global/layout/toggleTheme';
 import { ThemeProvider } from '@/hooks/useThemeProvider';
 
-function renderToggle() {
+function renderToggle(variant?: 'ghost') {
   return render(
     <ThemeProvider storageKey="test-theme">
-      <ToggleTheme />
+      <ToggleTheme variant={variant} />
     </ThemeProvider>
   );
 }
@@ -26,6 +26,19 @@ describe('ToggleTheme', () => {
     expect(
       screen.getByRole('button', { name: 'Alternar tema' })
     ).toBeInTheDocument();
+  });
+
+  it('usa o visual outline por padrão e ghost quando pedido', () => {
+    const { unmount } = renderToggle();
+    expect(
+      screen.getByRole('button', { name: 'Alternar tema' })
+    ).toHaveAttribute('data-variant', 'outline');
+    unmount();
+
+    renderToggle('ghost');
+    expect(
+      screen.getByRole('button', { name: 'Alternar tema' })
+    ).toHaveAttribute('data-variant', 'ghost');
   });
 
   it('revela o tooltip no hover', async () => {

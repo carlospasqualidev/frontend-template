@@ -463,7 +463,10 @@ export function DataTable<TData extends RowData>({
                     // Coluna de ações: largura fixa no mesmo eixo do título e
                     // dos botões, para não alargar a coluna ao carregar.
                     const width = meta?.isActions
-                      ? 'mx-auto w-16'
+                      ? cn(
+                          'w-16',
+                          meta.actionsAlign === 'right' ? 'ml-auto' : 'mx-auto'
+                        )
                       : SKELETON_WIDTHS[
                           (rowIndex + colIndex) % SKELETON_WIDTHS.length
                         ];

@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import {
   RowActions,
   type RowAction,
+  type RowActionsAlign,
 } from '@/components/global/rowActions/rowActions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -293,12 +294,14 @@ interface RowActionsColumnOptions<TData> {
   id?: string;
   /** Rótulo do cabeçalho. Padrão: `'Ações'`. */
   header?: string;
+  /** Alinhamento do título e dos botões. Padrão: `center`; `right` em tabela de valores. */
+  align?: RowActionsAlign;
 }
 
 /**
- * Coluna de ações por linha em **botões-ícone visíveis** (um por ação), em vez do
- * menu "⋯" do `actionsColumn`. Use em telas operacionais: as etapas do fluxo são
- * executadas muitas vezes por dia e cada clique extra custa tempo do operador.
+ * Coluna de ações por linha em **botões-ícone visíveis** (um por ação): o padrão de
+ * toda lista, com o menu "⋯" do `actionsColumn` como escape. Cada clique extra
+ * custa tempo de quem repete a tarefa dezenas de vezes por dia.
  *
  * ```tsx
  * rowActionsColumn<Order>({
@@ -309,7 +312,7 @@ interface RowActionsColumnOptions<TData> {
  * })
  * ```
  *
- * Use o `actionsColumn` (menu "⋯") nas demais listas do sistema — ver
+ * Use o `actionsColumn` (menu "⋯") só quando as ações não cabem na fileira — ver
  * `docs/conventions/screen-layout.md` → "Ações de item".
  */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -317,21 +320,27 @@ export function rowActionsColumn<TData extends RowData>({
   actions,
   id = 'actions',
   header = 'Ações',
+  align = 'center',
 }: RowActionsColumnOptions<TData>): DataTableColumnDef<TData> {
   return {
     id,
     enableHiding: false,
     enableSorting: false,
     header: () => header,
-    // Coluna encolhe até o conteúdo, com título e botões centralizados no mesmo
-    // eixo (`max-w-none` porque a fileira de botões passa da largura máxima padrão
-    // das células do corpo).
+    // Coluna encolhe até o conteúdo, com título e botões no mesmo eixo (centro ou
+    // direita; `max-w-none` porque a fileira de botões passa da largura máxima
+    // padrão das células do corpo).
     meta: {
-      className: 'w-px max-w-none whitespace-nowrap text-center',
+      className: cn(
+        'w-px max-w-none whitespace-nowrap',
+        align === 'right' ? 'text-right' : 'text-center'
+      ),
       isActions: true,
+      actionsAlign: align,
     },
     cell: ({ row }) => (
       <RowActions
+        align={align}
         actions={
           typeof actions === 'function' ? actions(row.original) : actions
         }

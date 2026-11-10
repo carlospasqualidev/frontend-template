@@ -12,6 +12,15 @@ import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
 import { Card } from '@/components/global/card/card';
 import {
+  blockAction,
+  copyAction,
+  deleteAction,
+  downloadAction,
+  editAction,
+  retryAction,
+  unblockAction,
+} from '@/components/global/rowActions/actions';
+import {
   RowActions,
   type RowAction,
 } from '@/components/global/rowActions/rowActions';
@@ -32,7 +41,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Ações de uma linha de tabela como botões-ícone visíveis (um por ação) — para telas operacionais, onde o usuário repete as etapas do fluxo dezenas de vezes por dia. Cada ação tem ícone, tom semântico e rótulo em pt-BR (tooltip + nome acessível). Ações indisponíveis ficam visíveis e desabilitadas, com o motivo no tooltip. Nas demais listagens, use o menu "⋯" (`actionsColumn`).',
+          'Ações de uma linha de tabela como botões-ícone visíveis (um por ação). Cada ação tem ícone, tom semântico e rótulo em pt-BR (tooltip + nome acessível). Ações indisponíveis ficam visíveis e desabilitadas, com o motivo no tooltip e no nome acessível. É o padrão de toda lista; o menu "⋯" (`actionsColumn`) é o escape.',
       },
     },
   },
@@ -76,7 +85,7 @@ const itemActions = (released: boolean): RowAction[] => [
     icon: <Truck />,
     tone: 'brand',
     disabled: !released,
-    disabledReason: 'Apontar expedição — disponível após liberar o item',
+    disabledReason: 'Disponível após liberar o item',
     onSelect: noop,
   },
   {
@@ -209,9 +218,61 @@ export const Vitrine: Story = {
 
       <Card
         title="Lista de topo"
-        description="Ações da linha de um registro: consultar alterações, imprimir e excluir (editar é o clique na linha)."
+        description="Ações da linha de um registro com clique na linha: consultar alterações, imprimir e excluir (editar é pela linha)."
       >
         <RowActions className="justify-start" actions={orderActions} />
+      </Card>
+
+      <Card
+        title="Catálogo"
+        description="Ações recorrentes de actions.tsx: mesma ação, mesmo ícone e tom em qualquer tela. Editar só entra em lista sem clique na linha."
+      >
+        <RowActions
+          className="justify-start"
+          actions={[
+            editAction(noop),
+            downloadAction(noop),
+            retryAction(noop),
+            copyAction(noop),
+            blockAction(noop),
+            unblockAction(noop),
+            deleteAction(noop),
+          ]}
+        />
+      </Card>
+
+      <Card
+        title="Link externo e desabilitada com motivo"
+        description="`external` abre em nova aba pelo navegador, sem `onSelect`. A desabilitada mostra o motivo no tooltip e no nome acessível."
+      >
+        <RowActions
+          className="justify-start"
+          actions={[
+            {
+              key: 'map',
+              label: 'Abrir no mapa',
+              icon: <ExternalLink />,
+              tone: 'info',
+              href: 'https://www.openstreetmap.org',
+              external: true,
+            },
+            blockAction(noop, { disabled: true }),
+            deleteAction(noop, {
+              disabled: true,
+              disabledReason: 'Em uso por outro registro',
+            }),
+          ]}
+        />
+      </Card>
+
+      <Card
+        title="Alinhada à direita"
+        description="`align='right'` para tabela de valores."
+      >
+        <RowActions
+          align="right"
+          actions={[editAction(noop), deleteAction(noop)]}
+        />
       </Card>
 
       <Card

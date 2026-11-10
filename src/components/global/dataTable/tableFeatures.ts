@@ -39,10 +39,12 @@ export interface DataTableColumnMeta {
   label?: string;
   /**
    * Marca a coluna de ações por linha (já posta por `actionsColumn` e
-   * `rowActionsColumn`): no carregamento, o skeleton dela é centralizado e de
-   * largura fixa, no mesmo eixo do título e dos botões.
+   * `rowActionsColumn`): no carregamento, o skeleton dela tem largura fixa e
+   * acompanha o eixo do título e dos botões (`actionsAlign`).
    */
   isActions?: boolean;
+  /** Eixo da coluna de ações: `right` leva o skeleton à direita. Padrão: `center`. */
+  actionsAlign?: 'center' | 'right';
 }
 
 /**

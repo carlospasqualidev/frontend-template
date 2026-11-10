@@ -5,9 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   RowActions,
   type RowAction,
+  type RowActionBase,
 } from '@/components/global/rowActions/rowActions';
 
-function action(overrides: Partial<RowAction> = {}): RowAction {
+function action(
+  overrides: Partial<RowActionBase & { onSelect: () => void }> = {}
+): RowAction {
   return {
     key: 'edit',
     label: 'Editar pedido',
@@ -76,18 +79,103 @@ describe('RowActions', () => {
             key: 'output',
             label: 'Autorizar',
             disabled: true,
-            disabledReason: 'Autorizar — disponível após a inspeção',
+            disabledReason: 'Disponível após a inspeção',
             onSelect,
           }),
         ]}
       />
     );
 
-    const button = screen.getByRole('button', { name: 'Autorizar' });
+    const button = screen.getByRole('button', {
+      name: 'Autorizar: Disponível após a inspeção',
+    });
     expect(button).toBeDisabled();
 
     await userEvent.click(button);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('desabilitada sem motivo, o nome acessível é só o rótulo', () => {
+    render(
+      <RowActions actions={[action({ label: 'Autorizar', disabled: true })]} />
+    );
+
+    expect(screen.getByRole('button', { name: 'Autorizar' })).toBeDisabled();
+  });
+
+  it('ação externa é link em nova aba, sem interceptar o clique nem chamar onSelect', async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <RowActions
+        actions={[
+          {
+            key: 'mail',
+            label: 'Enviar e-mail',
+            icon: <span aria-hidden>@</span>,
+            href: 'mailto:a@b.com',
+            external: true,
+            onSelect,
+          },
+        ]}
+      />
+    );
+
+    const link = screen.getByRole('link', { name: 'Enviar e-mail' });
+    expect(link).toHaveAttribute('href', 'mailto:a@b.com');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+
+    // Registra se o clique chegou à raiz sem `preventDefault` e o cancela aqui,
+    // para o jsdom não tentar navegar.
+    let preventedByComponent = true;
+    container.addEventListener(
+      'click',
+      (event) => {
+        preventedByComponent = event.defaultPrevented;
+        event.preventDefault();
+      },
+      { once: true }
+    );
+    link.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true })
+    );
+
+    expect(preventedByComponent).toBe(false);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('ação externa funciona sem onSelect', () => {
+    render(
+      <RowActions
+        actions={[
+          {
+            key: 'map',
+            label: 'Abrir mapa',
+            icon: <span aria-hidden>M</span>,
+            href: 'https://maps.example.com',
+            external: true,
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('link', { name: 'Abrir mapa' })).toHaveAttribute(
+      'target',
+      '_blank'
+    );
+  });
+
+  it('align right leva a fileira e o espaço reservado para a direita', () => {
+    const { container, rerender } = render(
+      <RowActions align="right" actions={[action()]} />
+    );
+    expect(container.firstElementChild).toHaveClass('justify-end');
+
+    rerender(<RowActions actions={[action()]} />);
+    expect(container.firstElementChild).toHaveClass('justify-center');
+
+    rerender(<RowActions align="right" actions={[]} />);
+    expect(container.firstElementChild).toHaveClass('ml-auto');
   });
 
   it('revela o tooltip da ação no hover (traz o próprio provider)', async () => {
@@ -114,24 +202,17 @@ describe('RowActions', () => {
           action({
             label: 'Apontar expedição',
             disabled: true,
-            disabledReason:
-              'Apontar expedição — disponível após liberar o item',
+            disabledReason: 'Disponível após liberar o item',
           }),
         ]}
       />
     );
 
     // O botão desabilitado não recebe eventos: o gatilho do tooltip é o wrapper.
-    await user.hover(
-      screen.getByRole('button', { name: 'Apontar expedição' }).parentElement!
-    );
+    await user.hover(screen.getByRole('button').parentElement!);
 
     expect(
-      (
-        await screen.findAllByText(
-          'Apontar expedição — disponível após liberar o item'
-        )
-      ).length
+      (await screen.findAllByText('Disponível após liberar o item')).length
     ).toBeGreaterThan(0);
   });
 

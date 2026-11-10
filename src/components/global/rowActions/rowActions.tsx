@@ -22,13 +22,12 @@ import { cn } from '@/lib/utils';
 export type RowActionTone =
   'neutral' | 'brand' | 'info' | 'success' | 'warning' | 'destructive';
 
-export interface RowAction {
+export interface RowActionBase {
   /** Chave estável da ação (usada como `key` da lista). */
   key: string;
   /** Rótulo em pt-BR: vira o tooltip **e** o nome acessível do botão. */
   label: string;
   icon: ReactNode;
-  onSelect: () => void;
   /**
    * URL de destino, quando a ação **navega** (ex.: `/pedidos/1/itens/2`).
    * Com ela o botão vira um link de verdade: **clique do meio** (bolinha do mouse)
@@ -40,9 +39,31 @@ export interface RowAction {
   tone?: RowActionTone;
   /** Ação visível mas indisponível nesta linha (ex.: etapa fora do status atual). */
   disabled?: boolean;
-  /** Motivo mostrado no tooltip quando indisponível. Padrão: o próprio `label`. */
+  /**
+   * Motivo da indisponibilidade. Vai no tooltip (padrão: o próprio `label`) e no
+   * nome acessível do botão desabilitado, como "rótulo: motivo".
+   */
   disabledReason?: string;
 }
+
+/** Ação interna do app: `onSelect` é obrigatório. */
+interface RowActionInternal extends RowActionBase {
+  external?: false;
+  onSelect: () => void;
+}
+
+/**
+ * Link para FORA do app (`mailto:`, `wa.me`, mapa): `href` é obrigatório e o
+ * clique é do navegador, em nova aba, sem interceptação. Se `onSelect` vier, ele
+ * **não roda**: por isso é opcional só aqui.
+ */
+interface RowActionExternal extends RowActionBase {
+  external: true;
+  href: string;
+  onSelect?: () => void;
+}
+
+export type RowAction = RowActionInternal | RowActionExternal;
 
 // Soft-tint com a mesma fórmula das variantes do `Badge`: texto na cor cheia
 // sobre 10% do tom (20% no dark, onde o fundo é escuro).
@@ -88,7 +109,12 @@ function RowActionButton({ action }: { action: RowAction }) {
   if (action.disabled) {
     // Botão desabilitado não recebe eventos de mouse (`disabled:pointer-events-none`),
     // então o gatilho do tooltip é o wrapper — assim o operador ainda descobre o
-    // que a ação faz (e por que está indisponível) ao passar o mouse.
+    // que a ação faz (e por que está indisponível) ao passar o mouse. O motivo
+    // entra também no nome acessível, para quem não usa mouse nem vê o tooltip.
+    const accessibleName = action.disabledReason
+      ? `${action.label}: ${action.disabledReason}`
+      : action.label;
+
     return (
       <TooltipProvider delayDuration={300}>
         <Tooltip>
@@ -99,7 +125,7 @@ function RowActionButton({ action }: { action: RowAction }) {
                 variant="ghost"
                 size="icon-sm"
                 disabled
-                aria-label={action.label}
+                aria-label={accessibleName}
                 className={className}
               >
                 {action.icon}
@@ -131,22 +157,28 @@ function RowActionButton({ action }: { action: RowAction }) {
               aria-label={action.label}
               className={className}
             >
-              <a
-                href={action.href}
-                onClick={(event) => {
-                  if (
-                    event.metaKey ||
-                    event.ctrlKey ||
-                    event.shiftKey ||
-                    event.button !== 0
-                  )
-                    return;
-                  event.preventDefault();
-                  action.onSelect();
-                }}
-              >
-                {action.icon}
-              </a>
+              {action.external ? (
+                <a href={action.href} target="_blank" rel="noopener noreferrer">
+                  {action.icon}
+                </a>
+              ) : (
+                <a
+                  href={action.href}
+                  onClick={(event) => {
+                    if (
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.button !== 0
+                    )
+                      return;
+                    event.preventDefault();
+                    action.onSelect();
+                  }}
+                >
+                  {action.icon}
+                </a>
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{action.label}</TooltipContent>
@@ -169,16 +201,20 @@ function RowActionButton({ action }: { action: RowAction }) {
   );
 }
 
+export type RowActionsAlign = 'center' | 'right';
+
 interface RowActionsProps {
   actions: RowAction[];
+  /** Alinhamento da fileira na célula. Padrão: `center`; `right` para tabela de valores. */
+  align?: RowActionsAlign;
   className?: string;
 }
 
 /**
- * Ações de uma linha de tabela como **botões-ícone visíveis**, um por ação — para
- * fluxos operacionais, onde o usuário executa as etapas dezenas de vezes por dia e
- * um menu "⋯" custaria um clique a mais em cada uma. Nas demais listagens, prefira
- * o `actionsColumn` (menu "⋯") — ver `docs/conventions/screen-layout.md` → "Ações de item".
+ * Ações de uma linha de tabela como **botões-ícone visíveis**, um por ação: é o
+ * padrão de toda lista. O menu "⋯" (`actionsColumn`) é o escape, para quando as
+ * ações não cabem na fileira — ver `docs/conventions/screen-layout.md` → "Ações de item".
+ * As ações recorrentes (editar, excluir, baixar…) vêm do catálogo `actions.tsx`.
  *
  * Cada ação tem seu ícone e seu tom; o rótulo em pt-BR vira tooltip + nome
  * acessível. Ações indisponíveis ficam **visíveis e desabilitadas** (a posição
@@ -196,11 +232,20 @@ interface RowActionsProps {
  * />
  * ```
  */
-export function RowActions({ actions, className }: RowActionsProps) {
+export function RowActions({
+  actions,
+  align = 'center',
+  className,
+}: RowActionsProps) {
   // Sem nenhuma ação, reserva o espaço de um botão para a linha manter a MESMA
   // altura das que têm ações (linhas de altura uniforme na tabela).
   if (actions.length === 0) {
-    return <div aria-hidden className="mx-auto size-7" />;
+    return (
+      <div
+        aria-hidden
+        className={cn('size-7', align === 'right' ? 'ml-auto' : 'mx-auto')}
+      />
+    );
   }
 
   return (
@@ -209,7 +254,11 @@ export function RowActions({ actions, className }: RowActionsProps) {
     // clicável cancela o padrão do botão do meio (evitar o autoscroll) — e isso
     // impediria o clique do meio de abrir a AÇÃO em nova aba.
     <div
-      className={cn('flex items-center justify-center gap-0.5', className)}
+      className={cn(
+        'flex items-center gap-0.5',
+        align === 'right' ? 'justify-end' : 'justify-center',
+        className
+      )}
       onClick={(event) => event.stopPropagation()}
       onAuxClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}

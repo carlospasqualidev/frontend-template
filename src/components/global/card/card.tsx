@@ -17,7 +17,12 @@ import {
 import { cn } from '@/lib/utils';
 
 interface ICardBase {
-  title: string;
+  /**
+   * Opcional: sem `title` o card não renderiza cabeçalho (nem `description` ou
+   * `action`). Card de lista dentro de uma tela não repete o nome que a trilha
+   * já dá. O modo recolhível exige título (é o gatilho).
+   */
+  title?: string;
   description?: string;
   /**
    * Ação do cabeçalho (ex.: botão "Adicionar …"), renderizada **alinhada à
@@ -41,6 +46,7 @@ interface ICardBase {
  * validação). A ação do cabeçalho fica fora do gatilho.
  */
 interface ICollapsibleCardSection {
+  title: string;
   expanded: boolean;
   onToggle: () => void;
 }
@@ -70,11 +76,13 @@ export function Card(props: ICard) {
   if (!isCollapsible(props)) {
     return (
       <CardPrimitive className={cardClassName}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          {description && <CardDescription>{description}</CardDescription>}
-          {action && <CardAction>{action}</CardAction>}
-        </CardHeader>
+        {title && (
+          <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            {description && <CardDescription>{description}</CardDescription>}
+            {action && <CardAction>{action}</CardAction>}
+          </CardHeader>
+        )}
         <CardContent className={contentClassName}>{children}</CardContent>
       </CardPrimitive>
     );

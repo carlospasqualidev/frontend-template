@@ -120,6 +120,7 @@ Skeleton localizado onde o dado entra:
 
 - **[`DataTable`](../../src/components/global/dataTable/dataTable.tsx)** com `isLoading={true}`: header, filtros e paginação **continuam visíveis**; só as células do `<tbody>` viram skeleton, linha-a-linha.
 - **Atualizações parciais:** Evite recarregar a tela ou refetchar listas inteiras quando apenas um pedaço do dado muda. Por exemplo, ao editar um usuário diretamente na listagem, atualize apenas as informações daquele usuário (via `queryClient.setQueryData`, `useMutation` com `onMutate`/optimistic update ou atualizando a linha correspondente no estado) em vez de rebuscar todos os dados de todos os usuários. Isso mantém a UI responsiva, reduz tráfego desnecessário e evita flicker.
+- **Os quatro estados de uma lista** (carregando, erro, vazio, cheio) ficam dentro do card, com filtros e ações visíveis: ver "Quatro estados de uma lista" em [`filters-and-tables.md`](../conventions/filters-and-tables.md).
 - **[`Skeleton*`](../../src/components/global/skeleton/skeleton.tsx)** (`SkeletonText`, `SkeletonValue`, `SkeletonBadge`, `SkeletonAvatar`): granulares por design — coloque no lugar **exato** do dado, dentro do card real.
 - **[`Button` global](../../src/components/global/button/button.tsx)** com `loading`: spinner pequeno inline **dentro do botão** que disparou a ação. Esse spinner é localizado, não é "spinner de tela".
 

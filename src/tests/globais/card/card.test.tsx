@@ -7,6 +7,31 @@ import { Card } from '@/components/global/card/card';
 import { CardContent } from '@/components/ui/card';
 
 describe('Card (global)', () => {
+  it('sem title, não renderiza cabeçalho e mostra o conteúdo', () => {
+    const { container } = render(
+      <Card>
+        <p>Lista</p>
+      </Card>
+    );
+
+    expect(screen.getByText('Lista')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="card-header"]')
+    ).not.toBeInTheDocument();
+  });
+
+  it('com title, renderiza o cabeçalho', () => {
+    const { container } = render(
+      <Card title="Resumo">
+        <p>Conteúdo</p>
+      </Card>
+    );
+
+    expect(
+      container.querySelector('[data-slot="card-header"]')
+    ).toBeInTheDocument();
+  });
+
   it('renderiza title, description e children', () => {
     render(
       <Card title="Resumo" description="Visão consolidada do dia.">

@@ -88,6 +88,17 @@ Exceção: filtro puramente **client-side de refino instantâneo** dentro de um 
 - **[`sortRows`](../../src/components/global/dataTable/sortRows.ts)** `(rows, sorting, accessors)` ordena em memória a lista client-side: `accessors` é um `Map` de id da coluna para função que devolve `string | number | null | undefined`; número por subtração, texto por `localeCompare('pt-BR')`, respeita `desc`, não muta a entrada e devolve a ordem original sem regra ou sem acessor para a coluna. Valor vazio (`null`/`undefined`) vai para o fim nos dois sentidos; número e texto na mesma coluna não são comparados entre si (número vem antes em ordem crescente e depois em decrescente); empates mantêm a ordem de entrada.
 - Exemplo vivo: story `DataTable/ServerSide` no Storybook.
 
+### Quatro estados de uma lista
+
+Toda lista de topo é um `Card` sem `title` (ver `components.md`, "Card de lista") com os filtros e a `DataTable` dentro dele. Os quatro estados acontecem **dentro do card**, e filtros, cabeçalho e ações de tela continuam visíveis e interativos em todos:
+
+- **Carregando:** `isLoading` (`isPending` da query) troca só as células por skeleton.
+- **Erro:** `errorMessage="Não foi possível carregar X"` (e `onRetry` para o botão "Tentar novamente") mostra um `Empty` no corpo. A tela passa `errorMessage` só quando a query falhou **e não há dado** (`isError && !data`): se a recarga falha com linhas já carregadas, as linhas ficam (o interceptor já avisou o erro). `onRetry={refetch}`: o botão fica desabilitado, em carregamento, até a promessa terminar. Os filtros preenchidos ficam.
+- **Vazio:** sem filtro, "Ainda não há registros para exibir."; com filtro, "Ajuste os filtros…" e o botão "Limpar filtros". Vem do `emptyMessage` e é automático.
+- **Cheio:** linhas, com ações por ícone (`rowActionsColumn`) e colunas secundárias ocultas por `defaultHiddenColumnIds`.
+
+Exemplos: users, roles e audit-logs.
+
 ### Colunas ordenáveis pelo cabeçalho — padrão obrigatório
 
 **Por padrão, TODA coluna de uma `DataTable` é ordenável pelo cabeçalho.** O clique no cabeçalho alterna asc/desc. A `DataTable` **nunca reordena localmente** (`manualSorting: true`): quem ordena é o **dono dos dados** — o backend (listas paginadas server-side) ou a própria tela (listas pequenas carregadas por inteiro). Regra dura ao criar/tocar uma listagem:

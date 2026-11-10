@@ -2,9 +2,10 @@ import { expect, test } from '@playwright/test';
 
 import { ADMIN_STORAGE_STATE } from './helpers/storageState';
 
-// Menu "Colunas" da DataTable, exercitado na listagem de Usuários: o usuário
-// oculta uma coluna, a escolha sobrevive ao recarregar (fica neste navegador)
-// e "Mostrar todas" volta ao padrão.
+// Menu "Configurar colunas" da DataTable, exercitado na listagem de Usuários: o
+// padrão oculta "Último acesso" e "Criado em"; o usuário oculta outra coluna, a
+// escolha sobrevive ao recarregar (fica neste navegador) e "Mostrar todas" exibe
+// todas as colunas e grava a lista de ocultas vazia.
 test.describe('Tabela — mostrar e ocultar colunas', () => {
   test.use({ storageState: ADMIN_STORAGE_STATE });
 
@@ -55,12 +56,12 @@ test.describe('Tabela — mostrar e ocultar colunas', () => {
 
   test('ocultar colunas não altera os filtros da URL', async ({ page }) => {
     await page.getByRole('button', { name: 'Configurar colunas' }).click();
-    await page.getByRole('menuitemcheckbox', { name: 'Último acesso' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Cargos' }).click();
     await page.keyboard.press('Escape');
 
     await expect(
-      page.getByRole('columnheader', { name: 'Último acesso' })
+      page.getByRole('columnheader', { name: 'Cargos' })
     ).toHaveCount(0);
-    expect(new URL(page.url()).search).not.toContain('Último');
+    expect(new URL(page.url()).search).not.toContain('Cargos');
   });
 });

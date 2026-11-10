@@ -119,10 +119,7 @@ async function chooseRowAction(
   name: string,
   action: string
 ) {
-  await user.click(
-    within(rowOf(name)).getByRole('button', { name: 'Abrir menu' })
-  );
-  await user.click(await screen.findByRole('menuitem', { name: action }));
+  await user.click(within(rowOf(name)).getByRole('button', { name: action }));
 }
 
 function badRequest(message: string): AxiosError {
@@ -223,21 +220,69 @@ describe('UsersPage — listagem', () => {
     const bruno = rowOf('Bruno Lima');
     expect(within(bruno).getByText('Bloqueado')).toBeInTheDocument();
     expect(within(bruno).getByText('Sem cargo')).toBeInTheDocument();
-    expect(within(bruno).getByText('Nunca acessou')).toBeInTheDocument();
 
-    const headers = screen
-      .getAllByRole('columnheader')
-      .map((header) => header.textContent?.trim());
-    expect(headers).toEqual(
-      expect.arrayContaining([
-        'Nome',
-        'E-mail',
-        'Cargos',
-        'Status',
-        'Último acesso',
-        'Criado em',
-      ])
+    const headers = () =>
+      screen
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent?.trim());
+    expect(headers()).toEqual(
+      expect.arrayContaining(['Nome', 'E-mail', 'Cargos', 'Status', 'Ações'])
     );
+    // Colunas secundárias nascem ocultas.
+    expect(headers()).not.toContain('Último acesso');
+    expect(headers()).not.toContain('Criado em');
+    expect(within(bruno).queryByText('Nunca acessou')).not.toBeInTheDocument();
+  });
+
+  it('"Mostrar todas" revela as colunas ocultas por padrão e a escolha persiste', async () => {
+    const user = userEvent.setup();
+    renderUsers();
+
+    await screen.findByText('Camila Oliveira');
+    await user.click(
+      screen.getByRole('button', { name: 'Configurar colunas' })
+    );
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Mostrar todas' })
+    );
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Último acesso' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Criado em' })
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf('Bruno Lima')).getByText('Nunca acessou')
+    ).toBeInTheDocument();
+    expect(localStorage.getItem('dataTable:hiddenColumns:users')).toBe('[]');
+  });
+
+  it('com a lista falha, mostra o erro dentro do card e mantém os filtros', async () => {
+    vi.mocked(fetchUsers).mockRejectedValue(new Error('falha'));
+    renderUsers({ search: 'cam' });
+
+    expect(
+      await screen.findByText('Não foi possível carregar os usuários')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Tentar novamente' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar')).toHaveValue('cam');
+  });
+
+  it('se a recarga falha com linhas já carregadas, as linhas ficam', async () => {
+    renderUsers();
+
+    await screen.findByText('Camila Oliveira');
+    vi.mocked(fetchUsers).mockRejectedValue(new Error('falha'));
+    await queryClient.refetchQueries({ queryKey: ['users'] });
+
+    await waitFor(() => expect(fetchUsers).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Camila Oliveira')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível carregar os usuários')
+    ).not.toBeInTheDocument();
   });
 
   it('manda os filtros da URL ao servidor, a partir da primeira página', async () => {
@@ -421,28 +466,33 @@ describe('UsersPage — ordenação por status', () => {
 
 describe('UsersPage — permissões', () => {
   it('com as permissões, mostra "Novo usuário" como link e as ações da linha', async () => {
-    const user = userEvent.setup();
     renderUsers();
 
     expect(
       await screen.findByRole('link', { name: 'Novo usuário' })
     ).toHaveAttribute('href', '/users/create');
     await screen.findByText('Camila Oliveira');
+    const camila = within(rowOf('Camila Oliveira'));
+    expect(camila.getByRole('button', { name: 'Copiar e-mail' })).toBeVisible();
+    expect(camila.getByRole('button', { name: 'Bloquear' })).toBeVisible();
+    expect(camila.getByRole('button', { name: 'Excluir' })).toBeVisible();
+    expect(
+      camila.queryByRole('button', { name: 'Editar' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('clicar um ícone de ação não abre o registro', async () => {
+    const user = userEvent.setup();
+    const { router } = renderUsers();
+
+    await screen.findByText('Camila Oliveira');
     await user.click(
-      within(rowOf('Camila Oliveira')).getByRole('button', {
-        name: 'Abrir menu',
-      })
+      within(rowOf('Camila Oliveira')).getByRole('button', { name: 'Bloquear' })
     );
-    expect(
-      await screen.findByRole('menuitem', { name: 'Bloquear' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('menuitem', { name: 'Excluir' })
-    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
   });
 
   it('só com a leitura, esconde criar, bloquear, excluir e o filtro de cargos', async () => {
-    const user = userEvent.setup();
     signIn(['backoffice.users.read']);
     renderUsers({ roleId: [ROLE_FINANCEIRO], search: 'cam' });
 
@@ -458,19 +508,13 @@ describe('UsersPage — permissões', () => {
     expect(params?.roleId).toBeUndefined();
     expect(params?.search).toBe('cam');
 
-    await user.click(
-      within(rowOf('Camila Oliveira')).getByRole('button', {
-        name: 'Abrir menu',
-      })
-    );
+    const camila = within(rowOf('Camila Oliveira'));
+    expect(camila.getByRole('button', { name: 'Copiar e-mail' })).toBeVisible();
     expect(
-      await screen.findByRole('menuitem', { name: 'Copiar e-mail' })
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('menuitem', { name: 'Bloquear' })
+      camila.queryByRole('button', { name: 'Bloquear' })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('menuitem', { name: 'Excluir' })
+      camila.queryByRole('button', { name: 'Excluir' })
     ).not.toBeInTheDocument();
   });
 });

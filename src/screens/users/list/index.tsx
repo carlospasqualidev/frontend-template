@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
+import { Card } from '@/components/global/card/card';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   dateRangeFilter,
@@ -31,6 +32,9 @@ import { userKeys } from '@/services/users/queryKeys';
 import { buildUserListParams, fetchUsers } from '@/services/users/userListApi';
 
 const PAGE_SIZE = 25;
+
+// Colunas secundárias: o menu "Configurar colunas" as revela.
+const HIDDEN_BY_DEFAULT = ['lastLoginAt', 'createdAt'];
 
 const STATUS_OPTIONS = [
   { value: 'true', label: 'Ativo' },
@@ -143,7 +147,7 @@ export function UsersPage() {
     : [];
   const params = { ...listParams, roleId: roleIds.join(',') || undefined };
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: userKeys.list(params),
     queryFn: () => fetchUsers(params),
     staleTime: 30_000,
@@ -186,20 +190,29 @@ export function UsersPage() {
         Usuários
       </Typography>
 
-      <DataTable
-        columns={columns}
-        data={data?.users ?? []}
-        rowCount={data?.count}
-        filters={filters}
-        isLoading={isPending}
-        emptyMessage="Nenhum usuário encontrado."
-        columnVisibilityKey="users"
-        onRowClick={(user) =>
-          navigate({ to: '/users/$userId', params: { userId: user.id } })
-        }
-        getRowHref={(user) => `/users/${user.id}`}
-        {...tableProps}
-      />
+      <Card>
+        <DataTable
+          columns={columns}
+          data={data?.users ?? []}
+          rowCount={data?.count}
+          filters={filters}
+          isLoading={isPending}
+          emptyMessage="Nenhum usuário encontrado."
+          errorMessage={
+            isError && !data
+              ? 'Não foi possível carregar os usuários'
+              : undefined
+          }
+          onRetry={refetch}
+          columnVisibilityKey="users"
+          defaultHiddenColumnIds={HIDDEN_BY_DEFAULT}
+          onRowClick={(user) =>
+            navigate({ to: '/users/$userId', params: { userId: user.id } })
+          }
+          getRowHref={(user) => `/users/${user.id}`}
+          {...tableProps}
+        />
+      </Card>
 
       <UserActionDialog
         action={dialog.action}

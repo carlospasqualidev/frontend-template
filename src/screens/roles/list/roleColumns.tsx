@@ -1,11 +1,13 @@
-import { Copy, Trash2 } from 'lucide-react';
-
 import {
-  actionsColumn,
+  rowActionsColumn,
   SortableHeader,
-  type DataTableRowAction,
 } from '@/components/global/dataTable/columnHelpers';
 import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
+import {
+  copyAction,
+  deleteAction,
+} from '@/components/global/rowActions/actions';
+import type { RowAction } from '@/components/global/rowActions/rowActions';
 import { Badge } from '@/components/ui/badge';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
@@ -33,34 +35,22 @@ interface RoleColumnsOptions {
 function rowActions(
   role: RoleListItem,
   { canCreate, canDelete, onCopy, onDelete }: RoleColumnsOptions
-): DataTableRowAction<RoleListItem>[] {
-  // O `Administrador` não é copiado nem excluído: a linha fica sem ações.
-  // Sem "Editar" no menu: editar é pelo clique na linha (abre o detalhe).
+): RowAction[] {
+  // O `Administrador` não é copiado nem excluído: a linha fica sem ações (e
+  // reserva o espaço de um botão). Sem `editAction`: editar é pelo clique na linha.
   if (role.isSystem) return [];
 
   return [
-    ...(canCreate
-      ? [{ label: 'Copiar', icon: <Copy />, onSelect: () => onCopy(role) }]
-      : []),
-    ...(canDelete
-      ? [
-          {
-            label: 'Excluir',
-            icon: <Trash2 />,
-            destructive: true,
-            separatorBefore: canCreate,
-            onSelect: () => onDelete(role),
-          },
-        ]
-      : []),
+    ...(canCreate ? [copyAction(() => onCopy(role))] : []),
+    ...(canDelete ? [deleteAction(() => onDelete(role))] : []),
   ];
 }
 
 /**
  * Colunas da listagem. Ordenáveis as que o servidor ordena (`name`,
  * `createdAt`); as contagens de permissões e de usuários não estão na
- * allowlist de `orderBy` do servidor. O menu "⋯" só entra com alguma ação
- * permitida (copiar ou excluir).
+ * allowlist de `orderBy` do servidor. A coluna de ações só entra com alguma
+ * ação permitida (copiar ou excluir).
  */
 export function buildRoleColumns(
   options: RoleColumnsOptions
@@ -129,8 +119,7 @@ export function buildRoleColumns(
 
   return [
     ...columns,
-    actionsColumn<RoleListItem>({
-      label: 'Ações',
+    rowActionsColumn<RoleListItem>({
       actions: (role) => rowActions(role, options),
     }),
   ];

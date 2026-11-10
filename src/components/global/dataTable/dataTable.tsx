@@ -9,7 +9,7 @@ import {
   flexRender,
   useTable,
 } from '@tanstack/react-table';
-import { Eraser, Search } from 'lucide-react';
+import { CircleAlert, Eraser, Loader2, RefreshCw, Search } from 'lucide-react';
 
 import { expandColumn } from './columnHelpers';
 import {
@@ -68,6 +68,30 @@ const CELL_MAX_WIDTH = 'max-w-[400px]';
  * simples primeiro colapsa qualquer seleção anterior (no `mousedown`), então no
  * `click` a seleção só é não-vazia quando o gesto foi de fato selecionar texto.
  */
+function RetryButton({ onRetry }: { onRetry: () => unknown }) {
+  const [isRetrying, setIsRetrying] = React.useState(false);
+
+  async function handleRetry() {
+    setIsRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      disabled={isRetrying}
+      onClick={() => void handleRetry()}
+    >
+      {isRetrying ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+      Tentar novamente
+    </Button>
+  );
+}
+
 function hasActiveTextSelection(): boolean {
   const selection = window.getSelection();
   return (
@@ -156,6 +180,20 @@ type DataTableBaseProps<TData extends RowData> = {
   rowCount?: number;
   /** Mensagem exibida quando não há resultados. */
   emptyMessage?: string;
+  /**
+   * Título do estado de erro (ex.: "Não foi possível carregar os usuários"). Com
+   * ele, o corpo mostra um `Empty` de erro no lugar das linhas e do vazio; filtros,
+   * cabeçalho e ações seguem na tela. A tela passa só quando a query falhou e não
+   * há dado a mostrar: se a recarga falha com linhas já carregadas, as linhas
+   * ficam (o interceptor já avisou o erro).
+   */
+  errorMessage?: string;
+  /**
+   * Botão "Tentar novamente" do estado de erro, chamado sem argumentos. Se
+   * devolver uma promessa (ex.: `refetch`), o botão fica desabilitado, em
+   * carregamento, até ela terminar.
+   */
+  onRetry?: () => unknown;
   /**
    * Ordenação atual, **controlada** por fora (ex.: o `sort` da URL, já fiado em
    * `tableProps` pelos hooks). O indicador do cabeçalho e o `aria-sort` seguem
@@ -301,6 +339,8 @@ export function DataTable<TData extends RowData>({
   onPageSizeChange,
   rowCount,
   emptyMessage = 'Nenhum resultado.',
+  errorMessage,
+  onRetry,
   sorting: controlledSorting,
   onSortingChange,
   isRowClickable,
@@ -591,6 +631,18 @@ export function DataTable<TData extends RowData>({
                   </React.Fragment>
                 );
               })
+            ) : errorMessage ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columnCount} className="py-6">
+                  <Empty
+                    title={errorMessage}
+                    description="Tente novamente em instantes."
+                    icon={<CircleAlert />}
+                  >
+                    {onRetry ? <RetryButton onRetry={onRetry} /> : null}
+                  </Empty>
+                </TableCell>
+              </TableRow>
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={columnCount} className="py-6">

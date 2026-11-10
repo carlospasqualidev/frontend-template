@@ -95,10 +95,7 @@ function rowOf(name: string): HTMLElement {
 
 async function chooseRowAction(name: string, action: string) {
   const user = userEvent.setup();
-  await user.click(
-    within(rowOf(name)).getByRole('button', { name: 'Abrir menu' })
-  );
-  await user.click(await screen.findByRole('menuitem', { name: action }));
+  await user.click(within(rowOf(name)).getByRole('button', { name: action }));
 }
 
 function refused(status: number, message: string): AxiosError {
@@ -157,9 +154,12 @@ describe('RolesPage — listagem', () => {
     const admin = rowOf('Administrador');
     expect(admin).toHaveTextContent('Sistema');
     expect(admin).toHaveTextContent('11 permissões');
-    // O `Administrador` não é copiado nem excluído: sem menu.
+    // O `Administrador` não é copiado nem excluído: sem botões de ação.
     expect(
-      within(admin).queryByRole('button', { name: 'Abrir menu' })
+      within(admin).queryByRole('button', { name: 'Copiar' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(admin).queryByRole('button', { name: 'Excluir' })
     ).not.toBeInTheDocument();
 
     expect(fetchRoles).toHaveBeenCalledWith({
@@ -186,6 +186,7 @@ describe('RolesPage — listagem', () => {
 
   it('ordena por nome e por criação no servidor, pelo cabeçalho', async () => {
     const user = userEvent.setup();
+    localStorage.setItem('dataTable:hiddenColumns:roles', '[]');
     renderList();
 
     await screen.findByText('Suporte');
@@ -208,7 +209,7 @@ describe('RolesPage — listagem', () => {
     );
   });
 
-  it('sem criar nem excluir: sem "Novo cargo" e sem a coluna do menu', async () => {
+  it('sem criar nem excluir: sem "Novo cargo" e sem a coluna de ações', async () => {
     signIn(['backoffice.roles.read']);
     renderList();
 
@@ -217,25 +218,52 @@ describe('RolesPage — listagem', () => {
       screen.queryByRole('link', { name: 'Novo cargo' })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Abrir menu' })
+      screen.queryByRole('columnheader', { name: 'Ações' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir' })
     ).not.toBeInTheDocument();
   });
 
-  it('com só a de excluir, o menu tem só "Excluir"', async () => {
-    const user = userEvent.setup();
+  it('com só a de excluir, a linha tem só "Excluir"', async () => {
     signIn(['backoffice.roles.read', 'backoffice.roles.delete']);
     renderList();
 
     await screen.findByText('Suporte');
+    const suporte = within(rowOf('Suporte'));
+    expect(suporte.getByRole('button', { name: 'Excluir' })).toBeVisible();
+    expect(
+      suporte.queryByRole('button', { name: 'Copiar' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('"Criado em" nasce oculta e "Mostrar todas" a revela', async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await screen.findByText('Suporte');
+    expect(
+      screen.queryByRole('columnheader', { name: 'Criado em' })
+    ).not.toBeInTheDocument();
     await user.click(
-      within(rowOf('Suporte')).getByRole('button', { name: 'Abrir menu' })
+      screen.getByRole('button', { name: 'Configurar colunas' })
+    );
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Mostrar todas' })
     );
     expect(
-      await screen.findByRole('menuitem', { name: 'Excluir' })
+      screen.getByRole('columnheader', { name: 'Criado em' })
     ).toBeInTheDocument();
+  });
+
+  it('com a lista falha, mostra o erro dentro do card e mantém os filtros', async () => {
+    vi.mocked(fetchRoles).mockRejectedValue(new Error('falha'));
+    renderList();
+
     expect(
-      screen.queryByRole('menuitem', { name: 'Copiar' })
-    ).not.toBeInTheDocument();
+      await screen.findByText('Não foi possível carregar os cargos')
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar')).toBeInTheDocument();
   });
 });
 

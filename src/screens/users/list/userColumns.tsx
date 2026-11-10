@@ -1,13 +1,18 @@
-import { Copy, Trash2, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { UserAvatar } from '@/components/global/avatar/userAvatar';
 import {
-  actionsColumn,
+  rowActionsColumn,
   SortableHeader,
-  type DataTableRowAction,
 } from '@/components/global/dataTable/columnHelpers';
 import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
+import {
+  blockAction,
+  copyAction,
+  deleteAction,
+  unblockAction,
+} from '@/components/global/rowActions/actions';
+import type { RowAction } from '@/components/global/rowActions/rowActions';
 import { Badge } from '@/components/ui/badge';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
@@ -32,38 +37,25 @@ interface UserColumnsOptions {
 function rowActions(
   user: CompanyUser,
   { canUpdate, canDelete, onAction }: UserColumnsOptions
-): DataTableRowAction<CompanyUser>[] {
-  // Sem "Editar" no menu: editar é pelo clique na linha (abre o detalhe).
+): RowAction[] {
+  // Sem `editAction`: editar é pelo clique na linha (abre o detalhe).
   return [
-    {
-      label: 'Copiar e-mail',
-      icon: <Copy />,
-      onSelect: () => {
+    copyAction(
+      () => {
         void navigator.clipboard.writeText(user.email);
         toast.success('E-mail copiado para a área de transferência.');
       },
-    },
+      { label: 'Copiar e-mail' }
+    ),
     ...(canUpdate
       ? [
-          {
-            label: user.isActive ? 'Bloquear' : 'Desbloquear',
-            icon: user.isActive ? <UserX /> : <UserCheck />,
-            separatorBefore: true,
-            onSelect: () =>
-              onAction({ type: user.isActive ? 'block' : 'unblock', user }),
-          },
+          user.isActive
+            ? blockAction(() => onAction({ type: 'block', user }))
+            : unblockAction(() => onAction({ type: 'unblock', user })),
         ]
       : []),
     ...(canDelete
-      ? [
-          {
-            label: 'Excluir',
-            icon: <Trash2 />,
-            destructive: true,
-            separatorBefore: !canUpdate,
-            onSelect: () => onAction({ type: 'delete', user }),
-          },
-        ]
+      ? [deleteAction(() => onAction({ type: 'delete', user }))]
       : []),
   ];
 }
@@ -155,8 +147,7 @@ export function buildUserColumns(
           showHours: false,
         }),
     },
-    actionsColumn<CompanyUser>({
-      label: 'Ações',
+    rowActionsColumn<CompanyUser>({
       actions: (user) => rowActions(user, options),
     }),
   ];

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
+import { Card } from '@/components/global/card/card';
 import { SortableHeader } from '@/components/global/dataTable/columnHelpers';
 import type { DataTableColumnDef } from '@/components/global/dataTable/tableFeatures';
 import { DataTable } from '@/components/global/dataTable/dataTable';
@@ -125,7 +126,7 @@ export function AuditLogsPage() {
     ? listParams
     : { ...listParams, userId: undefined };
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: auditKeys.list(params),
     queryFn: () => fetchAuditLogs(params),
     staleTime: 30_000,
@@ -195,16 +196,24 @@ export function AuditLogsPage() {
       <Typography as="h1" variant="h3" className="sr-only">
         Auditoria
       </Typography>
-      <DataTable
-        columns={columns}
-        data={data?.logs ?? []}
-        filters={filters}
-        isLoading={isPending}
-        emptyMessage="Nenhum registro de auditoria encontrado."
-        columnVisibilityKey="audit-logs"
-        onRowClick={(log) => setDetailId(log.id)}
-        {...tableProps}
-      />
+      <Card>
+        <DataTable
+          columns={columns}
+          data={data?.logs ?? []}
+          filters={filters}
+          isLoading={isPending}
+          emptyMessage="Nenhum registro de auditoria encontrado."
+          errorMessage={
+            isError && !data
+              ? 'Não foi possível carregar a auditoria'
+              : undefined
+          }
+          onRetry={refetch}
+          columnVisibilityKey="audit-logs"
+          onRowClick={(log) => setDetailId(log.id)}
+          {...tableProps}
+        />
+      </Card>
 
       <AuditLogDetailModal
         logId={detailId}

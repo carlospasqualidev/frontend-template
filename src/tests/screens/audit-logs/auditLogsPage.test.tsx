@@ -110,6 +110,21 @@ afterEach(() => {
   useSessionStore.setState({ user: null });
 });
 
+describe('AuditLogsPage — estado de erro', () => {
+  it('com a lista falha, mostra o erro dentro do card e mantém os filtros', async () => {
+    vi.mocked(fetchAuditLogs).mockRejectedValue(new Error('falha'));
+    renderAuditLogs({ search: 'login' });
+
+    expect(
+      await screen.findByText('Não foi possível carregar a auditoria')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Tentar novamente' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar no conteúdo')).toHaveValue('login');
+  });
+});
+
 describe('AuditLogsPage — filtro "Usuário"', () => {
   it('a tela tem um `h1` só para leitor de tela, com o nome da trilha', async () => {
     renderAuditLogs({});

@@ -40,9 +40,8 @@ function rolesUrl(search: string): string {
 
 async function chooseRowAction(page: Page, name: string, action: string) {
   await rowNamed(page, name)
-    .getByRole('button', { name: 'Abrir menu' })
+    .getByRole('button', { name: action, exact: true })
     .click();
-  await page.getByRole('menuitem', { name: action }).click();
 }
 
 function isRoleWrite(
@@ -468,9 +467,8 @@ test.describe('Cargos', () => {
       await page.goto(rolesUrl('Administrador'));
       const row = rowNamed(page, 'Administrador');
       await expect(row).toContainText('Sistema');
-      await expect(row.getByRole('button', { name: 'Abrir menu' })).toHaveCount(
-        0
-      );
+      await expect(row.getByRole('button', { name: 'Copiar' })).toHaveCount(0);
+      await expect(row.getByRole('button', { name: 'Excluir' })).toHaveCount(0);
       await row.click();
 
       await expect(page).toHaveURL(/\/roles\/[0-9a-f-]+$/);
@@ -524,13 +522,14 @@ test.describe('Cargos', () => {
       ).toBeVisible();
       expect(await page.locator('[data-sonner-toast]').count()).toBe(1);
       await expect(page).toHaveURL(/\/roles\?/);
-      // Sem `backoffice.roles.delete`: o menu só copia.
-      await rowNamed(page, sourceName)
-        .getByRole('button', { name: 'Abrir menu' })
-        .click();
-      await expect(page.getByRole('menuitem', { name: 'Excluir' })).toHaveCount(
-        0
-      );
+      // Sem `backoffice.roles.delete`: a linha só copia.
+      const sourceRow = rowNamed(page, sourceName);
+      await expect(
+        sourceRow.getByRole('button', { name: 'Copiar' })
+      ).toBeVisible();
+      await expect(
+        sourceRow.getByRole('button', { name: 'Excluir' })
+      ).toHaveCount(0);
     });
 
     // Por último: o gestor sai daqui sem `backoffice.roles.create`. Retirar

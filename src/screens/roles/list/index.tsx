@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ShieldPlus } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
+import { Card } from '@/components/global/card/card';
 import { DataTable } from '@/components/global/dataTable/dataTable';
 import {
   textFilter,
@@ -24,6 +25,9 @@ import { type RoleListItem } from '@/services/roles/types';
 
 const PAGE_SIZE = 25;
 
+// Coluna secundária: o menu "Configurar colunas" a revela.
+const HIDDEN_BY_DEFAULT = ['createdAt'];
+
 const FILTERS: DataTableFilter[] = [
   textFilter({
     key: 'search',
@@ -35,7 +39,7 @@ const FILTERS: DataTableFilter[] = [
 /**
  * Cargos da empresa (`GET /client/roles`): busca pelo nome, ordenação e
  * paginação no servidor, com as contagens de permissões e de usuários de cada
- * um. O clique na linha abre o detalhe (a edição); o "⋯" copia e exclui.
+ * um. O clique na linha abre o detalhe (a edição); os ícones da linha copiam e excluem.
  */
 export function RolesPage() {
   const navigate = useNavigate();
@@ -46,7 +50,7 @@ export function RolesPage() {
   const { query, tableProps } = useDataTableUrlQuery({ pageSize: PAGE_SIZE });
   const params = buildRoleListParams(query);
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: roleKeys.list(params),
     queryFn: () => fetchRoles(params),
     staleTime: 30_000,
@@ -95,20 +99,27 @@ export function RolesPage() {
         Cargos
       </Typography>
 
-      <DataTable
-        columns={columns}
-        data={data?.roles ?? []}
-        rowCount={data?.count}
-        filters={FILTERS}
-        isLoading={isPending}
-        emptyMessage="Nenhum cargo encontrado."
-        columnVisibilityKey="roles"
-        onRowClick={(role) =>
-          navigate({ to: '/roles/$roleId', params: { roleId: role.id } })
-        }
-        getRowHref={(role) => `/roles/${role.id}`}
-        {...tableProps}
-      />
+      <Card>
+        <DataTable
+          columns={columns}
+          data={data?.roles ?? []}
+          rowCount={data?.count}
+          filters={FILTERS}
+          isLoading={isPending}
+          emptyMessage="Nenhum cargo encontrado."
+          errorMessage={
+            isError && !data ? 'Não foi possível carregar os cargos' : undefined
+          }
+          onRetry={refetch}
+          columnVisibilityKey="roles"
+          defaultHiddenColumnIds={HIDDEN_BY_DEFAULT}
+          onRowClick={(role) =>
+            navigate({ to: '/roles/$roleId', params: { roleId: role.id } })
+          }
+          getRowHref={(role) => `/roles/${role.id}`}
+          {...tableProps}
+        />
+      </Card>
 
       <DeleteRoleDialog
         role={deletion.role}

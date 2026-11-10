@@ -244,6 +244,17 @@ function LongList() {
   );
 }
 
+export const SemTitulo: Story = {
+  render: () => (
+    <Card>
+      <Typography variant="muted">
+        Sem título o card não tem cabeçalho: é o painel de uma lista que a
+        trilha já nomeia (filtros e tabela dentro dele).
+      </Typography>
+    </Card>
+  ),
+};
+
 export const CabecalhoEstreito: Story = {
   render: () => (
     <div className="grid gap-6">

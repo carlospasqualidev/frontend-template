@@ -47,9 +47,8 @@ function todayInputDate(): string {
 
 async function chooseRowAction(page: Page, rowText: string, action: string) {
   await rowWith(page, rowText)
-    .getByRole('button', { name: 'Abrir menu' })
+    .getByRole('button', { name: action, exact: true })
     .click();
-  await page.getByRole('menuitem', { name: action }).click();
 }
 
 // As opções vêm da busca do servidor: o cargo é achado pelo nome digitado,
@@ -160,7 +159,8 @@ test.describe('Usuários', () => {
       await expect(activeRow).toContainText(active.email);
       await expect(activeRow).toContainText(auditRoleName);
       await expect(activeRow).toContainText('Ativo');
-      await expect(activeRow).toContainText('Nunca acessou');
+      // "Último acesso" nasce oculta: o e-mail e o status bastam aqui.
+      await expect(activeRow).not.toContainText('Nunca acessou');
       await expect(rowWith(page, blocked.name)).toContainText('Bloqueado');
       await expect(rowWith(page, withoutRole.name)).toContainText('Sem cargo');
     });

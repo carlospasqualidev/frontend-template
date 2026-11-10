@@ -59,7 +59,10 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = 'item-aligned',
+  // `popper` e não `item-aligned`: o modo alinhado ao item do Radix abre a lista PARA CIMA quando o
+  // item selecionado está no fim dela, mesmo com espaço abaixo. `popper` abre sempre ABAIXO do campo e
+  // só vira para cima quando não cabe.
+  position = 'popper',
   align = 'center',
   // Só tem efeito em `position="popper"` (o modo `item-aligned` do Radix tem
   // posicionamento próprio). Mantém a lista fora da faixa do header, já que os

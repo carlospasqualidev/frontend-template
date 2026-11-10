@@ -276,3 +276,18 @@ describe('DateField — navegação do calendário', () => {
     expect(await screen.findByText('valor:2027-07-28')).toBeInTheDocument();
   });
 });
+
+describe('DateField — rótulo oculto', () => {
+  it('sem id, o rótulo oculto continua ligado ao campo', () => {
+    render(<DateField label="Vencimento" srOnlyLabel />);
+
+    expect(screen.getByLabelText('Vencimento')).toBeInTheDocument();
+  });
+
+  it('srOnlyLabel mantém o rótulo no DOM, ligado ao campo, e oculto à vista', () => {
+    render(<DateField id="due" label="Vencimento" srOnlyLabel />);
+
+    expect(screen.getByLabelText('Vencimento')).toBeInTheDocument();
+    expect(screen.getByText('Vencimento')).toHaveClass('sr-only');
+  });
+});

@@ -60,4 +60,25 @@ describe('Switch (global)', () => {
     await userEvent.click(screen.getByRole('switch'));
     expect(screen.getByTestId('value')).toHaveTextContent('true');
   });
+
+  it('sem `id`, o rótulo continua alcançando o controle', async () => {
+    render(<Switch label="Atende todos os itens" />);
+
+    const controlEl = screen.getByLabelText('Atende todos os itens');
+    await userEvent.click(screen.getByText('Atende todos os itens'));
+    expect(controlEl).toBeChecked();
+  });
+
+  it('`id` informado continua sendo o que vale', () => {
+    render(<Switch id="my-id" label="Ativo" />);
+
+    expect(screen.getByLabelText('Ativo')).toHaveAttribute('id', 'my-id');
+  });
+
+  it('srOnlyLabel esconde o rótulo do olho, e não do leitor de tela', () => {
+    render(<Switch id="doc-1" label="Liberar relatorio.pdf" srOnlyLabel />);
+
+    expect(screen.getByLabelText('Liberar relatorio.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Liberar relatorio.pdf')).toHaveClass('sr-only');
+  });
 });

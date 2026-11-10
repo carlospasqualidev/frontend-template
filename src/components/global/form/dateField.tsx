@@ -51,6 +51,9 @@ type DateFieldBaseProps = Omit<
   'type' | 'value' | 'defaultValue' | 'onChange' | 'onBlur'
 > & {
   label: string;
+  /** Mantém o rótulo acessível (leitor de tela) mas oculto visualmente — para uso
+   *  em células de tabela onde o cabeçalho da coluna já é o rótulo visual. */
+  srOnlyLabel?: boolean;
   description?: string;
   errors?: FormFieldErrors;
   value?: string;
@@ -84,9 +87,10 @@ type DateFieldProps<
 > = ControlledDateFieldProps<TFieldValues, TName> | UncontrolledDateFieldProps;
 
 function DateFieldBase({
-  id,
+  id: idProp,
   name,
   label,
+  srOnlyLabel,
   description,
   placeholder = 'dd/mm/aaaa',
   errors,
@@ -100,6 +104,9 @@ function DateFieldBase({
   calendarProps,
   ...props
 }: DateFieldBaseProps) {
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao input.
+  const generatedId = React.useId();
+  const id = idProp ?? generatedId;
   const [open, setOpen] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
   const isControlled = value !== undefined;
@@ -221,7 +228,14 @@ function DateFieldBase({
 
   return (
     <BaseField data-invalid={invalid}>
-      {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
+      {label && (
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
+          {label}
+        </FieldLabel>
+      )}
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverAnchor asChild>

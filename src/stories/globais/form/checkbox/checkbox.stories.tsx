@@ -78,6 +78,24 @@ export const Vitrine: Story = {
       </Card>
 
       <Card
+        title="Com dica em tooltip"
+        description="`labelHint`: o detalhe num ícone de informação ao lado do rótulo, sem ocupar uma linha abaixo."
+      >
+        <Checkbox
+          id="cb-hint"
+          label="Receber avisos"
+          labelHint="Envia um aviso a cada alteração."
+        />
+      </Card>
+
+      <Card
+        title="Rótulo só para o leitor de tela"
+        description="`srOnlyLabel`: para a caixa dentro de uma célula, onde o cabeçalho da coluna já é o rótulo visual. O rótulo continua no DOM e obrigatório."
+      >
+        <Checkbox id="cb-sr-only" label="Selecionar a linha 001" srOnlyLabel />
+      </Card>
+
+      <Card
         title="Marcado por padrão"
         description="Uncontrolled com defaultChecked."
       >

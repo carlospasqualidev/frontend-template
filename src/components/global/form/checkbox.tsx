@@ -21,11 +21,23 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Checkbox as BaseCheckbox } from '@/components/ui/checkbox';
+import { InfoTooltip } from '@/components/global/infoTooltip/infoTooltip';
 
 type CheckboxBaseProps = React.ComponentProps<typeof CheckboxPrimitive.Root> & {
   label: string;
   description?: string;
+  /**
+   * Dica curta num tooltip (ícone "i") ao lado do rótulo, para o detalhe que
+   * explica a opção sem ocupar uma linha de `description`.
+   */
+  labelHint?: React.ReactNode;
   errors?: FormFieldErrors;
+  /**
+   * Esconde o rótulo visualmente, mantendo-o para o leitor de tela. Para a caixa
+   * dentro de uma célula de tabela, onde o cabeçalho da coluna já é o rótulo
+   * visual. O rótulo segue no DOM e ligado ao controle.
+   */
+  srOnlyLabel?: boolean;
 };
 
 type ControlledCheckboxProps<
@@ -57,9 +69,19 @@ type CheckboxProps<
 function CheckboxBase({
   label,
   description,
+  labelHint,
   errors,
+  srOnlyLabel,
   ...props
 }: CheckboxBaseProps) {
+  /**
+   * O `id` que associa rótulo e controle, DERIVADO quando ninguém o informa:
+   * sem ele o `htmlFor` apontaria para `undefined` e o rótulo (inclusive o
+   * `srOnlyLabel`) não nomearia o controle.
+   */
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
+
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const descriptionId = useId();
@@ -76,6 +98,15 @@ function CheckboxBase({
       .filter(Boolean)
       .join(' ') || undefined;
 
+  const fieldLabel = label ? (
+    <FieldLabel
+      htmlFor={id}
+      className={srOnlyLabel ? 'sr-only' : 'cursor-pointer'}
+    >
+      {label}
+    </FieldLabel>
+  ) : null;
+
   return (
     <BaseField data-invalid={invalid}>
       <BaseField orientation="horizontal">
@@ -83,12 +114,19 @@ function CheckboxBase({
           aria-invalid={resolvedAriaInvalid}
           aria-describedby={resolvedAriaDescribedBy}
           {...checkboxProps}
+          id={id}
           className="cursor-pointer"
         />
-        {label && (
-          <FieldLabel htmlFor={props.id} className="cursor-pointer">
-            {label}
-          </FieldLabel>
+        {/* Com a dica, rótulo e ícone vão juntos: no campo horizontal o rótulo
+            ganha `flex-auto` e, sozinho, empurraria a dica para a borda direita.
+            A dica fica fora do `<label>` para não entrar no nome do campo. */}
+        {labelHint ? (
+          <span className="inline-flex items-center gap-1.5">
+            {fieldLabel}
+            <InfoTooltip label={labelHint} triggerLabel={`Sobre ${label}`} />
+          </span>
+        ) : (
+          fieldLabel
         )}
       </BaseField>
       {description && (
@@ -110,6 +148,7 @@ function ControlledCheckbox<
   label,
   description,
   errors,
+  srOnlyLabel,
   ...props
 }: ControlledCheckboxProps<TFieldValues, TName>) {
   const {
@@ -127,6 +166,7 @@ function ControlledCheckbox<
       {...props}
       label={label}
       description={description}
+      srOnlyLabel={srOnlyLabel}
       name={field.name}
       checked={Boolean(field.value)}
       onCheckedChange={(checked) => field.onChange(Boolean(checked))}

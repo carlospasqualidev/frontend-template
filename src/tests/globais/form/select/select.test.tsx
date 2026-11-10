@@ -44,6 +44,16 @@ describe('Select (global)', () => {
       );
     });
 
+    it('usa o modo popper por padrão, mesmo com o último item selecionado', async () => {
+      const user = userEvent.setup();
+      render(<Select label="Estado" value="SP" options={OPTIONS} />);
+
+      await user.click(screen.getByRole('combobox'));
+
+      const content = await screen.findByRole('listbox');
+      expect(content).toHaveAttribute('data-align-trigger', 'false');
+    });
+
     it('clearable limpa a seleção (Radix)', async () => {
       const user = userEvent.setup();
       const onValueChange = vi.fn();

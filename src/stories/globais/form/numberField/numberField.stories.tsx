@@ -72,6 +72,40 @@ function NumberFieldDemo() {
   );
 }
 
+const signedSchema = z.object({
+  rate: z.number({ error: 'Informe a taxa.' }),
+});
+
+type SignedFormValues = z.infer<typeof signedSchema>;
+
+function AllowNegativeDemo() {
+  const { control } = useForm<SignedFormValues>({
+    resolver: zodResolver(signedSchema),
+    defaultValues: { rate: -0.00125 },
+  });
+  return (
+    <NumberField
+      id="rate"
+      name="rate"
+      control={control}
+      label="Taxa do mês"
+      maxDecimals={5}
+      allowNegative
+    />
+  );
+}
+
+export const AceitaNegativo: Story = {
+  render: () => (
+    <Card
+      title="Valor negativo (allowNegative)"
+      description='Com `allowNegative`, digite ou cole "-" junto dos dígitos: "-12345" vira "-0,12345". Apagar o "-" volta ao positivo; zero continua válido. Sem a prop, o "-" é ignorado.'
+    >
+      <AllowNegativeDemo />
+    </Card>
+  ),
+};
+
 export const Vitrine: Story = {
   render: () => (
     <div className="grid gap-6 lg:grid-cols-2">

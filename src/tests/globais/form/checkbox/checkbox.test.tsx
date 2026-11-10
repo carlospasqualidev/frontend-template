@@ -148,6 +148,51 @@ describe('Checkbox (global)', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
+  it('labelHint rende um tooltip de informação nomeado pelo rótulo', () => {
+    render(
+      <Checkbox
+        id="notify"
+        label="Receber avisos"
+        labelHint="Envia um aviso a cada alteração."
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Sobre Receber avisos' })
+    ).toBeInTheDocument();
+    // A dica fica fora do <label>: não entra no nome do controle.
+    expect(
+      screen.getByRole('checkbox', { name: 'Receber avisos' })
+    ).toBeInTheDocument();
+  });
+
+  it('sem `id`, o rótulo continua alcançando o controle', async () => {
+    render(<Checkbox label="Selecionar linha" />);
+
+    const controlEl = screen.getByLabelText('Selecionar linha');
+    await userEvent.click(screen.getByText('Selecionar linha'));
+    expect(controlEl).toBeChecked();
+  });
+
+  it('`id` do chamador vence o derivado', () => {
+    render(<Checkbox id="my-id" label="Ativo" />);
+
+    expect(screen.getByLabelText('Ativo')).toHaveAttribute('id', 'my-id');
+  });
+
+  it('srOnlyLabel esconde o rótulo do olho, e não do leitor de tela', () => {
+    render(<Checkbox id="row-1" label="Selecionar a linha 001" srOnlyLabel />);
+
+    expect(screen.getByLabelText('Selecionar a linha 001')).toBeInTheDocument();
+    expect(screen.getByText('Selecionar a linha 001')).toHaveClass('sr-only');
+  });
+
+  it('sem srOnlyLabel o rótulo fica visível', () => {
+    render(<Checkbox id="visible" label="Aceito os termos" />);
+
+    expect(screen.getByText('Aceito os termos')).not.toHaveClass('sr-only');
+  });
+
   it('exibe erro e marca o controle como inválido', () => {
     render(
       <Checkbox

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   useController,
   type Control,
@@ -24,6 +25,12 @@ type SwitchBaseProps = React.ComponentProps<typeof BaseSwitch> & {
   label: string;
   description?: string;
   errors?: FormFieldErrors;
+  /**
+   * Esconde o rótulo visualmente, mantendo-o para o leitor de tela. Para o
+   * interruptor dentro de uma célula de tabela, onde o cabeçalho da coluna já é
+   * o rótulo visual. O rótulo segue no DOM e ligado ao controle.
+   */
+  srOnlyLabel?: boolean;
 };
 
 type ControlledSwitchProps<
@@ -52,7 +59,21 @@ type SwitchProps<
   TName extends FieldPathByValue<TFieldValues, boolean>,
 > = ControlledSwitchProps<TFieldValues, TName> | UncontrolledSwitchProps;
 
-function SwitchBase({ label, description, errors, ...props }: SwitchBaseProps) {
+function SwitchBase({
+  label,
+  description,
+  errors,
+  srOnlyLabel,
+  ...props
+}: SwitchBaseProps) {
+  /**
+   * O `id` que associa rótulo e controle, DERIVADO quando ninguém o informa:
+   * sem ele o `htmlFor` apontaria para `undefined` e o rótulo (inclusive o
+   * `srOnlyLabel`) não nomearia o controle.
+   */
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
+
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const { 'aria-invalid': ariaInvalid, ...switchProps } = props;
@@ -64,10 +85,14 @@ function SwitchBase({ label, description, errors, ...props }: SwitchBaseProps) {
         <BaseSwitch
           aria-invalid={resolvedAriaInvalid}
           {...switchProps}
+          id={id}
           className="cursor-pointer"
         />
         {label && (
-          <FieldLabel htmlFor={props.id} className="cursor-pointer">
+          <FieldLabel
+            htmlFor={id}
+            className={srOnlyLabel ? 'sr-only' : 'cursor-pointer'}
+          >
             {label}
           </FieldLabel>
         )}
@@ -89,6 +114,7 @@ function ControlledSwitch<
   label,
   description,
   errors,
+  srOnlyLabel,
   ...props
 }: ControlledSwitchProps<TFieldValues, TName>) {
   const {
@@ -106,6 +132,7 @@ function ControlledSwitch<
       {...props}
       label={label}
       description={description}
+      srOnlyLabel={srOnlyLabel}
       name={field.name}
       checked={Boolean(field.value)}
       onCheckedChange={(checked) => field.onChange(Boolean(checked))}

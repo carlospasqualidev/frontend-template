@@ -96,6 +96,18 @@ export const Vitrine: Story = {
         />
       </Card>
 
+      <Card
+        title="Abre sempre abaixo"
+        description="Com o último item selecionado, a lista abre abaixo do campo (popper), não para cima."
+      >
+        <Select
+          id="sel-last"
+          label="Departamento"
+          defaultValue={departmentOptions.at(-1)?.value}
+          options={departmentOptions}
+        />
+      </Card>
+
       <Card title="Com descrição" description="Texto auxiliar abaixo.">
         <Select
           id="sel-desc"

@@ -54,6 +54,13 @@ export const Vitrine: Story = {
       </Card>
 
       <Card
+        title="Rótulo só para o leitor de tela"
+        description="`srOnlyLabel`: para o interruptor dentro de uma célula, onde o cabeçalho da coluna já é o rótulo visual. O rótulo continua no DOM e obrigatório."
+      >
+        <Switch id="sw-sr-only" label="Liberar relatorio.pdf" srOnlyLabel />
+      </Card>
+
+      <Card
         title="Ligado por padrão"
         description="Uncontrolled com defaultChecked."
       >

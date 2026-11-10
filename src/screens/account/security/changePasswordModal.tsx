@@ -129,14 +129,12 @@ function ChangePasswordForm({ onChanged }: { onChanged: () => void }) {
         placeholder="Repita a nova senha"
         autoComplete="new-password"
       />
-      {isDirty && (
-        <ModalFooter>
-          <Button type="submit" loading={mutation.isPending}>
-            <Check />
-            Alterar senha
-          </Button>
-        </ModalFooter>
-      )}
+      <ModalFooter>
+        <Button type="submit" loading={mutation.isPending} disabled={!isDirty}>
+          <Check />
+          Alterar senha
+        </Button>
+      </ModalFooter>
     </form>
   );
 }

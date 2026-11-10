@@ -33,12 +33,14 @@ type Story = StoryObj<typeof meta>;
 
 function EditProfileDemo() {
   const [open, setOpen] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
 
   return (
     <>
       <Button
         onClick={(event) => {
           event.currentTarget.blur();
+          setDirty(false);
           setOpen(true);
         }}
       >
@@ -51,7 +53,7 @@ function EditProfileDemo() {
         open={open}
         setOpen={setOpen}
       >
-        <form className="grid items-start gap-6">
+        <form className="grid items-start gap-6" onInput={() => setDirty(true)}>
           <div className="grid gap-3">
             <Label htmlFor="modal-story-email">E-mail</Label>
             <Input
@@ -65,7 +67,9 @@ function EditProfileDemo() {
             <Input id="modal-story-username" defaultValue="@usuario" />
           </div>
           <ModalFooter>
-            <Button onClick={() => setOpen(false)}>Salvar alterações</Button>
+            <Button disabled={!dirty} onClick={() => setOpen(false)}>
+              Salvar alterações
+            </Button>
           </ModalFooter>
         </form>
       </Modal>
@@ -87,6 +91,7 @@ export const Vitrine: Story = {
 function StepsDemo() {
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState<'menu' | 'form'>('menu');
+  const [dirty, setDirty] = React.useState(false);
 
   return (
     <>
@@ -94,6 +99,7 @@ function StepsDemo() {
         onClick={(event) => {
           event.currentTarget.blur();
           setStep('menu');
+          setDirty(false);
           setOpen(true);
         }}
       >
@@ -117,13 +123,18 @@ function StepsDemo() {
             <Button onClick={() => setStep('form')}>Continuar</Button>
           </ModalFooter>
         ) : (
-          <form className="grid items-start gap-6">
+          <form
+            className="grid items-start gap-6"
+            onInput={() => setDirty(true)}
+          >
             <div className="grid gap-3">
               <Label htmlFor="modal-story-step-name">Nome</Label>
               <Input id="modal-story-step-name" defaultValue="" />
             </div>
             <ModalFooter>
-              <Button onClick={() => setOpen(false)}>Salvar</Button>
+              <Button disabled={!dirty} onClick={() => setOpen(false)}>
+                Salvar
+              </Button>
             </ModalFooter>
           </form>
         )}
@@ -170,6 +181,90 @@ export const ComDoisBotoes: Story = {
       description="Um botão ocupa a linha toda; dois ou mais centralizam e quebram de linha se não couberem."
     >
       <TwoButtonsDemo />
+    </Card>
+  ),
+};
+
+function HeaderActionDemo() {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button
+        onClick={(event) => {
+          event.currentTarget.blur();
+          setOpen(true);
+        }}
+      >
+        Abrir modal com ação no cabeçalho
+      </Button>
+
+      <Modal
+        title="Contrato.pdf"
+        open={open}
+        setOpen={setOpen}
+        size="xl"
+        headerAction={
+          <Button variant="outline" size="sm">
+            Baixar
+          </Button>
+        }
+      >
+        <p>Corpo largo: no tamanho xl o corpo chega a 85% da altura da tela.</p>
+      </Modal>
+    </>
+  );
+}
+
+export const ComAcaoNoCabecalho: Story = {
+  render: () => (
+    <Card
+      title="Ação no cabeçalho"
+      description="`headerAction` fica à direita, antes do X; `xl` e `2xl` têm corpo mais alto."
+    >
+      <HeaderActionDemo />
+    </Card>
+  ),
+};
+
+function BlockingDemo() {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button
+        onClick={(event) => {
+          event.currentTarget.blur();
+          setOpen(true);
+        }}
+      >
+        Abrir modal bloqueante
+      </Button>
+
+      <Modal
+        title="Aceite os termos"
+        open={open}
+        setOpen={setOpen}
+        dismissible={false}
+      >
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Recusar
+          </Button>
+          <Button onClick={() => setOpen(false)}>Aceitar</Button>
+        </ModalFooter>
+      </Modal>
+    </>
+  );
+}
+
+export const Bloqueante: Story = {
+  render: () => (
+    <Card
+      title="Modal bloqueante"
+      description="Com `dismissible={false}` Esc, clique fora e X não fecham: só os botões do conteúdo."
+    >
+      <BlockingDemo />
     </Card>
   ),
 };

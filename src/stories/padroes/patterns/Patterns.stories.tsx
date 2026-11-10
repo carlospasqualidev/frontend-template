@@ -671,13 +671,11 @@ function PersonForm({
         }))}
       />
 
-      {isDirty && (
-        <ModalFooter>
-          <Button type="submit" loading={isSubmitting}>
-            {initial ? 'Salvar alterações' : 'Cadastrar'}
-          </Button>
-        </ModalFooter>
-      )}
+      <ModalFooter>
+        <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
+          {initial ? 'Salvar alterações' : 'Cadastrar'}
+        </Button>
+      </ModalFooter>
     </form>
   );
 }

@@ -66,7 +66,7 @@ Quando um campo (`InputField`/`NumberField`/`Combobox`/…) exibe mensagem de er
 
 ## Detalhe = Edição (edição sempre liberada; salvar aparece quando há mudança)
 
-**Quando uma entidade tem edição, a tela de detalhe É a tela de edição — não crie uma tela separada só de visualização.** Regra de produto: **a ação tem que ser o mais simples possível** — a tela **abre já editável**, sem passo intermediário de "Editar". Os campos ficam editáveis desde o primeiro render; **o `Salvar alterações` só aparece quando há mudança** (o formulário fica _dirty_). No topo (`PageActions`):
+**Quando uma entidade tem edição, a tela de detalhe É a tela de edição — não crie uma tela separada só de visualização.** Regra de produto: **a ação tem que ser o mais simples possível** — a tela **abre já editável**, sem passo intermediário de "Editar". Os campos ficam editáveis desde o primeiro render; **o `Salvar alterações` só aparece quando há mudança** (o formulário fica _dirty_). Isto vale para a **tela** de detalhe; no **modal** o salvar fica sempre visível e desabilitado até haver mudança (ver `components.md`). No topo (`PageActions`):
 
 - **Sem mudanças (form pristine):** só **`Excluir`** (se permitido). Nada de `Editar`, nada de `Salvar`.
 - **Com mudanças (form dirty):** o `Excluir` **some** e aparecem **`Descartar`** + **`Salvar alterações`**. `Descartar` reverte o formulário (`reset()` — volta ao último estado salvo/carregado); `Salvar alterações` persiste **sem trocar de rota** e, ao concluir, o form volta a pristine (aí o `Salvar`/`Descartar` some e o `Excluir` reaparece).

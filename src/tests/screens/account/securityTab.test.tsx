@@ -143,15 +143,20 @@ describe('Minha conta — Segurança: troca de senha', () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it('só oferece enviar depois de digitar algo', async () => {
+  it('mostra o botão desabilitado e só habilita depois de digitar algo', async () => {
     const user = userEvent.setup();
     renderAccount('security');
 
     const dialog = await openPasswordModal(user);
+    const submit = within(dialog).getByRole('button', {
+      name: 'Alterar senha',
+    });
 
-    expect(
-      within(dialog).queryByRole('button', { name: 'Alterar senha' })
-    ).not.toBeInTheDocument();
+    expect(submit).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText('Senha atual'), 'x');
+
+    expect(submit).toBeEnabled();
   });
 
   it('recusa antes de enviar a confirmação diferente e a nova igual à atual', async () => {

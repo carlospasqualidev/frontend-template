@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,8 +15,14 @@ function Harness({
   onBack,
   backLabel,
   icon,
+  headerAction,
+  dismissible,
   description = 'Atualize seus dados.',
+  body = <p>Conteúdo do modal</p>,
 }: {
+  body?: ReactNode;
+  headerAction?: ReactNode;
+  dismissible?: boolean;
   description?: string | null;
   initialOpen?: boolean;
   size?: ModalSize;
@@ -40,8 +46,10 @@ function Harness({
         onBack={onBack}
         backLabel={backLabel}
         icon={icon}
+        headerAction={headerAction}
+        dismissible={dismissible}
       >
-        <p>Conteúdo do modal</p>
+        {body}
       </Modal>
     </>
   );
@@ -117,6 +125,195 @@ describe('Modal (global)', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog.querySelector('[data-slot="drawer-description"]')).toBeNull();
     expect(dialog).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('headerAction aparece no cabeçalho, em ml-auto shrink-0, no Dialog', () => {
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+      />
+    );
+
+    const action = screen.getByRole('button', { name: 'Baixar' });
+    expect(action.parentElement).toHaveClass('ml-auto', 'shrink-0');
+    expect(screen.getByRole('dialog').contains(action)).toBe(true);
+  });
+
+  it('headerAction também aparece no Drawer (mobile)', () => {
+    window.matchMedia = (query) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Baixar' }).parentElement
+    ).toHaveClass('ml-auto', 'shrink-0');
+  });
+
+  it('dismissible padrão: o X existe e o Esc fecha', async () => {
+    render(<Harness initialOpen />);
+
+    expect(screen.getByRole('button', { name: /fechar|close/i })).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('dismissible padrão: clique fora fecha (controle do bloqueante)', async () => {
+    render(<Harness initialOpen />);
+
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(document.body);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('com headerAction, o foco inicial vai ao primeiro campo do corpo', async () => {
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+        body={<input aria-label="Nome" />}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveFocus()
+    );
+  });
+
+  it('o foco inicial pula file input oculto, hidden e tabindex=-1 e vai ao primeiro campo real', async () => {
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+        body={
+          <>
+            <input
+              type="file"
+              aria-label="Arquivo"
+              style={{ display: 'none' }}
+            />
+            <input type="hidden" name="token" />
+            <input aria-label="Ignorado" tabIndex={-1} />
+            <input aria-label="Nome" />
+          </>
+        }
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveFocus()
+    );
+  });
+
+  it('no Drawer, o foco inicial não é forçado ao campo do corpo', async () => {
+    window.matchMedia = (query) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+
+    render(
+      <Harness
+        initialOpen
+        headerAction={<button type="button">Baixar</button>}
+        body={<input aria-label="Nome" />}
+      />
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByRole('textbox', { name: 'Nome' })).not.toHaveFocus();
+  });
+
+  it('o Dialog limita a altura total ao viewport e o corpo rola', () => {
+    render(<Harness initialOpen size="2xl" />);
+
+    expect(screen.getByRole('dialog')).toHaveClass(
+      'max-h-[calc(100dvh-2rem)]',
+      'grid-rows-[auto_minmax(0,1fr)]'
+    );
+  });
+
+  it('dismissible=false: sem X, Esc e clique fora não fecham, e o cabeçalho não reserva pr-12', async () => {
+    render(<Harness initialOpen dismissible={false} />);
+
+    expect(
+      screen.queryByRole('button', { name: /fechar|close/i })
+    ).not.toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(document.body);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    const header = screen
+      .getByText('Editar perfil')
+      .closest('[data-slot="dialog-header"]');
+    expect(header).not.toHaveClass('pr-12');
+  });
+
+  it('dismissible=false no Drawer: Esc não fecha', async () => {
+    window.matchMedia = (query) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+
+    render(<Harness initialOpen dismissible={false} />);
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it.each([
+    [true, 'ligado'],
+    [false, 'desligado'],
+  ])('sem descrição fica sem aria-describedby, dismissible %s', (value) => {
+    render(<Harness initialOpen description={null} dismissible={value} />);
+
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it.each([
+    ['default', 'max-h-[70dvh]'],
+    ['lg', 'max-h-[70dvh]'],
+    ['xl', 'max-h-[85dvh]'],
+    ['2xl', 'max-h-[85dvh]'],
+  ] as const)('size=%s limita o corpo a %s', (size, expected) => {
+    render(<Harness initialOpen size={size} />);
+
+    const viewport = screen
+      .getByText('Conteúdo do modal')
+      .closest('[data-slot="scroll-area-viewport"]');
+    expect(viewport).toHaveClass(expected);
   });
 
   it('inicializa aberto quando open=true desde o start', () => {
@@ -242,6 +439,19 @@ describe('ModalFooter (global)', () => {
     rerender(<Footer canDelete />);
     expect(footer?.querySelectorAll(':scope > button')).toHaveLength(2);
     expect(footer).toHaveClass('justify-center', 'gap-2');
+  });
+
+  it('marca o rodapé com data-slot="modal-footer"', () => {
+    const { container } = render(
+      <ModalFooter>
+        <button type="button">Salvar</button>
+      </ModalFooter>
+    );
+
+    expect(container.firstElementChild).toHaveAttribute(
+      'data-slot',
+      'modal-footer'
+    );
   });
 
   it('texto ao lado do botão: linha inteira centralizada, e o botão segue sendo o único <button> filho', () => {

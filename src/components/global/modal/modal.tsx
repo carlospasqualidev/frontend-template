@@ -49,6 +49,30 @@ function sizeClassName(size: ModalSize): string {
   }
 }
 
+/** Falso para campo sem layout (`display:none`, `visibility:hidden`) ou `aria-hidden`. */
+function isRendered(element: HTMLElement): boolean {
+  if (element.closest('[hidden], [aria-hidden="true"]')) return false;
+  for (
+    let node: HTMLElement | null = element;
+    node;
+    node = node.parentElement
+  ) {
+    const style = window.getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Altura máxima do corpo que rola, no desktop. `xl`/`2xl` trazem conteúdo denso
+ * (tabelas, dois painéis) e ganham mais altura; os demais ficam no teto padrão.
+ */
+function viewportMaxHeight(size: ModalSize): string {
+  return size === 'xl' || size === '2xl' ? 'max-h-[85dvh]' : 'max-h-[70dvh]';
+}
+
 interface IModal {
   title: string;
   /**
@@ -75,6 +99,22 @@ interface IModal {
    * continuar visualmente o passo anterior. Decorativo — o título é quem nomeia.
    */
   icon?: React.ReactNode;
+  /**
+   * Ação própria da janela, no alto à direita, antes do "fechar" (ex.: baixar o
+   * arquivo que o modal mostra). É do modal, não do conteúdo: vale para qualquer
+   * tamanho e não disputa espaço com o que está sendo exibido. Com ela, o foco
+   * inicial vai ao primeiro campo visível do corpo (e não ao botão do
+   * cabeçalho); sem campo, segue o padrão do Radix. Dialog: foco no primeiro
+   * campo; Drawer: padrão do vaul (evita abrir o teclado virtual).
+   */
+  headerAction?: React.ReactNode;
+  /**
+   * Padrão `true`. Com `false` o modal é bloqueante: não fecha por Esc, clique
+   * fora, arrastar (drawer) nem botão X, e só sai da tela quando o consumidor
+   * muda `open`. Use para decisão que a pessoa precisa tomar antes de seguir e
+   * ofereça sempre uma saída explícita no conteúdo.
+   */
+  dismissible?: boolean;
 }
 
 /**
@@ -98,6 +138,7 @@ function ModalHeaderContent({
   onBack,
   backLabel = 'Voltar',
   icon,
+  headerAction,
   Title,
   Description,
 }: {
@@ -106,6 +147,7 @@ function ModalHeaderContent({
   onBack?: () => void;
   backLabel?: string;
   icon?: React.ReactNode;
+  headerAction?: React.ReactNode;
   Title: React.ElementType;
   Description: React.ElementType;
 }) {
@@ -145,6 +187,8 @@ function ModalHeaderContent({
         <Title className="truncate">{title}</Title>
         {description ? <Description>{description}</Description> : null}
       </div>
+
+      {headerAction && <div className="ml-auto shrink-0">{headerAction}</div>}
     </div>
   );
 }
@@ -159,8 +203,33 @@ export function Modal({
   onBack,
   backLabel,
   icon,
+  headerAction,
+  dismissible = true,
 }: IModal) {
   const isMobile = useIsMobile();
+  // Esc, clique fora e arrastar chegam como `onOpenChange(false)`; o bloqueante
+  // só deixa passar o pedido de abrir.
+  const handleOpenChange = (next: boolean): void => {
+    if (dismissible || next) setOpen(next);
+  };
+
+  // Dialog: o `headerAction` vem antes do corpo no DOM e levaria o foco inicial;
+  // com ele, o foco vai ao primeiro campo utilizável do corpo. O padrão só é
+  // cancelado se o campo de fato recebeu o foco. O Drawer segue o padrão do vaul
+  // (não força foco, para não abrir o teclado virtual).
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const focusFirstBodyField = headerAction
+    ? (event: Event): void => {
+        const field = Array.from(
+          bodyRef.current?.querySelectorAll<HTMLElement>(
+            'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [role="combobox"]:not([disabled]):not([tabindex="-1"])'
+          ) ?? []
+        ).find((candidate) => isRendered(candidate));
+        if (!field) return;
+        field.focus();
+        if (document.activeElement === field) event.preventDefault();
+      }
+    : undefined;
   // Defensivo: o Radix/vaul instalados não avisam nem ligam `aria-describedby`
   // sem `Description`. Passar `undefined` explícito garante isso em versões que
   // avisam (ou que apontam para um id inexistente).
@@ -177,7 +246,11 @@ export function Modal({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
+      <Drawer
+        open={open}
+        onOpenChange={handleOpenChange}
+        dismissible={dismissible}
+      >
         <DrawerContent {...noDescriptionProps}>
           <DrawerHeader className={cn('mt-2', HEADER_BAND)}>
             <ModalHeaderContent
@@ -186,6 +259,7 @@ export function Modal({
               onBack={onBack}
               backLabel={backLabel}
               icon={icon}
+              headerAction={headerAction}
               Title={DrawerTitle}
               Description={DrawerDescription}
             />
@@ -204,7 +278,7 @@ export function Modal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {/*
         `p-0 gap-0`: o padding sai do container e vai para a faixa do cabeçalho e
         para o corpo, senão a faixa não sangra até a borda do modal. NÃO use
@@ -215,16 +289,27 @@ export function Modal({
         Os cantos da faixa acompanham o modal pelo `rounded-t-xl` dela.
       */}
       <DialogContent
-        className={cn('gap-0 p-0', sizeClassName(size))}
+        className={cn(
+          'max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0',
+          sizeClassName(size)
+        )}
+        showCloseButton={dismissible}
+        onOpenAutoFocus={focusFirstBodyField}
+        // Barra o fechamento já no evento, e não só no `onOpenChange`.
+        onEscapeKeyDown={dismissible ? undefined : (e) => e.preventDefault()}
+        onInteractOutside={dismissible ? undefined : (e) => e.preventDefault()}
         {...noDescriptionProps}
       >
-        <DialogHeader className={cn(HEADER_BAND, 'rounded-t-xl pr-12')}>
+        <DialogHeader
+          className={cn(HEADER_BAND, 'rounded-t-xl', dismissible && 'pr-12')}
+        >
           <ModalHeaderContent
             title={title}
             description={description}
             onBack={onBack}
             backLabel={backLabel}
             icon={icon}
+            headerAction={headerAction}
             Title={DialogTitle}
             Description={DialogDescription}
           />
@@ -240,7 +325,11 @@ export function Modal({
           cabeçalho sangrando até a borda, o `DialogContent` ficou `p-0` e cada
           bloco passou a cuidar do seu espaçamento.
         */}
-        <ScrollArea className="min-w-0" viewportClassName="max-h-[70dvh] p-4">
+        <ScrollArea
+          ref={bodyRef}
+          className="min-h-0 min-w-0"
+          viewportClassName={cn(viewportMaxHeight(size), 'p-4')}
+        >
           {children}
         </ScrollArea>
       </DialogContent>
@@ -257,8 +346,10 @@ export function Modal({
  * tratamento. A regra olha a tag: o filho precisa renderizar `<button>`; um
  * `Button asChild` que vira `<a>`/`Link` conta como texto (linha inteira).
  * Use para agrupar os botões de ação de QUALQUER modal do projeto.
- * Em modais de edição, o botão de salvar deve renderizar apenas quando o
- * formulário está _dirty_ (ver docs/conventions/screen-layout.md).
+ * O botão de salvar fica sempre visível, com `disabled` até haver mudança
+ * (`!formState.isDirty`), combinado com os demais bloqueios: a ação é
+ * descobrível sem permitir salvar à toa. Vale para modal; a tela de detalhe
+ * segue o par Descartar + Salvar (ver docs/conventions/screen-layout.md).
  */
 export function ModalFooter({
   className,
@@ -269,6 +360,7 @@ export function ModalFooter({
 }) {
   return (
     <div
+      data-slot="modal-footer"
       className={cn(
         'flex flex-wrap justify-center gap-2 [&>:not(button)]:basis-full [&>:not(button)]:text-center [&>button:only-of-type]:basis-full',
         className

@@ -119,7 +119,9 @@ export function AttachmentPreview({
         />
       ) : (
         // `iframe` e não `object`: o Chrome esconde o visualizador de PDF dentro
-        // de `object`. Texto vai com `sandbox=""` e tema claro fixo (o
+        // de `object`. Texto vai com `sandbox=""` e tema claro fixo, também com o
+        // sistema escuro: fundo e cor claros no próprio iframe, além do
+        // `color-scheme` (o
         // visualizador segue o `color-scheme` e sairia branco sobre branco).
         // PDF fica sem `sandbox`: o visualizador do Chrome não abre sandboxed.
         <iframe
@@ -128,7 +130,8 @@ export function AttachmentPreview({
           sandbox={kind === 'text' ? '' : undefined}
           className={cn(
             'h-[70vh] w-full rounded-md border',
-            kind === 'text' && 'bg-white [color-scheme:light]'
+            kind === 'text' &&
+              'bg-white text-black [color-scheme:light] dark:bg-white dark:text-black dark:[color-scheme:light]'
           )}
         />
       )}

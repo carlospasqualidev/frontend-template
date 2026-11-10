@@ -19,7 +19,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Tabela estilizada para seções de formulário/configuração (coleções editáveis inline): container com borda arredondada + cabeçalho na cor da marca. Não confundir com o `DataTable` (listagem paginada server-side).',
+          'Tabela estilizada para seções de formulário/configuração (coleções editáveis inline): container com borda arredondada + cabeçalho em `bg-muted`. Não confundir com o `DataTable` (listagem paginada server-side).',
       },
     },
   },
@@ -34,7 +34,7 @@ export const Vitrine: Story = {
     <div className="space-y-6">
       <Card
         title="Métodos"
-        description="Cabeçalho na cor da marca, cantos arredondados."
+        description="Cabeçalho em bg-muted, cantos arredondados."
       >
         <FormTable>
           <FormTableHeader>

@@ -83,7 +83,9 @@ describe('FieldShortcuts', () => {
       </FieldShortcuts>
     );
 
-    const button = screen.getByRole('button', { name: '10%' });
+    const button = screen.getByRole('button', {
+      name: '10%: Informe a base primeiro',
+    });
     expect(button).toHaveAttribute('aria-disabled', 'true');
 
     await user.tab();

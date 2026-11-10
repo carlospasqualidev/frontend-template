@@ -19,7 +19,7 @@ interface IFormTable {
  * Tabela estilizada para seções de formulário/configuração — coleções editáveis
  * inline (ex.: a lista de itens de um cadastro, uma tabela de limites).
  * Padroniza o container com borda arredondada (recorta os cantos) e o
- * cabeçalho na cor da marca. Componha com `FormTableHeader` + `TableBody`/`TableRow`/
+ * cabeçalho em `bg-muted`. Componha com `FormTableHeader` + `TableBody`/`TableRow`/
  * `TableCell` (reexportados aqui).
  *
  * Não confundir com o `DataTable` global (listagem paginada/filtrável server-side):

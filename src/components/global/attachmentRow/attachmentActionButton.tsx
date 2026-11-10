@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/global/button/button';
-import { cn } from '@/lib/utils';
 
 interface IAttachmentActionButton {
   label: string;
@@ -26,22 +25,16 @@ export function AttachmentActionButton({
   disabledReason,
   className,
 }: IAttachmentActionButton) {
-  const accessibleName =
-    disabled && disabledReason ? `${label}: ${disabledReason}` : label;
-
   return (
     <Button
       type="button"
       variant="outline"
       size="icon-sm"
-      tooltip={disabled ? (disabledReason ?? label) : label}
-      aria-label={accessibleName}
-      aria-disabled={disabled || undefined}
-      className={cn(
-        'aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
-        className
-      )}
-      onClick={disabled ? undefined : onSelect}
+      tooltip={label}
+      disabled={disabled}
+      disabledReason={disabledReason ?? ''}
+      className={className}
+      onClick={onSelect}
     >
       {icon}
     </Button>

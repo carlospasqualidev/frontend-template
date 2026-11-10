@@ -130,7 +130,7 @@ screens/users/
 │   └── userStatusBadge.tsx
 ├── list/
 │   ├── index.tsx              # UsersPage (listagem)
-│   ├── userColumns.tsx        # colunas e menu "⋯"
+│   ├── userColumns.tsx        # colunas e ações de linha (`rowActionsColumn`)
 │   └── userActionDialog.tsx   # confirmação exclusiva da listagem
 ├── create/
 │   └── index.tsx              # UserCreatePage (/users/create)

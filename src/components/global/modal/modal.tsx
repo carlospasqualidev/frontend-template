@@ -104,7 +104,7 @@ interface IModal {
    * arquivo que o modal mostra). É do modal, não do conteúdo: vale para qualquer
    * tamanho e não disputa espaço com o que está sendo exibido. Com ela, o foco
    * inicial vai ao primeiro campo visível do corpo (e não ao botão do
-   * cabeçalho); sem campo, segue o padrão do Radix. Dialog: foco no primeiro
+   * cabeçalho); sem campo, o foco vai ao próprio diálogo. Dialog: foco no primeiro
    * campo; Drawer: padrão do vaul (evita abrir o teclado virtual).
    */
   headerAction?: React.ReactNode;

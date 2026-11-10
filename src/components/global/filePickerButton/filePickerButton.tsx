@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
-import { cn } from '@/lib/utils';
 
 interface IFilePickerButton {
   /** Rótulo em pt-BR: vira o tooltip e o nome acessível do botão. */
@@ -40,11 +39,6 @@ export function FilePickerButton({
     if (files.length > 0) onFiles(files);
   }
 
-  // `aria-disabled` (e não `disabled`) mantém o botão focável: o motivo aparece no
-  // tooltip também para quem navega por teclado, e o leitor anuncia o estado.
-  const accessibleName =
-    disabled && disabledReason ? `${label}: ${disabledReason}` : label;
-
   return (
     <>
       <input
@@ -62,14 +56,11 @@ export function FilePickerButton({
         type="button"
         variant="outline"
         size="icon-sm"
-        tooltip={disabled ? (disabledReason ?? label) : label}
-        aria-label={accessibleName}
-        aria-disabled={disabled || undefined}
-        className={cn(
-          'aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
-          className
-        )}
-        onClick={disabled ? undefined : () => inputRef.current?.click()}
+        tooltip={label}
+        disabled={disabled}
+        disabledReason={disabledReason ?? ''}
+        className={className}
+        onClick={() => inputRef.current?.click()}
       >
         <Plus />
       </Button>

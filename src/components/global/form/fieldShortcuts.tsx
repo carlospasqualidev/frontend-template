@@ -1,13 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/global/button/button';
 import { FieldLabel } from '@/components/ui/field';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 export interface FieldShortcut {
   label: string;
@@ -42,30 +36,18 @@ function ShortcutButton({
   const disabled = groupDisabled || shortcut.disabled;
   // Com o grupo desabilitado vale o motivo do grupo; o do atalho não se aplica.
   const reason = groupDisabled ? groupDisabledReason : shortcut.disabledReason;
-  // `aria-disabled` (e não `disabled`) mantém o botão focável: o motivo aparece
-  // no tooltip também para quem navega por teclado, e o leitor anuncia o estado.
-  const button = (
+  return (
     <Button
       type="button"
       variant="outline"
       size="xs"
-      aria-disabled={disabled || undefined}
-      className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-      onClick={disabled ? undefined : shortcut.onSelect}
+      aria-label={shortcut.label}
+      disabled={disabled}
+      disabledReason={reason ?? ''}
+      onClick={shortcut.onSelect}
     >
       {shortcut.label}
     </Button>
-  );
-
-  if (!disabled || !reason) return button;
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent>{reason}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }
 

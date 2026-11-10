@@ -97,3 +97,125 @@ describe('Button (global)', () => {
     expect(link).toHaveAttribute('data-slot', 'button');
   });
 });
+
+describe('Button (global): disabledReason', () => {
+  it('fica focável por Tab, com aria-disabled e nome "rótulo: motivo"', async () => {
+    const user = userEvent.setup();
+    render(
+      <Button disabled disabledReason="Sem permissão" tooltip="Excluir">
+        x
+      </Button>
+    );
+
+    await user.tab();
+    const button = screen.getByRole('button', {
+      name: 'Excluir: Sem permissão',
+    });
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toBeDisabled();
+  });
+
+  it('Enter e clique não chamam onClick', async () => {
+    const user = userEvent.setup();
+    const handleClick = vi.fn();
+    render(
+      <Button
+        disabled
+        disabledReason="Sem permissão"
+        aria-label="Excluir"
+        onClick={handleClick}
+      >
+        x
+      </Button>
+    );
+
+    await user.tab();
+    await user.keyboard('{Enter}');
+    await user.click(screen.getByRole('button'));
+
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+
+  it('type=submit não envia o formulário por Enter num campo', async () => {
+    const user = userEvent.setup();
+    const handleSubmit = vi.fn((event: React.FormEvent) =>
+      event.preventDefault()
+    );
+    render(
+      <form onSubmit={handleSubmit}>
+        <input aria-label="Nome" />
+        <Button
+          type="submit"
+          disabled
+          disabledReason="Preencha o nome"
+          aria-label="Salvar"
+        >
+          x
+        </Button>
+      </form>
+    );
+
+    await user.type(screen.getByRole('textbox'), 'a{Enter}');
+    await user.click(screen.getByRole('button'));
+
+    expect(handleSubmit).not.toHaveBeenCalled();
+  });
+
+  it("com '' continua focável e o nome é só o rótulo", async () => {
+    const user = userEvent.setup();
+    render(
+      <Button disabled disabledReason="" aria-label="Excluir">
+        x
+      </Button>
+    );
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Excluir' })).toHaveFocus();
+  });
+
+  it('loading vence: volta ao disabled nativo, sem aria-disabled', () => {
+    render(
+      <Button loading disabled disabledReason="Motivo" aria-label="Salvar">
+        x
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Salvar' });
+    expect(button).toBeDisabled();
+    expect(button).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('sem efeito de hover nem de active no modo aria-disabled (classe)', () => {
+    render(
+      <Button
+        variant="outline"
+        disabled
+        disabledReason="Motivo"
+        aria-label="Excluir"
+      >
+        x
+      </Button>
+    );
+
+    const button = screen.getByRole('button');
+    expect(button.className).toContain('aria-disabled:hover:bg-background');
+    expect(button.className).toContain('aria-disabled:active:translate-y-0');
+    expect(button.className).toContain('hover:bg-muted');
+  });
+});
+
+describe('Button (global): sem disabledReason não mexe no hover do consumidor', () => {
+  it('mantém o className de hover do consumidor e não adiciona classe aria-disabled', () => {
+    render(
+      <Button variant="ghost" className="hover:bg-secondary">
+        Dia
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Dia' });
+    expect(button).toHaveClass('hover:bg-secondary');
+    expect(button.className).not.toContain('aria-disabled:hover');
+    expect(button).not.toHaveAttribute('aria-disabled');
+  });
+});

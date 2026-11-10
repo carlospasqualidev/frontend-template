@@ -79,8 +79,8 @@ describe('RowActions', () => {
             key: 'output',
             label: 'Autorizar',
             disabled: true,
-            disabledReason: 'Disponível após a inspeção',
             onSelect,
+            disabledReason: 'Disponível após a inspeção',
           }),
         ]}
       />
@@ -89,10 +89,36 @@ describe('RowActions', () => {
     const button = screen.getByRole('button', {
       name: 'Autorizar: Disponível após a inspeção',
     });
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
 
     await userEvent.click(button);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('desabilitada continua no Tab e, no tom, não muda no hover', async () => {
+    const user = userEvent.setup();
+    render(
+      <RowActions
+        actions={[
+          action({
+            label: 'Autorizar',
+            disabled: true,
+            disabledReason: 'Disponível após a inspeção',
+          }),
+        ]}
+      />
+    );
+
+    await user.tab();
+    expect(
+      screen.getByRole('button', {
+        name: 'Autorizar: Disponível após a inspeção',
+      })
+    ).toHaveFocus();
+
+    expect(screen.getByRole('button')).toHaveClass(
+      'aria-disabled:hover:bg-accent'
+    );
   });
 
   it('desabilitada sem motivo, o nome acessível é só o rótulo', () => {
@@ -100,7 +126,10 @@ describe('RowActions', () => {
       <RowActions actions={[action({ label: 'Autorizar', disabled: true })]} />
     );
 
-    expect(screen.getByRole('button', { name: 'Autorizar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Autorizar' })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
   });
 
   it('ação externa é link em nova aba, sem interceptar o clique nem chamar onSelect', async () => {
@@ -208,8 +237,8 @@ describe('RowActions', () => {
       />
     );
 
-    // O botão desabilitado não recebe eventos: o gatilho do tooltip é o wrapper.
-    await user.hover(screen.getByRole('button').parentElement!);
+    // O botão desabilitado segue focável: o gatilho do tooltip é o próprio botão.
+    await user.hover(screen.getByRole('button'));
 
     expect(
       (await screen.findAllByText('Disponível após liberar o item')).length

@@ -11,7 +11,7 @@ Quando a maioria dos valores cai em poucas opções (hoje, daqui a 7 dias, 10%, 
 
 ## 2. Ação indisponível fica visível, com o motivo
 
-Esconder a ação deixa o usuário sem saber se ela existe. Mostre-a desabilitada e diga por quê, com `disabledReason` (vira tooltip e parte do nome acessível: "rótulo: motivo") em [`RowActions`](../../src/components/global/rowActions/rowActions.tsx), [`ActionMenu`](../../src/components/global/actionMenu/actionMenu.tsx) e [`FilePickerButton`](../../src/components/global/filePickerButton/filePickerButton.tsx). As ações de linha comuns vêm do catálogo [`actions.tsx`](../../src/components/global/rowActions/actions.tsx) (`editAction`, `deleteAction`, `downloadAction`, `retryAction`, `copyAction`, `blockAction`, `unblockAction`). Sem permissão para a tela inteira, use [`NoAccess`](../../src/components/global/noAccess/noAccess.tsx) em vez de uma tela vazia.
+Esconder a ação deixa o usuário sem saber se ela existe. Mostre-a desabilitada e diga por quê, com `disabledReason` do [`Button`](../../src/components/global/button/button.tsx), o mecanismo único (vira tooltip e parte do nome acessível: "rótulo: motivo"; focável, com `aria-disabled`, clique e Enter bloqueados), usado por [`RowActions`](../../src/components/global/rowActions/rowActions.tsx), [`ActionMenu`](../../src/components/global/actionMenu/actionMenu.tsx) e [`FilePickerButton`](../../src/components/global/filePickerButton/filePickerButton.tsx). As ações de linha comuns vêm do catálogo [`actions.tsx`](../../src/components/global/rowActions/actions.tsx) (`editAction`, `deleteAction`, `downloadAction`, `retryAction`, `copyAction`, `blockAction`, `unblockAction`). Sem permissão para a tela inteira, use [`NoAccess`](../../src/components/global/noAccess/noAccess.tsx) em vez de uma tela vazia.
 
 - Exemplo: "Excluir" desabilitado com o motivo "Registro em uso".
 - Anti-padrão: botão que some sem explicação; botão desabilitado sem motivo; esconder só no mobile.
@@ -39,7 +39,7 @@ Nada que o usuário já fez pode se perder sem aviso. Formulário sujo avisa na 
 
 ## 6. Menos cliques no caminho frequente
 
-O caminho mais comum não passa por menu, confirmação ou segunda tela. Em modal, o botão de salvar fica sempre visível (`disabled` até haver mudança, mais `loading` ao enviar), para o usuário não procurá-lo. Ação frequente de item é ícone no `RowActions`, e o menu "⋯" ([`ActionMenu`](../../src/components/global/actionMenu/actionMenu.tsx)) fica para o resto. Busca no servidor: [`AsyncCombobox`](../../src/components/global/form/asyncCombobox.tsx) com `minChars` evita consulta a cada letra e diz "Digite ao menos N caracteres.". Confirmação só para o que apaga ou desfaz.
+O caminho mais comum não passa por menu, confirmação ou segunda tela. Em modal, o botão de salvar fica sempre visível (`disabled` até haver mudança, mais `loading` ao enviar), para o usuário não procurá-lo. Ação frequente de item é ícone no `RowActions`, e o escape é o `actionsColumn` ("⋯"); o [`ActionMenu`](../../src/components/global/actionMenu/actionMenu.tsx) é o botão de barra "Outras opções". Busca no servidor: [`AsyncCombobox`](../../src/components/global/form/asyncCombobox.tsx) com `minChars` evita consulta a cada letra e diz "Digite ao menos N caracteres.". Confirmação só para o que apaga ou desfaz.
 
 - Exemplo: editar um campo e salvar no mesmo modal, sem rolar até achar o botão.
 - Anti-padrão: em modal, salvar que só aparece depois de digitar; confirmação para ação reversível. Tela de detalhe e de criação seguem `docs/conventions/screen-layout.md`, não esta regra.

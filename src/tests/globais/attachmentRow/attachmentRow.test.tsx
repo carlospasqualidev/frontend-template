@@ -227,7 +227,14 @@ describe('AttachmentRow: visualizador', () => {
 
     const frame = await findFrame();
     expect(frame).toHaveAttribute('sandbox', '');
-    expect(frame).toHaveClass('bg-white');
+    expect(frame).toHaveClass(
+      'bg-white',
+      'text-black',
+      '[color-scheme:light]',
+      'dark:bg-white',
+      'dark:text-black',
+      'dark:[color-scheme:light]'
+    );
   });
 
   it('imagem abre em <img>', async () => {

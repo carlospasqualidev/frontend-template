@@ -96,47 +96,43 @@ const toneClasses = new Map<RowActionTone, string>([
   ],
 ]);
 
+// Desabilitado (aria-disabled): o hover repete a cor de repouso do tom, para
+// vencer o `hover:*` do variante `ghost` do `Button` sem mudar a cor.
+function restingHoverClasses(tone: string): string {
+  return tone
+    .split(' ')
+    .filter((token) => !token.includes('hover:'))
+    .map((token) =>
+      token.startsWith('dark:')
+        ? `dark:aria-disabled:hover:${token.slice(5)}`
+        : `aria-disabled:hover:${token}`
+    )
+    .join(' ');
+}
+
 function RowActionButton({ action }: { action: RowAction }) {
   // `icon-sm` (28px): a fileira chega a 7 ações por linha, e com o tamanho padrão
   // (32px) ela empurra a tabela para o scroll lateral cedo demais. É o caso de
   // "controle auxiliar denso" da regra de tamanhos (todos os botões do grupo têm
   // a MESMA altura).
-  const className = cn(
-    'rounded-full',
-    toneClasses.get(action.tone ?? 'neutral')
-  );
+  const tone = toneClasses.get(action.tone ?? 'neutral') ?? '';
+  const className = cn('rounded-full', tone);
 
   if (action.disabled) {
-    // Botão desabilitado não recebe eventos de mouse (`disabled:pointer-events-none`),
-    // então o gatilho do tooltip é o wrapper — assim o operador ainda descobre o
-    // que a ação faz (e por que está indisponível) ao passar o mouse. O motivo
-    // entra também no nome acessível, para quem não usa mouse nem vê o tooltip.
-    const accessibleName = action.disabledReason
-      ? `${action.label}: ${action.disabledReason}`
-      : action.label;
-
+    // O `Button` global cuida do desabilitado com motivo: focável, `aria-disabled`,
+    // clique e Enter bloqueados, motivo no tooltip e no nome acessível.
     return (
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled
-                aria-label={accessibleName}
-                className={className}
-              >
-                {action.icon}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            {action.disabledReason ?? action.label}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        tooltip={action.label}
+        disabled
+        disabledReason={action.disabledReason ?? ''}
+        className={cn(className, restingHoverClasses(tone))}
+      >
+        {action.icon}
+      </Button>
     );
   }
 

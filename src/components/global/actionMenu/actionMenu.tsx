@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { Button } from '@/components/global/button/button';
+import { disabledName } from '@/components/global/button/disabledName';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -138,8 +139,8 @@ export function ActionMenu({
 }
 
 function accessibleName(item: IActionMenuItem): string {
-  return item.disabled && item.disabledReason
-    ? `${item.label}: ${item.disabledReason}`
+  return item.disabled
+    ? disabledName(item.label, item.disabledReason)
     : item.label;
 }
 

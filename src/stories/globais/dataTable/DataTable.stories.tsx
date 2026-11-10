@@ -1,5 +1,8 @@
 import * as React from 'react';
-import { type SortingState } from '@tanstack/react-table';
+import {
+  type ColumnVisibilityState,
+  type SortingState,
+} from '@tanstack/react-table';
 import { toast } from 'sonner';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
@@ -547,6 +550,62 @@ function ColumnVisibilityShowcase() {
     </div>
   );
 }
+
+function ControlledColumnVisibilityShowcase() {
+  const [visibility, setVisibility] = React.useState<ColumnVisibilityState>({
+    description: false,
+  });
+
+  return (
+    <Card
+      title="Visibilidade controlada pela tela"
+      description={`Estado recebido pela tela: ${JSON.stringify(visibility)}`}
+    >
+      <DataTable
+        columns={roleColumns}
+        data={ROLES}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        pageSize={ROLES.length}
+        columnVisibility={visibility}
+        onColumnVisibilityChange={setVisibility}
+      />
+    </Card>
+  );
+}
+
+export const ControlledColumnVisibility: Story = {
+  name: 'Colunas controladas',
+  render: () => <ControlledColumnVisibilityShowcase />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Com `columnVisibility` e `onColumnVisibilityChange`, a tela guarda a visibilidade: a tabela reflete o valor recebido, avisa cada mudança e não grava nada no `localStorage`.',
+      },
+    },
+  },
+};
+
+export const HiddenPagination: Story = {
+  name: 'Sem paginação',
+  render: () => (
+    <DataTable
+      columns={roleColumns}
+      data={ROLES}
+      hidePagination
+      defaultHiddenColumnIds={['description']}
+    />
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tabela com tudo em memória: `hidePagination` remove o rodapé e dispensa `pageIndex`/`onPageChange`. `defaultHiddenColumnIds` esconde Descrição até o usuário escolher.',
+      },
+    },
+  },
+};
 
 export const ColumnVisibility: Story = {
   name: 'Colunas',

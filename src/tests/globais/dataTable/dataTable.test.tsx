@@ -279,6 +279,7 @@ describe('DataTable', () => {
       />
     );
 
+    // A última célula é a do menu de colunas; a de ações é a penúltima.
     // Duas linhas, mas só a primeira tem ação → um único gatilho "Abrir menu".
     expect(screen.getAllByRole('button', { name: 'Abrir menu' })).toHaveLength(
       1
@@ -289,7 +290,7 @@ describe('DataTable', () => {
     const bodyRows = screen.getAllByRole('row').slice(1);
     const actionsCellWithoutMenu = within(bodyRows[1])
       .getAllByRole('cell')
-      .at(-1);
+      .at(-2);
     expect(actionsCellWithoutMenu).not.toBeEmptyDOMElement();
   });
 

@@ -1,9 +1,11 @@
 import * as React from 'react';
 import {
+  type ColumnVisibilityState,
   type ExpandedState,
   type RowData,
   type RowSelectionState,
   type SortingState,
+  type Updater,
   flexRender,
   useTable,
 } from '@tanstack/react-table';
@@ -77,19 +79,44 @@ function hasActiveTextSelection(): boolean {
   );
 }
 
-interface DataTableProps<TData extends RowData> {
+function hideableColumnIds<TData extends RowData>(
+  columns: DataTableColumnDef<TData>[]
+): string[] {
+  return columns.flatMap((column) => {
+    if (column.enableHiding === false) return [];
+    const id =
+      column.id ??
+      ('accessorKey' in column && typeof column.accessorKey === 'string'
+        ? column.accessorKey
+        : undefined);
+    return id ? [id] : [];
+  });
+}
+
+type DataTablePaginationProps =
+  | {
+      /** Remove o rodapé de paginação (tabela com tudo em memória). */
+      hidePagination?: false;
+      /** Página atual (0-based), controlada pelo consumidor. */
+      pageIndex: number;
+      /**
+       * Chamado ao navegar; use o novo índice (0-based) para buscar a página
+       * correspondente no backend. "Próxima" é desabilitado quando `data` vem com
+       * menos de `pageSize` linhas — sinal de que não há mais registros,
+       * dispensando um `COUNT` total.
+       */
+      onPageChange: (pageIndex: number) => void;
+    }
+  | {
+      hidePagination: true;
+      pageIndex?: number;
+      onPageChange?: (pageIndex: number) => void;
+    };
+
+type DataTableBaseProps<TData extends RowData> = {
   columns: DataTableColumnDef<TData>[];
   /** Linhas da página atual, já paginadas/filtradas/ordenadas pelo backend. */
   data: TData[];
-  /** Página atual (0-based), controlada pelo consumidor. */
-  pageIndex: number;
-  /**
-   * Chamado ao navegar; use o novo índice (0-based) para buscar a página
-   * correspondente no backend. "Próxima" é desabilitado quando `data` vem com
-   * menos de `pageSize` linhas — sinal de que não há mais registros, dispensando
-   * um `COUNT` total.
-   */
-  onPageChange: (pageIndex: number) => void;
   /** Quantidade de linhas por página (usada para detectar a última página). Padrão: `25`. */
   pageSize?: number;
   /**
@@ -171,13 +198,33 @@ interface DataTableProps<TData extends RowData> {
    */
   isLoading?: boolean;
   /**
-   * Liga o menu "Colunas", onde o usuário escolhe quais colunas ver. A escolha
-   * fica salva **neste navegador** (`localStorage`) sob esta chave — use um
-   * identificador único e estável por tabela (ex.: `'users'`). Colunas com
-   * `enableHiding: false` (seleção, ações, expansão) não entram no menu.
+   * Guarda a escolha do menu "Configurar colunas" **neste navegador**
+   * (`localStorage`) sob esta chave — use um identificador único e estável por
+   * tabela (ex.: `'users'`). Sem ela o menu continua aparecendo, mas a escolha
+   * vale só em memória. Colunas com `enableHiding: false` (seleção, ações,
+   * expansão) não entram no menu.
    */
   columnVisibilityKey?: string;
-}
+  /**
+   * Ids das colunas que nascem ocultas enquanto o usuário não escolheu nada. A
+   * escolha gravada (inclusive "mostrar todas") vence o padrão. Ids que não
+   * existem são ignorados.
+   */
+  defaultHiddenColumnIds?: readonly string[];
+  /** Remove o menu "Configurar colunas" e a coluna que o hospeda. */
+  disableColumnVisibility?: boolean;
+  /**
+   * Visibilidade controlada pela tela (id da coluna -> visível). Use junto de
+   * `onColumnVisibilityChange`; neste modo a tabela não grava nada por conta
+   * própria e `columnVisibilityKey`/`defaultHiddenColumnIds` não valem.
+   */
+  columnVisibility?: ColumnVisibilityState;
+  /** Chamado com o novo estado quando o usuário mexe no menu de colunas. */
+  onColumnVisibilityChange?: (visibility: ColumnVisibilityState) => void;
+};
+
+type DataTableProps<TData extends RowData> = DataTableBaseProps<TData> &
+  DataTablePaginationProps;
 
 /**
  * Tabela de dados server-side construída sobre o TanStack Table, no estilo do
@@ -202,7 +249,7 @@ interface DataTableProps<TData extends RowData> {
 export function DataTable<TData extends RowData>({
   columns,
   data,
-  pageIndex,
+  pageIndex = 0,
   onPageChange,
   pageSize = 25,
   onPageSizeChange,
@@ -219,27 +266,57 @@ export function DataTable<TData extends RowData>({
   rowClassName,
   isLoading = false,
   columnVisibilityKey,
+  defaultHiddenColumnIds,
+  disableColumnVisibility = false,
+  columnVisibility: controlledVisibility,
+  onColumnVisibilityChange,
+  hidePagination = false,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
-  const [columnVisibility, setColumnVisibility] =
-    useColumnVisibility(columnVisibilityKey);
+  const isVisibilityControlled = controlledVisibility !== undefined;
+  const [storedVisibility, setStoredVisibility] = useColumnVisibility(
+    isVisibilityControlled ? undefined : columnVisibilityKey,
+    defaultHiddenColumnIds
+  );
+  // Um padrão (ou valor gravado) que esconderia todas as colunas ocultáveis
+  // deixaria a tabela sem dado: nesse caso vale tudo visível.
+  const hidesEveryColumn = React.useMemo(() => {
+    const ids = hideableColumnIds(columns);
+    const hidden = new Set(
+      Object.entries(storedVisibility)
+        .filter(([, visible]) => !visible)
+        .map(([id]) => id)
+    );
+    return ids.length > 0 && ids.every((id) => hidden.has(id));
+  }, [columns, storedVisibility]);
+  const columnVisibility =
+    controlledVisibility ?? (hidesEveryColumn ? {} : storedVisibility);
+
+  const handleColumnVisibilityChange = (
+    updater: Updater<ColumnVisibilityState>
+  ) => {
+    const next =
+      typeof updater === 'function' ? updater(columnVisibility) : updater;
+    if (!isVisibilityControlled) setStoredVisibility(next);
+    onColumnVisibilityChange?.(next);
+  };
 
   const hasActiveFilters =
     !!defaultFilterValues && Object.keys(defaultFilterValues).length > 0;
 
-  // Com `renderSubRow`, injeta a coluna do chevron no início; com
-  // `columnVisibilityKey`, o menu de colunas no canto direito do cabeçalho —
-  // assim o consumidor declara só as colunas de dado.
+  // Com `renderSubRow`, injeta a coluna do chevron no início; salvo
+  // `disableColumnVisibility`, o menu de colunas no canto direito do
+  // cabeçalho — assim o consumidor declara só as colunas de dado.
   const tableColumns = React.useMemo(() => {
     const withExpand = renderSubRow
       ? [expandColumn<TData>(), ...columns]
       : columns;
-    return columnVisibilityKey
-      ? withColumnVisibilityMenu(withExpand)
-      : withExpand;
-  }, [columns, renderSubRow, columnVisibilityKey]);
+    return disableColumnVisibility
+      ? withExpand
+      : withColumnVisibilityMenu(withExpand);
+  }, [columns, renderSubRow, disableColumnVisibility]);
 
   const table = useTable({
     features: dataTableFeatures,
@@ -256,7 +333,7 @@ export function DataTable<TData extends RowData>({
     },
     onRowSelectionChange: setRowSelection,
     onExpandedChange: setExpanded,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: handleColumnVisibilityChange,
     state: {
       sorting,
       rowSelection,
@@ -465,57 +542,59 @@ export function DataTable<TData extends RowData>({
         </Table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 py-4">
-        {onPageSizeChange && isPageSizeOption(pageSize) ? (
-          <div className="mr-2 flex items-center gap-2">
-            <span
-              id={pageSizeLabelId}
-              className="text-sm whitespace-nowrap text-muted-foreground"
+      {hidePagination ? null : (
+        <div className="flex flex-wrap items-center justify-end gap-2 py-4">
+          {onPageSizeChange && isPageSizeOption(pageSize) ? (
+            <div className="mr-2 flex items-center gap-2">
+              <span
+                id={pageSizeLabelId}
+                className="text-sm whitespace-nowrap text-muted-foreground"
+              >
+                Itens por página
+              </span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => onPageSizeChange(Number(value))}
+                disabled={isLoading}
+              >
+                <SelectTrigger size="sm" aria-labelledby={pageSizeLabelId}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(pageIndex - 1)}
+              disabled={pageIndex === 0 || isLoading}
             >
-              Itens por página
-            </span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(value) => onPageSizeChange(Number(value))}
-              disabled={isLoading}
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(pageIndex + 1)}
+              disabled={
+                isLoading ||
+                (rowCount != null
+                  ? (pageIndex + 1) * pageSize >= rowCount
+                  : data.length < pageSize)
+              }
             >
-              <SelectTrigger size="sm" aria-labelledby={pageSizeLabelId}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={String(option)}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              Próxima
+            </Button>
           </div>
-        ) : null}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(pageIndex - 1)}
-            disabled={pageIndex === 0 || isLoading}
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(pageIndex + 1)}
-            disabled={
-              isLoading ||
-              (rowCount != null
-                ? (pageIndex + 1) * pageSize >= rowCount
-                : data.length < pageSize)
-            }
-          >
-            Próxima
-          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

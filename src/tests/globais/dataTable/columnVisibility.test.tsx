@@ -57,6 +57,12 @@ function renderTable(columnVisibilityKey: string | null = TABLE_KEY) {
   );
 }
 
+function storedKeys(): string[] {
+  return Object.keys(localStorage).filter((key) =>
+    key.startsWith('dataTable:hiddenColumns:')
+  );
+}
+
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Configurar colunas' }));
 }
@@ -67,10 +73,172 @@ afterEach(() => {
 });
 
 describe('DataTable — visibilidade de colunas', () => {
-  it('não mostra o menu sem columnVisibilityKey', () => {
+  it('mostra o menu sem columnVisibilityKey e não grava nada', async () => {
+    const user = userEvent.setup();
     renderTable(null);
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'E-mail' }));
+
+    expect(screen.queryByText('ana@example.com')).not.toBeInTheDocument();
+    expect(storedKeys()).toEqual([]);
+  });
+
+  it('com disableColumnVisibility não há menu nem coluna do menu', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        columnVisibilityKey={TABLE_KEY}
+        disableColumnVisibility
+      />
+    );
+
     expect(
       screen.queryByRole('button', { name: 'Configurar colunas' })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
+  });
+
+  it('com disableColumnVisibility o skeleton não ganha célula do menu', () => {
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        pageIndex={0}
+        onPageChange={() => undefined}
+        disableColumnVisibility
+        isLoading
+      />
+    );
+
+    const row = container.querySelector('tbody tr') as HTMLElement;
+    expect(within(row).getAllByRole('cell')).toHaveLength(4);
+  });
+
+  describe('defaultHiddenColumnIds', () => {
+    function renderWithDefaults(
+      hidden: string[],
+      key: string | undefined = TABLE_KEY
+    ) {
+      return render(
+        <DataTable
+          columns={columns}
+          data={rows}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          columnVisibilityKey={key}
+          defaultHiddenColumnIds={hidden}
+        />
+      );
+    }
+
+    it('oculta as colunas listadas sem gravar nada', () => {
+      renderWithDefaults(['email', 'inexistente']);
+
+      expect(screen.queryByText('ana@example.com')).not.toBeInTheDocument();
+      expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('a escolha gravada vence, inclusive para mostrar uma coluna oculta por padrão', () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(['name']));
+      renderWithDefaults(['email']);
+
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+      expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument();
+    });
+
+    it('"Mostrar todas" grava [] e o padrão não volta no próximo carregamento', async () => {
+      const user = userEvent.setup();
+      const { unmount } = renderWithDefaults(['email']);
+      await openMenu(user);
+      await user.click(screen.getByRole('menuitem', { name: 'Mostrar todas' }));
+
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+      expect(localStorage.getItem(STORAGE_KEY)).toBe('[]');
+
+      unmount();
+      renderWithDefaults(['email']);
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    });
+
+    it('array novo de mesmo conteúdo não refaz o listener de storage nem reinicia a escolha', async () => {
+      const user = userEvent.setup();
+      const addSpy = vi.spyOn(window, 'addEventListener');
+      const storageSubscriptions = () =>
+        addSpy.mock.calls.filter(([type]) => type === 'storage').length;
+      const { rerender } = renderWithDefaults(['email']);
+      await openMenu(user);
+      await user.click(
+        screen.getByRole('menuitemcheckbox', { name: 'E-mail' })
+      );
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+      const before = storageSubscriptions();
+
+      rerender(
+        <DataTable
+          columns={columns}
+          data={rows}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          columnVisibilityKey={TABLE_KEY}
+          defaultHiddenColumnIds={['email']}
+        />
+      );
+
+      expect(storageSubscriptions()).toBe(before);
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    });
+
+    it('padrão que esconderia todas as colunas ocultáveis é ignorado', () => {
+      renderWithDefaults(['name', 'email', 'role']);
+
+      expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+      expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    });
+  });
+
+  describe('columnVisibility controlada', () => {
+    it('reflete o valor recebido, avisa a mudança e não grava nada', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(
+        <DataTable
+          columns={columns}
+          data={rows}
+          pageIndex={0}
+          onPageChange={() => undefined}
+          columnVisibilityKey={TABLE_KEY}
+          columnVisibility={{ email: false }}
+          onColumnVisibilityChange={onChange}
+        />
+      );
+
+      expect(screen.queryByText('ana@example.com')).not.toBeInTheDocument();
+
+      await openMenu(user);
+      await user.click(
+        screen.getByRole('menuitemcheckbox', { name: 'E-mail' })
+      );
+
+      expect(onChange).toHaveBeenCalledWith({ email: true });
+      // A tela não atualizou o valor: a tabela segue refletindo o recebido.
+      expect(screen.queryByText('ana@example.com')).not.toBeInTheDocument();
+      expect(storedKeys()).toEqual([]);
+    });
+  });
+
+  it('hidePagination remove o rodapé e mantém as linhas', () => {
+    render(<DataTable columns={columns} data={rows} hidePagination />);
+
+    expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Próxima' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Anterior' })
     ).not.toBeInTheDocument();
   });
 

@@ -286,6 +286,29 @@ describe('MaskedInputField — o que aparece é o que sai', () => {
     expect(sent(onSubmit)).toBe('11912345678');
   });
 
+  it.each([
+    ['+5511912345678', '(11) 91234-5678', '11912345678'],
+    ['011912345678', '(11) 91234-5678', '11912345678'],
+  ])(
+    'telefone inserido de uma vez por insertText (%s) é normalizado, não ignorado',
+    async (inserted, shown, stored) => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      render(<Form mask="phone" onSubmit={onSubmit} />);
+
+      // Sugestão do teclado do celular/IME: um único `insertText` com o número inteiro.
+      fireEvent.input(screen.getByLabelText('Documento'), {
+        target: { value: inserted },
+        inputType: 'insertText',
+        data: inserted,
+      });
+      await send(user);
+
+      expect(screen.getByLabelText('Documento')).toHaveValue(shown);
+      expect(sent(onSubmit)).toBe(stored);
+    }
+  );
+
   it('telefone com DDD 55 completo ignora a tecla digitada a mais', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
@@ -294,6 +317,22 @@ describe('MaskedInputField — o que aparece é o que sai', () => {
     await user.type(screen.getByLabelText('Documento'), '7', {
       initialSelectionStart: 15,
       initialSelectionEnd: 15,
+    });
+    await send(user);
+
+    expect(screen.getByLabelText('Documento')).toHaveValue('(55) 99999-8888');
+    expect(sent(onSubmit)).toBe('55999998888');
+  });
+
+  it('telefone com DDD 55 completo ignora 1 dígito vindo como insertCompositionText', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<Form mask="phone" onSubmit={onSubmit} initial="55999998888" />);
+
+    fireEvent.input(screen.getByLabelText('Documento'), {
+      target: { value: '(55) 99999-88887' },
+      inputType: 'insertCompositionText',
+      data: '7',
     });
     await send(user);
 

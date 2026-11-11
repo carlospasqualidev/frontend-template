@@ -150,14 +150,22 @@ export function MaskedInputField<
     const target = event.target;
     const inputType = (event.nativeEvent as InputEvent).inputType ?? '';
     const previousDigits = onlyDigits(displayValue);
-    const isTyping = inputType === 'insertText';
+    const insertedText = (event.nativeEvent as InputEvent).data ?? '';
+    const isTyping = inputType === 'insertText' && insertedText.length === 1;
     const isDelete =
       inputType === 'deleteContentBackward' ||
       inputType === 'deleteContentForward';
 
-    // Telefone: a tecla digitada que passaria de onze dígitos é ignorada. O corte
-    // do `55`/`0` só vale para valor que chega de uma vez (colar, preencher).
-    if (mask === 'phone' && isTyping && onlyDigits(target.value).length > 11) {
+    // Telefone: a mudança que acrescenta exatamente um dígito e passaria de onze é
+    // digitação e é ignorada, qualquer que seja o `inputType` (inclusive
+    // `insertCompositionText` do Android). O corte do `55`/`0` vale para valor que
+    // chega de uma vez (colar, preencher, sugestão do teclado ou IME).
+    const nextDigits = onlyDigits(target.value);
+    if (
+      mask === 'phone' &&
+      nextDigits.length > 11 &&
+      nextDigits.length === previousDigits.length + 1
+    ) {
       return;
     }
 

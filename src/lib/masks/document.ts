@@ -1,11 +1,9 @@
+import { onlyDigits } from '@/lib/masks/onlyDigits';
+
 /**
  * Formatação de documentos (exibição). Recebe o valor cru (só dígitos, como o
  * backend guarda) e devolve mascarado. Entrada não-numérica é limpa antes.
  */
-
-function onlyDigits(value: string): string {
-  return value.replace(/\D/g, '');
-}
 
 /** `00000000000` → `000.000.000-00` (aplica parcial se incompleto). */
 export function formatCpf(value: string): string {

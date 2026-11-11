@@ -7,6 +7,7 @@ import { Combobox } from '@/components/global/form/combobox';
 import { DateTimeField } from '@/components/global/form/dateTimeField';
 import { DecimalField } from '@/components/global/form/decimalField';
 import { InputField } from '@/components/global/form/inputField';
+import { MaskedInputField } from '@/components/global/form/maskedInputField';
 import { MultiSelect } from '@/components/global/form/multiSelect';
 import { Select } from '@/components/global/form/select';
 import { TextArea } from '@/components/global/form/textArea';
@@ -29,6 +30,22 @@ function DecimalHarness({ id }: { id?: string }) {
   );
 }
 
+function MaskedHarness({ id }: { id?: string }) {
+  const { control } = useForm<{ value: string }>({
+    defaultValues: { value: '' },
+  });
+  return (
+    <MaskedInputField
+      id={id}
+      name="value"
+      control={control}
+      mask="cpf"
+      label="Campo"
+      srOnlyLabel
+    />
+  );
+}
+
 const fields: Array<{
   name: string;
   render: (id?: string) => React.ReactElement;
@@ -36,6 +53,10 @@ const fields: Array<{
   {
     name: 'InputField',
     render: (id) => <InputField id={id} label="Campo" srOnlyLabel />,
+  },
+  {
+    name: 'MaskedInputField',
+    render: (id) => <MaskedHarness id={id} />,
   },
   {
     name: 'TextArea',

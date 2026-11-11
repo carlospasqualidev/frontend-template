@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { formatCep } from '@/lib/masks/cep';
+import { formatCep, isValidCep } from '@/lib/masks/cep';
 
 describe('formatCep', () => {
   it('mascara 8 dígitos como CEP', () => {
@@ -17,5 +17,18 @@ describe('formatCep', () => {
 
   it('ignora não numéricos e limita a 8 dígitos', () => {
     expect(formatCep('01001-000999')).toBe('01001-000');
+  });
+});
+
+describe('isValidCep', () => {
+  it('aceita oito dígitos, com ou sem pontuação', () => {
+    expect(isValidCep('01001000')).toBe(true);
+    expect(isValidCep('01001-000')).toBe(true);
+  });
+
+  it('recusa o incompleto e o excedente', () => {
+    expect(isValidCep('')).toBe(false);
+    expect(isValidCep('01001')).toBe(false);
+    expect(isValidCep('010010000')).toBe(false);
   });
 });

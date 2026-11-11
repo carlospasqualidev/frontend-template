@@ -9,6 +9,7 @@ import { DateField } from '@/components/global/form/dateField';
 import { DateTimeField } from '@/components/global/form/dateTimeField';
 import { DecimalField } from '@/components/global/form/decimalField';
 import { InputField } from '@/components/global/form/inputField';
+import { MaskedInputField } from '@/components/global/form/maskedInputField';
 import { MultiSelect } from '@/components/global/form/multiSelect';
 import { NumberField } from '@/components/global/form/numberField';
 import { RadioGroup } from '@/components/global/form/radioGroup';
@@ -39,6 +40,23 @@ function DecimalHarness({ error, describedBy }: IHarnessProps) {
       name="value"
       control={control}
       label="Campo"
+      aria-describedby={describedBy}
+    />
+  );
+}
+
+function MaskedHarness({ description, error, describedBy }: IHarnessProps) {
+  const { control } = useForm<{ value: string }>({
+    defaultValues: { value: '' },
+    errors: error ? { value: { type: 'required', ...ERROR } } : undefined,
+  });
+  return (
+    <MaskedInputField
+      name="value"
+      control={control}
+      mask="cpf"
+      label="Campo"
+      description={description ? HELP : undefined}
       aria-describedby={describedBy}
     />
   );
@@ -114,6 +132,10 @@ const fields: IFieldCase[] = [
   {
     name: 'NumberField',
     render: (props) => <NumberHarness {...props} />,
+  },
+  {
+    name: 'MaskedInputField',
+    render: (props) => <MaskedHarness {...props} />,
   },
   {
     name: 'DecimalField',

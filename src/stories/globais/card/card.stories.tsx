@@ -316,3 +316,31 @@ export const ParComListaAoLado: Story = {
     },
   },
 };
+
+export const ComFiletePorSeveridade: Story = {
+  render: () => (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Card title="Sem filete (padrão)">Nenhuma tela muda sem `accent`.</Card>
+      <Card title="Informação" accent="info">
+        Filete com o token `info`.
+      </Card>
+      <Card title="Sucesso" accent="success">
+        Filete com o token `success`.
+      </Card>
+      <Card title="Atenção" accent="warning">
+        Filete com o token `warning`.
+      </Card>
+      <Card title="Destrutivo" accent="destructive">
+        Filete com o token `destructive`.
+      </Card>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`accent` é opt-in: sem ele o card não tem filete. A cor reforça, não substitui: o significado vai no título ou no conteúdo. Hoje só o `ConfirmDialog` o usa.',
+      },
+    },
+  },
+};

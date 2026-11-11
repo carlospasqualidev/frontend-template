@@ -1,5 +1,7 @@
 import * as React from 'react';
+import { CircleAlert, TriangleAlert } from 'lucide-react';
 
+import { cardAccentClass } from '@/components/global/card/accent';
 import { Button } from '@/components/global/button/button';
 import {
   AlertDialog as AlertDialogPrimitive,
@@ -82,10 +84,33 @@ function ConfirmDialogInternal({
       {trigger ? (
         <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       ) : null}
-      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
+      <AlertDialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        className={cardAccentClass(destructive ? 'destructive' : 'warning')}
+      >
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <div className="flex items-center gap-3">
+            {/* Decorativo: título e descrição já dizem o que a ação faz. */}
+            <span
+              aria-hidden
+              data-slot="confirm-dialog-icon"
+              className={
+                destructive
+                  ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive'
+                  : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning'
+              }
+            >
+              {destructive ? (
+                <TriangleAlert className="size-4.5" />
+              ) : (
+                <CircleAlert className="size-4.5" />
+              )}
+            </span>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription className="mt-1.5">
+            {description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>

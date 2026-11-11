@@ -14,6 +14,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  cardAccentClass,
+  type CardAccent,
+} from '@/components/global/card/accent';
 import { cn } from '@/lib/utils';
 
 interface ICardBase {
@@ -37,6 +41,12 @@ interface ICardBase {
    * interno (ver `PAIRED_CARD_*` em `lib/constants/pairedCard.ts`).
    */
   contentClassName?: string;
+  /**
+   * Filete lateral colorido por severidade. Opt-in: sem `accent` o card não
+   * tem filete. A cor é reforço visual; o significado precisa estar também no
+   * título ou no conteúdo.
+   */
+  accent?: CardAccent;
 }
 
 /**
@@ -65,12 +75,21 @@ function isCollapsible(
 }
 
 export function Card(props: ICard) {
-  const { title, description, action, children, className, contentClassName } =
-    props;
+  const {
+    title,
+    description,
+    action,
+    children,
+    className,
+    contentClassName,
+    accent,
+  } = props;
 
   const cardClassName = cn(
     'rounded-2xl border border-border/70 shadow-sm ring-0 sm:rounded-3xl dark:shadow-none',
-    className
+    className,
+    // Depois do `className`: um `border-*` do consumidor não apaga o filete.
+    accent && cardAccentClass(accent)
   );
 
   if (!isCollapsible(props)) {

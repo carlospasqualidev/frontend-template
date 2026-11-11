@@ -17,7 +17,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Confirmação para ações destrutivas/reversíveis. **Uncontrolled** (`trigger` + estado interno) ou **controlled** (`open`/`setOpen`). Loading interno automático e auto-close em sucesso.',
+          'Confirmação para ações destrutivas/reversíveis. **Uncontrolled** (`trigger` + estado interno) ou **controlled** (`open`/`setOpen`). Loading interno automático e auto-close em sucesso. A severidade aparece no filete lateral e no ícone: vermelho (`destructive`) para o que não se desfaz, âmbar (`warning`) nos demais; o ícone é decorativo e o significado está no título e na descrição.',
       },
     },
   },
@@ -135,7 +135,7 @@ export const Vitrine: Story = {
     <div className="grid gap-6 lg:grid-cols-2">
       <Card
         title="Destrutivo (uncontrolled)"
-        description="Trigger abre o dialog; estado interno."
+        description="Trigger abre o dialog; estado interno. Filete e ícone vermelhos."
       >
         <ConfirmDialog
           title="Excluir registro?"
@@ -152,7 +152,7 @@ export const Vitrine: Story = {
 
       <Card
         title="Padrão (uncontrolled)"
-        description="Confirmação para ações reversíveis."
+        description="Confirmação para ações reversíveis. Filete e ícone âmbar."
       >
         <ConfirmDialog
           title="Publicar agora?"

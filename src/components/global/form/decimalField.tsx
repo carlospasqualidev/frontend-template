@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
   useController,
   useWatch,
@@ -76,7 +76,7 @@ export function DecimalField<
   name,
   label,
   srOnlyLabel,
-  id,
+  id: idProp,
   placeholder,
   disabled,
   readOnly,
@@ -85,6 +85,9 @@ export function DecimalField<
     field,
     fieldState: { error },
   } = useController({ control, name });
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
   // O valor vem do `useWatch`, não do `field.value`: quando o campo é esvaziado
   // (`undefined`), o `useController` devolve o DEFAULT do formulário — e um campo

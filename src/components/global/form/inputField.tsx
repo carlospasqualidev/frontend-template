@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   useController,
   type Control,
@@ -61,7 +62,7 @@ function InputFieldBase({
   srOnlyLabel,
   description,
   type,
-  id,
+  id: idProp,
   'aria-invalid': ariaInvalid,
   errors,
   ...props
@@ -69,6 +70,9 @@ function InputFieldBase({
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
   return (
     <BaseField data-invalid={invalid}>

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   useController,
   type Control,
@@ -23,6 +24,8 @@ import { cn } from '@/lib/utils';
 
 type TextAreaBaseProps = React.ComponentProps<'textarea'> & {
   label: string;
+  /** Mantém o rótulo acessível (leitor de tela) mas oculto visualmente. */
+  srOnlyLabel?: boolean;
   description?: string;
   errors?: FormFieldErrors;
 };
@@ -54,7 +57,9 @@ type TextAreaProps<
 > = ControlledTextAreaProps<TFieldValues, TName> | UncontrolledTextAreaProps;
 
 function TextAreaBase({
+  id: idProp,
   label,
+  srOnlyLabel,
   description,
   errors,
   className,
@@ -64,11 +69,22 @@ function TextAreaBase({
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
   return (
     <BaseField data-invalid={invalid}>
-      {label && <FieldLabel htmlFor={props.id}>{label}</FieldLabel>}
+      {label && (
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
+          {label}
+        </FieldLabel>
+      )}
       <Textarea
+        id={id}
         aria-invalid={resolvedAriaInvalid}
         {...props}
         className={cn('min-h-28 resize-none', className)}

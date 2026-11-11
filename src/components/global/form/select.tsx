@@ -103,7 +103,7 @@ type SelectProps<
 > = ControlledSelectProps<TFieldValues, TName> | UncontrolledSelectProps;
 
 function SelectBase({
-  id,
+  id: idProp,
   label,
   srOnlyLabel,
   description,
@@ -124,6 +124,9 @@ function SelectBase({
 }: SelectBaseProps) {
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = React.useId();
+  const id = idProp ?? generatedId;
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
 
   // Fallback interno para o modo `searchable` uncontrolled (com `defaultValue`).

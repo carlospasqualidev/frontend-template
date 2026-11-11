@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   useController,
   type Control,
@@ -30,6 +31,8 @@ type MultiSelectBaseProps = Omit<
   'options'
 > & {
   label: string;
+  /** Mantém o rótulo acessível (leitor de tela) mas oculto visualmente. */
+  srOnlyLabel?: boolean;
   description?: string;
   errors?: FormFieldErrors;
   options: MultiSelectOption[];
@@ -64,8 +67,9 @@ type MultiSelectProps<
   | UncontrolledMultiSelectProps;
 
 function MultiSelectBase({
-  id,
+  id: idProp,
   label,
+  srOnlyLabel,
   description,
   errors,
   options,
@@ -75,10 +79,20 @@ function MultiSelectBase({
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
   return (
     <BaseField data-invalid={invalid}>
-      {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
+      {label && (
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
+          {label}
+        </FieldLabel>
+      )}
 
       <BaseMultiSelect
         {...props}

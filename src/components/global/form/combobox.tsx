@@ -260,7 +260,7 @@ type UncontrolledComboboxProps = ComboboxBaseProps & {
 };
 
 function ComboboxField({
-  id,
+  id: idProp,
   label,
   srOnlyLabel,
   errors,
@@ -279,6 +279,9 @@ function ComboboxField({
 }) {
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = React.useId();
+  const id = idProp ?? generatedId;
 
   return (
     <BaseField data-invalid={invalid}>

@@ -57,6 +57,8 @@ type DateTimeFieldBaseProps = Omit<
   'type' | 'value' | 'defaultValue' | 'onChange' | 'onBlur'
 > & {
   label: string;
+  /** Mantém o rótulo acessível (leitor de tela) mas oculto visualmente. */
+  srOnlyLabel?: boolean;
   description?: string;
   errors?: FormFieldErrors;
   value?: string;
@@ -104,9 +106,10 @@ function preventFocusSteal(event: React.MouseEvent<HTMLButtonElement>) {
 }
 
 function DateTimeFieldBase({
-  id,
+  id: idProp,
   name,
   label,
+  srOnlyLabel,
   description,
   placeholder = 'dd/mm/aaaa hh:mm',
   errors,
@@ -120,6 +123,9 @@ function DateTimeFieldBase({
   calendarProps,
   ...props
 }: DateTimeFieldBaseProps) {
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = React.useId();
+  const id = idProp ?? generatedId;
   const inputRef = React.useRef<HTMLInputElement>(null);
   const fieldRef = React.useRef<HTMLDivElement>(null);
   const popoverContentRef = React.useRef<HTMLDivElement>(null);
@@ -410,7 +416,14 @@ function DateTimeFieldBase({
 
   return (
     <BaseField data-invalid={invalid}>
-      {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
+      {label && (
+        <FieldLabel
+          htmlFor={id}
+          className={srOnlyLabel ? 'sr-only' : undefined}
+        >
+          {label}
+        </FieldLabel>
+      )}
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverAnchor asChild>

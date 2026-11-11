@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 import { ComboboxInput } from '@/components/global/form/combobox';
 import {
   useAsyncOptions,
@@ -16,7 +18,7 @@ import {
 } from '@/lib/forms/errors';
 
 export interface AsyncComboboxProps {
-  id: string;
+  id?: string;
   label: string;
   /** Mantém o rótulo acessível mas oculto — só em célula de tabela, onde o cabeçalho já rotula. */
   srOnlyLabel?: boolean;
@@ -61,7 +63,7 @@ export interface AsyncComboboxProps {
  * `useAsyncOptions`, compartilhada com qualquer campo de busca no servidor.
  */
 export function AsyncCombobox({
-  id,
+  id: idProp,
   label,
   srOnlyLabel,
   placeholder = 'Selecione...',
@@ -77,6 +79,9 @@ export function AsyncCombobox({
   clearable,
 }: AsyncComboboxProps) {
   const messages = resolveFieldErrors(errors);
+  // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
   const { loading, search, withSelected, labelOf } = useAsyncOptions({
     onSearch,
     minChars,

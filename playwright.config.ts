@@ -41,9 +41,11 @@ export default defineConfig({
   // Sobe o Vite na porta dos E2E (`--strictPort`: porta tomada é erro, não
   // outra porta). Um servidor já de pé na porta é reaproveitado, e o
   // `globalSetup` confere, antes de qualquer spec, que ele é este frontend
-  // apontando para a mesma API; se não for, para com a mensagem.
+  // apontando para a mesma API; se não for, para com a mensagem. Sem `--` antes
+  // de `--port`: o pnpm 12 já repassa os argumentos ao script, e com o `--` o
+  // Vite ignora a porta e sobe na 5173.
   webServer: {
-    command: `pnpm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+    command: `pnpm run dev --port ${FRONTEND_PORT} --strictPort`,
     env: { VITE_API_URL: SERVER_API_URL },
     url: FRONTEND_URL,
     reuseExistingServer: true,

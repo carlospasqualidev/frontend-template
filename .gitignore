@@ -15,6 +15,7 @@ storybook-static
 
 # Playwright (E2E)
 /test-results/
+/test-results-storybook/
 /playwright-report/
 /blob-report/
 /playwright/.cache/

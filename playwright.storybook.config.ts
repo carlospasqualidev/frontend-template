@@ -7,9 +7,14 @@ import { defineConfig, devices } from '@playwright/test';
 // Rode com `pnpm run test:layers`. Os specs vivem em `e2e/storybook/` e usam a
 // bancada `src/stories/padroes/camadas/Camadas.stories.tsx`.
 const baseURL = process.env.STORYBOOK_BASE_URL ?? 'http://localhost:6006';
+// A porta do Storybook sai da mesma URL que a espera do `webServer`.
+const storybookPort = new URL(baseURL).port || '6006';
 
 export default defineConfig({
   testDir: './e2e/storybook',
+  // Artefatos próprios: o e2e de fluxo usa `test-results/` e cada runner apaga o
+  // diretório de saída no início; compartilhado, um apagaria o do outro.
+  outputDir: './test-results-storybook',
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -26,7 +31,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm run storybook --no-open --quiet',
+    command: `pnpm run storybook -p ${storybookPort} --no-open --quiet`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     // O primeiro boot do Storybook compila o bundle inteiro — bem mais lento

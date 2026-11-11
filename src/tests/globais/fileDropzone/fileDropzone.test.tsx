@@ -159,6 +159,36 @@ describe('FileDropzone (global)', () => {
     expect(screen.queryByText('planilha.csv')).not.toBeInTheDocument();
   });
 
+  it('liga a área ao hint e ao texto do chamador por aria-describedby', () => {
+    render(
+      <>
+        <FileDropzone
+          file={null}
+          onFileChange={vi.fn()}
+          hint="Formatos aceitos: .csv"
+          describedBy="erro-x"
+        />
+        <p id="erro-x">Formato inválido</p>
+      </>
+    );
+
+    const area = screen.getByRole('button', { name: 'Selecionar arquivo' });
+    const hint = screen.getByText('Formatos aceitos: .csv');
+    expect(hint.id).not.toBe('');
+    expect(area).toHaveAttribute('aria-describedby', `${hint.id} erro-x`);
+    expect(area).toHaveAccessibleDescription(
+      'Formatos aceitos: .csv Formato inválido'
+    );
+  });
+
+  it('não liga aria-describedby quando não há hint nem describedBy', () => {
+    render(<FileDropzone file={null} onFileChange={vi.fn()} />);
+
+    expect(
+      screen.getByRole('button', { name: 'Selecionar arquivo' })
+    ).not.toHaveAttribute('aria-describedby');
+  });
+
   it('não interage quando desabilitado', () => {
     const handleChange = vi.fn();
     render(

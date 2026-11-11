@@ -13,6 +13,8 @@ interface IFileDropzoneBase {
   disabled?: boolean;
   /** `id` do input escondido — associe uma `FieldLabel htmlFor` a ele. */
   id?: string;
+  /** `id` do texto que descreve a área (ex.: a recusa do arquivo); soma-se ao `hint` no `aria-describedby`. */
+  describedBy?: string;
 }
 
 interface ISingleFileDropzone extends IFileDropzoneBase {
@@ -82,10 +84,14 @@ function matchesAccept(file: File, accept?: string): boolean {
  *   consome (ex.: a galeria do `ImageUploadField`).
  */
 export function FileDropzone(props: IFileDropzone) {
-  const { accept, hint, disabled, id } = props;
+  const { accept, hint, disabled, id, describedBy } = props;
   const multiple = isMultiple(props);
   const generatedId = useId();
   const inputId = id ?? generatedId;
+  const hintId = `${generatedId}-hint`;
+  const areaDescribedBy =
+    [hint ? hintId : undefined, describedBy].filter(Boolean).join(' ') ||
+    undefined;
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const selectedFile = isMultiple(props) ? null : props.file;
@@ -171,6 +177,7 @@ export function FileDropzone(props: IFileDropzone) {
           role="button"
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
+          aria-describedby={areaDescribedBy}
           aria-label={multiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}
           onClick={openPicker}
           onKeyDown={(event) => {
@@ -200,7 +207,7 @@ export function FileDropzone(props: IFileDropzone) {
               : 'Arraste o arquivo aqui ou clique para selecionar'}
           </Typography>
           {hint && (
-            <Typography as="p" variant="muted">
+            <Typography as="p" variant="muted" id={hintId}>
               {hint}
             </Typography>
           )}

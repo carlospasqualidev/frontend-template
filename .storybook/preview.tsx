@@ -3,8 +3,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Preview } from '@storybook/tanstack-react';
 
 import '../src/index.css';
+import { AddonThemeSync } from './addonThemeSync';
+
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/hooks/useThemeProvider';
+
+const addonThemes = { Claro: 'light', Escuro: 'dark' } as const;
+const defaultAddonTheme = 'Escuro';
+const themeByAddonName = new Map<string, 'light' | 'dark'>(
+  Object.entries(addonThemes)
+);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -47,11 +55,15 @@ const preview: Preview = {
   },
   decorators: [
     withThemeByClassName({
-      themes: { Claro: 'light', Escuro: 'dark' },
-      defaultTheme: 'Escuro',
+      themes: addonThemes,
+      defaultTheme: defaultAddonTheme,
     }),
-    (Story) => (
+    (Story, context) => (
       <ThemeProvider>
+        <AddonThemeSync
+          themes={themeByAddonName}
+          themeName={String(context.globals.theme || defaultAddonTheme)}
+        />
         <QueryClientProvider client={queryClient}>
           <div className="min-h-50 bg-background p-4 text-foreground">
             <Story />

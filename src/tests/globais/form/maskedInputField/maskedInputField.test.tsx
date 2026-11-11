@@ -309,6 +309,95 @@ describe('MaskedInputField — o que aparece é o que sai', () => {
     }
   );
 
+  it.each([
+    // 13 dígitos por cima de 11, e 12 por cima de 11 (acréscimo líquido de 1 dígito).
+    ['+55 48 99999-8888', '(48) 99999-8888', '48999998888'],
+    ['+55 48 9999-8888', '(48) 9999-8888', '4899998888'],
+  ])(
+    'telefone completo, tudo selecionado, colar %s substitui o número',
+    async (pasted, shown, stored) => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      render(<Form mask="phone" onSubmit={onSubmit} initial="11912345678" />);
+
+      const field = screen.getByLabelText<HTMLInputElement>('Documento');
+      await user.click(field);
+      field.setSelectionRange(0, field.value.length);
+      await user.paste(pasted);
+      await send(user);
+
+      expect(field).toHaveValue(shown);
+      expect(sent(onSubmit)).toBe(stored);
+    }
+  );
+
+  it.each([
+    ['cep', '01310100', '01310-100'],
+    ['cpf', '52998224725', '529.982.247-25'],
+  ] as const)(
+    'composição IME dígito a dígito no %s: só formata no compositionend',
+    async (mask, digits, formatted) => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      render(<Form mask={mask} onSubmit={onSubmit} />);
+
+      const field = screen.getByLabelText<HTMLInputElement>('Documento');
+      fireEvent.compositionStart(field);
+      for (let size = 1; size <= digits.length; size += 1) {
+        const raw = digits.slice(0, size);
+        fireEvent.input(field, {
+          target: { value: raw },
+          inputType: 'insertCompositionText',
+          data: raw,
+        });
+        // Mascarar no meio da composição faz o IME reenviar o texto e duplicar dígito.
+        expect(field).toHaveValue(raw);
+      }
+      fireEvent.compositionEnd(field);
+      await send(user);
+
+      expect(field).toHaveValue(formatted);
+      expect(sent(onSubmit)).toBe(digits);
+    }
+  );
+
+  it('blur no meio da composição encerra a composição: mascara e grava', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<Form mask="cep" onSubmit={onSubmit} />);
+
+    const field = screen.getByLabelText<HTMLInputElement>('Documento');
+    fireEvent.compositionStart(field);
+    fireEvent.input(field, {
+      target: { value: '013101' },
+      inputType: 'insertCompositionText',
+      data: '013101',
+    });
+    fireEvent.blur(field);
+    await send(user);
+
+    expect(field).toHaveValue('01310-1');
+    expect(sent(onSubmit)).toBe('013101');
+  });
+
+  it('sem máscara a composição não atrasa o formulário', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<Form mask="none" onSubmit={onSubmit} />);
+
+    const field = screen.getByLabelText<HTMLInputElement>('Documento');
+    fireEvent.compositionStart(field);
+    fireEvent.input(field, {
+      target: { value: 'ação' },
+      inputType: 'insertCompositionText',
+      data: 'ação',
+    });
+    await send(user);
+
+    expect(field).toHaveValue('ação');
+    expect(sent(onSubmit)).toBe('ação');
+  });
+
   it('telefone com DDD 55 completo ignora a tecla digitada a mais', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

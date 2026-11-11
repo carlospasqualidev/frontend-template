@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useReducer, useRef } from 'react';
+import { useId, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import {
   useController,
   type Control,
@@ -113,6 +113,8 @@ export function MaskedInputField<
   type,
   id: idProp,
   ref: forwardedRef,
+  onCompositionStart,
+  onCompositionEnd,
   'aria-describedby': ariaDescribedBy,
   ...props
 }: MaskedInputFieldProps<TFieldValues, TName>) {
@@ -124,7 +126,12 @@ export function MaskedInputField<
   const [, rerender] = useReducer((count: number) => count + 1, 0);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pendingDigitsBeforeCursor = useRef<number | null>(null);
-  const displayValue = apply(mask, String(field.value ?? ''));
+  // Durante a composição (IME) o campo mostra o texto cru do IME; a máscara
+  // entra uma vez, no `compositionend`.
+  const [composingText, setComposingText] = useState<string | null>(null);
+  const composingBaseDigits = useRef<string | null>(null);
+  const displayValue =
+    composingText ?? apply(mask, String(field.value ?? ''));
 
   function setInputRef(element: HTMLInputElement | null): void {
     inputRef.current = element;
@@ -156,13 +163,22 @@ export function MaskedInputField<
       inputType === 'deleteContentBackward' ||
       inputType === 'deleteContentForward';
 
-    // Telefone: a mudança que acrescenta exatamente um dígito e passaria de onze é
-    // digitação e é ignorada, qualquer que seja o `inputType` (inclusive
-    // `insertCompositionText` do Android). O corte do `55`/`0` vale para valor que
-    // chega de uma vez (colar, preencher, sugestão do teclado ou IME).
+    if (composingBaseDigits.current !== null) {
+      setComposingText(target.value);
+      return;
+    }
+
+    // Telefone: digitação (`insertText` de um caractere ou composição) que
+    // acrescenta exatamente um dígito e passaria de onze é ignorada. Colar,
+    // arrastar, substituir e autofill (sem `inputType`) sempre seguem o caminho
+    // da colagem, que normaliza o `55`/`0` e formata.
+    const isTypingLike =
+      (inputType === 'insertText' && insertedText.length <= 1) ||
+      inputType === 'insertCompositionText';
     const nextDigits = onlyDigits(target.value);
     if (
       mask === 'phone' &&
+      isTypingLike &&
       nextDigits.length > 11 &&
       nextDigits.length === previousDigits.length + 1
     ) {
@@ -210,6 +226,50 @@ export function MaskedInputField<
     field.onChange(store(mask, target.value));
   }
 
+  function handleCompositionStart(
+    event: React.CompositionEvent<HTMLInputElement>
+  ): void {
+    onCompositionStart?.(event);
+    if (mask === 'none') return;
+
+    composingBaseDigits.current = onlyDigits(displayValue);
+    setComposingText(event.currentTarget.value);
+  }
+
+  function finishComposition(target: HTMLInputElement): void {
+    const baseDigits = composingBaseDigits.current;
+    if (baseDigits === null) return;
+
+    composingBaseDigits.current = null;
+    setComposingText(null);
+
+    const nextDigits = onlyDigits(target.value);
+    if (
+      mask === 'phone' &&
+      nextDigits.length > 11 &&
+      nextDigits.length === baseDigits.length + 1
+    ) {
+      return;
+    }
+
+    settleCursor(
+      onlyDigits(target.value.slice(0, target.selectionStart ?? 0)).length
+    );
+    field.onChange(store(mask, target.value));
+  }
+
+  function handleCompositionEnd(
+    event: React.CompositionEvent<HTMLInputElement>
+  ): void {
+    onCompositionEnd?.(event);
+    finishComposition(event.currentTarget);
+  }
+
+  function handleBlur(): void {
+    if (inputRef.current) finishComposition(inputRef.current);
+    field.onBlur();
+  }
+
   const messages = resolveFieldErrors(fieldState.error, errors);
   const invalid = hasFieldErrors(messages);
   const { descriptionId, errorId, describedBy } = fieldDescribedBy({
@@ -238,10 +298,12 @@ export function MaskedInputField<
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         name={field.name}
-        onBlur={field.onBlur}
+        onBlur={handleBlur}
         ref={setInputRef}
         value={displayValue}
         onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         disabled={props.disabled ?? field.disabled}
       />
 

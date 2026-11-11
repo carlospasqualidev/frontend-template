@@ -37,13 +37,15 @@ function rowActions(
   role: RoleListItem,
   { canCreate, canDelete, onCopy, onDelete }: RoleColumnsOptions
 ): RowAction[] {
-  // O `Administrador` não é copiado nem excluído: a linha fica sem ações (e
-  // reserva o espaço de um botão). Sem `editAction`: editar é pelo clique na linha.
-  if (role.isSystem) return [];
+  // O `Administrador` não é copiado nem excluído: as ações ficam visíveis,
+  // desabilitadas e com o motivo. Sem `editAction`: editar é pelo clique na linha.
+  const systemOverrides = role.isSystem
+    ? { disabled: true, disabledReason: 'O cargo Administrador é do sistema.' }
+    : undefined;
 
   return [
-    ...(canCreate ? [copyAction(() => onCopy(role))] : []),
-    ...(canDelete ? [deleteAction(() => onDelete(role))] : []),
+    ...(canCreate ? [copyAction(() => onCopy(role), systemOverrides)] : []),
+    ...(canDelete ? [deleteAction(() => onDelete(role), systemOverrides)] : []),
   ];
 }
 

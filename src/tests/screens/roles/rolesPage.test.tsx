@@ -154,13 +154,15 @@ describe('RolesPage — listagem', () => {
     const admin = rowOf('Administrador');
     expect(admin).toHaveTextContent('Sistema');
     expect(admin).toHaveTextContent('11 permissões');
-    // O `Administrador` não é copiado nem excluído: sem botões de ação.
-    expect(
-      within(admin).queryByRole('button', { name: 'Copiar' })
-    ).not.toBeInTheDocument();
-    expect(
-      within(admin).queryByRole('button', { name: 'Excluir' })
-    ).not.toBeInTheDocument();
+    // O `Administrador` não é copiado nem excluído, mas as ações ficam visíveis,
+    // desabilitadas e com o motivo (a coluna nunca fica vazia sem explicação).
+    for (const label of ['Copiar', 'Excluir']) {
+      const button = within(admin).getByRole('button', {
+        name: `${label}: O cargo Administrador é do sistema.`,
+      });
+      expect(button).toBeVisible();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+    }
 
     expect(fetchRoles).toHaveBeenCalledWith({
       page: 0,

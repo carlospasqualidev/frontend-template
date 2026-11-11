@@ -38,6 +38,8 @@ Tons do mesmo hue não se distinguem entre si: usar o ramp sequencial para séri
 
 **Não fazem parte da marca**: `--ring`/`--sidebar-ring` (neutros, convenção shadcn) e os tokens neutros (background, border, muted, etc.).
 
+**Card no escuro**: `--card` é `oklch(0.19 0.006 285.885)` (≈ `#131316`), mais claro que o `--background` (`0.141`) por só 1,08:1: elevação sutil. Razões medidas por script (WCAG 2.x, oklch para sRGB; borda translúcida composta sobre o card): `--foreground` 17,70:1 e `--muted-foreground` 7,03:1 sobre o card (5,66:1 sobre `--muted`); `--brand-text` 8,85:1; `--muted` (cabeçalho de tabela) sobre o card 1,24:1; `--border` 1,31:1 e `--input` 1,55:1 sobre o card. Borda e input **não chegam a 3:1** (já era assim); subir o `--input` para ~33% de opacidade é decisão separada, não feita. O `--popover` fica em `0.24` de propósito (flutua 1,12:1 acima do card). A sidebar escura (`0.21`) fica 1,04:1 **acima** do card: decisão registrada de não mexer; se incomodar, `--sidebar: oklch(0.17 0.005 285.823)`. Ao mudar `--card`, remeça e atualize os comentários de `index.css`. O ramp `--chart-*` sobre o card escuro vai de 5,35 a 12,08:1.
+
 **Dark mode em superfícies "card-like"**: use `bg-card` em vez de `bg-background` (o `.dark` já clareia `--card` em relação ao `--background` pra dar elevação) e adicione `dark:shadow-none` — sombras não rendem em fundo escuro. O `Card` global já faz isso automaticamente.
 
 ## Sempre projete para claro E escuro (obrigatório)

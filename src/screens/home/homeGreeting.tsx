@@ -1,4 +1,5 @@
 import { Typography } from '@/components/ui/typography';
+import { APP_LOCALE } from '@/lib/locale';
 
 interface HomeGreetingProps {
   userName: string | null | undefined;
@@ -11,7 +12,7 @@ function pickGreeting(hour: number): string {
 }
 
 function formatToday(date: Date): string {
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleDateString(APP_LOCALE, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { resolveFieldErrors } from '@/lib/forms/errors';
+import { APP_LOCALE } from '@/lib/locale';
 
 interface NumberFieldProps<
   TFieldValues extends FieldValues,
@@ -66,7 +67,7 @@ function toMasked(
   if (value == null || Number.isNaN(value)) return '';
   const negative = allowNegative && isNegative(value);
   const formatted = (negative ? Math.abs(value) : value).toLocaleString(
-    'pt-BR',
+    APP_LOCALE,
     {
       minimumFractionDigits: maxDecimals,
       maximumFractionDigits: maxDecimals,

@@ -1,5 +1,7 @@
 import { type SortingState } from '@tanstack/react-table';
 
+import { APP_LOCALE } from '@/lib/locale';
+
 /** Valor que uma coluna entrega para ordenar; vazio (`null`/`undefined`) é permitido. */
 export type SortValue = string | number | null | undefined;
 
@@ -14,7 +16,7 @@ export type SortAccessors<TRow> = ReadonlyMap<string, (row: TRow) => SortValue>;
 function compareValues(a: SortValue, b: SortValue): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   if (typeof a === 'string' && typeof b === 'string') {
-    return a.localeCompare(b, 'pt-BR');
+    return a.localeCompare(b, APP_LOCALE);
   }
   return (typeof a === 'number' ? 0 : 1) - (typeof b === 'number' ? 0 : 1);
 }
@@ -26,7 +28,7 @@ function compareValues(a: SortValue, b: SortValue): number {
  * completo, a própria tela, e este helper evita que cada uma escreva o seu
  * comparador.
  *
- * Número ordena por subtração; texto por `localeCompare('pt-BR')`. Valor vazio
+ * Número ordena por subtração; texto por `localeCompare(APP_LOCALE)`. Valor vazio
  * (`null`/`undefined`) vai para o fim nos dois sentidos; número e texto na mesma
  * coluna não são comparados entre si (número vem antes em ordem crescente e depois em decrescente). Empates mantêm a ordem
  * de entrada. Sem regra de ordenação, ou sem acessor para a coluna, devolve a

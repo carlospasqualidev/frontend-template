@@ -11,6 +11,7 @@ import type { RowAction } from '@/components/global/rowActions/rowActions';
 import { Badge } from '@/components/ui/badge';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
+import { APP_LOCALE } from '@/lib/locale';
 import { type RoleListItem } from '@/services/roles/types';
 
 function mutedText(text: string) {
@@ -22,7 +23,7 @@ function mutedText(text: string) {
 }
 
 function countText(count: number, singular: string, plural: string): string {
-  return `${count.toLocaleString('pt-BR')} ${count === 1 ? singular : plural}`;
+  return `${count.toLocaleString(APP_LOCALE)} ${count === 1 ? singular : plural}`;
 }
 
 interface RoleColumnsOptions {

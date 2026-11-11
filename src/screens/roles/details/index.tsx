@@ -23,6 +23,7 @@ import { useReturnToList } from '@/hooks/useReturnToList';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
+import { APP_LOCALE } from '@/lib/locale';
 import { hasPermission } from '@/lib/permissions';
 import { OverviewTab } from '@/screens/roles/details/overviewTab';
 import {
@@ -71,7 +72,7 @@ const SYSTEM_ROLE_NOTICE: UsersTabNotice = {
 };
 
 const LARGE_ROLE_NOTICE: UsersTabNotice = {
-  title: `Mais de ${MAX_ROLE_MEMBERS.toLocaleString('pt-BR')} usuários`,
+  title: `Mais de ${MAX_ROLE_MEMBERS.toLocaleString(APP_LOCALE)} usuários`,
   description:
     'A lista deste cargo não muda por aqui: altere os cargos de cada usuário, na tela de usuários.',
 };

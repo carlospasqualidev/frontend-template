@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { sidebarData } from '@/lib/constants/sidebar';
+import { APP_LOCALE } from '@/lib/locale';
 import { hasPermission } from '@/lib/permissions';
 
 export function NavMain() {
@@ -57,7 +58,7 @@ export function NavMain() {
               }
               return !item.permission || hasPermission(user, item.permission);
             })
-            .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+            .sort((a, b) => a.title.localeCompare(b.title, APP_LOCALE));
 
           if (items.length === 0) return null;
 

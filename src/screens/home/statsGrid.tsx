@@ -15,6 +15,7 @@ import { DemoNotice } from '@/components/global/demoNotice/demoNotice';
 import { SkeletonValue } from '@/components/global/skeleton/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { useSessionStore } from '@/hooks/useSessionStore';
+import { APP_LOCALE } from '@/lib/locale';
 import { hasPermission } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import {
@@ -110,7 +111,7 @@ function UserCountCard({
     ? undefined
     : isError || count === undefined
       ? '—'
-      : count.toLocaleString('pt-BR');
+      : count.toLocaleString(APP_LOCALE);
 
   return (
     <StatCard label={label} icon={icon} value={value}>

@@ -4,6 +4,7 @@ import { type Control } from 'react-hook-form';
 import { Card } from '@/components/global/card/card';
 import { Typography } from '@/components/ui/typography';
 import { dateFormatter } from '@/lib/dateTime/dateFormatter';
+import { APP_LOCALE } from '@/lib/locale';
 import { type RoleFormValues } from '@/screens/roles/utils/roleForm';
 import {
   RoleIdentityCard,
@@ -32,7 +33,7 @@ function DefinitionItem({
 
 function usersCountText(count: number): string {
   if (count === 0) return 'Nenhum usuário';
-  return `${count.toLocaleString('pt-BR')} ${count === 1 ? 'usuário' : 'usuários'}`;
+  return `${count.toLocaleString(APP_LOCALE)} ${count === 1 ? 'usuário' : 'usuários'}`;
 }
 
 interface OverviewTabProps {

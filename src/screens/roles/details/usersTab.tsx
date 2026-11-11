@@ -23,6 +23,7 @@ import {
 } from '@/components/global/formTable/formTable';
 import { SkeletonText } from '@/components/global/skeleton/skeleton';
 import { Typography } from '@/components/ui/typography';
+import { APP_LOCALE } from '@/lib/locale';
 import { useRoleMemberOptions } from '@/screens/roles/details/useRoleMemberOptions';
 import { normalizeIds } from '@/screens/roles/utils/permissionTree';
 import { type RoleFormValues } from '@/screens/roles/utils/roleForm';
@@ -43,7 +44,7 @@ function toMembers(
 }
 
 function byName(first: RoleMember, second: RoleMember): number {
-  return first.name.localeCompare(second.name, 'pt-BR');
+  return first.name.localeCompare(second.name, APP_LOCALE);
 }
 
 export interface UsersTabNotice {

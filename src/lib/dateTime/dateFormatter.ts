@@ -1,5 +1,7 @@
 import type { IDateFormatterValue } from './types';
 
+import { APP_LOCALE } from '@/lib/locale';
+
 /**
  * Formata datas para EXIBIÇÃO, escolhendo o tratamento de fuso conforme a
  * natureza do valor persistido (ver "Manipulação de Datas" em docs/dates.md).
@@ -82,14 +84,14 @@ export function dateFormatter({
   // feito separado pra garantir que o navegador exiba corretamente
   if (hasTimeStamp) {
     if (!showHours) {
-      return d.toLocaleDateString(undefined, {
+      return d.toLocaleDateString(APP_LOCALE, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
       });
     }
 
-    return d.toLocaleString(undefined, {
+    return d.toLocaleString(APP_LOCALE, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -98,7 +100,7 @@ export function dateFormatter({
     });
   }
 
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(APP_LOCALE, {
     timeZone: 'UTC',
     year: 'numeric',
     month: '2-digit',

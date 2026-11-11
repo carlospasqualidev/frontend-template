@@ -84,3 +84,5 @@ transformIntoDatabaseQueryDate({
 1. O valor é um **dia** ou um **momento**? → define `hasTimeStamp`.
 2. Vou **exibir**? → `dateFormatter`. **Preencher input**? → `transformIntoInputDate`. **Salvar**? → `transformIntoDatabaseDate`. **Filtrar**? → `transformIntoDatabaseQueryDate`.
 3. Mantenha a **mesma** `hasTimeStamp` em toda a vida do dado (input → gravação → exibição).
+
+> **Locale fixo:** exibição de data e número usa sempre `pt-BR` (`APP_LOCALE` em [`src/lib/locale.ts`](../src/lib/locale.ts)); nunca `toLocale*(undefined)` nem sem argumento, que dependem do navegador.

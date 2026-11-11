@@ -22,6 +22,8 @@ A cor primária do sistema vive em **uma única variável** no topo de [`src/ind
 
 **Variante `brand` do `Button`**: soft-tint da marca (`bg-primary/10 text-primary`) para o botão auxiliar que precisa de corpo sem competir com o `default` (cheio). Divergência do shadcn, registrada no comentário de `ui/button.tsx`.
 
+**Locale do `ui/chart.tsx`**: o tooltip formata o valor com `APP_LOCALE` (`pt-BR`, de `src/lib/locale.ts`) em vez do locale do navegador. Divergência do shadcn, registrada no comentário de `ui/chart.tsx`: preserve numa atualização.
+
 **Números em coluna**: a classe utilitária `.tabular` (`index.css`, `@layer base`) liga `tabular-nums`/`'tnum'`; use em células e totais numéricos para os dígitos alinharem.
 
 **Há DUAS paletas de gráfico, com papéis diferentes — não as confunda:**

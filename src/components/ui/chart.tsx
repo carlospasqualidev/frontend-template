@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as RechartsPrimitive from 'recharts';
 import type { TooltipValueType } from 'recharts';
 
+import { APP_LOCALE } from '@/lib/locale';
 import { cn } from '@/lib/utils';
 
 // Format: { THEME_NAME: CSS_SELECTOR }
@@ -252,8 +253,9 @@ function ChartTooltipContent({
                       </div>
                       {item.value != null && (
                         <span className="font-mono font-medium text-foreground tabular-nums">
+                          {/* Divergência do shadcn: locale fixo (pt-BR), não o do navegador. */}
                           {typeof item.value === 'number'
-                            ? item.value.toLocaleString()
+                            ? item.value.toLocaleString(APP_LOCALE)
                             : String(item.value)}
                         </span>
                       )}

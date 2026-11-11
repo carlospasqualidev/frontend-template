@@ -63,7 +63,7 @@ Exceção: filtro puramente **client-side de refino instantâneo** dentro de um 
 
 ### Visões de uma listagem — `FilterButtons`
 
-[`FilterButtons`](../../src/components/global/filterButtons/filterButtons.tsx) é um grupo de botões de **escolha única** (as "visões" de uma fila: Todos, Pendentes, Atrasados), com `role="group"` + `label` para leitor de tela, o selecionado em `variant="default"` com `aria-pressed` e contador opcional (`showCounts`; `count` ausente mostra "…" até chegar, nunca um zero falso). Props: `label`, `options` (`{ value, label, count? }`), `value`, `onValueChange`, `showCounts?`, `className?`. Não aplica nada sozinho: quem usa decide o efeito, em geral gravar um search param. Quando não cabe na largura, rola de lado; nunca esconde opção. É atalho de visão, não substitui a barra de filtros nem o "Buscar"; `UrlTabs` continua sendo a escolha para aba com painel. Story `Global/FilterButtons`.
+[`FilterButtons`](../../src/components/global/filterButtons/filterButtons.tsx) é um grupo de botões de **escolha única** (as "visões" de uma lista de usuários: Todos, Ativos, Bloqueados), com `role="group"` + `label` para leitor de tela, o selecionado em `variant="default"` com `aria-pressed` e contador opcional (`showCounts`; `count` ausente mostra "…" até chegar, nunca um zero falso). Props: `label`, `options` (`{ value, label, count? }`), `value`, `onValueChange`, `showCounts?`, `className?`. Não aplica nada sozinho: quem usa decide o efeito, em geral gravar um search param. Quando não cabe na largura, rola de lado; nunca esconde opção. É atalho de visão, não substitui a barra de filtros nem o "Buscar"; `UrlTabs` continua sendo a escolha para aba com painel. Story `Globais/FilterButtons`.
 
 ### Busca no servidor num filtro `multiSelect`
 

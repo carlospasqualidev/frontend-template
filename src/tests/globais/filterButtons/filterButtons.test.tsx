@@ -6,7 +6,7 @@ import { FilterButtons } from '@/components/global/filterButtons/filterButtons';
 
 const OPTIONS = [
   { value: 'all', label: 'Todos', count: 10 },
-  { value: 'late', label: 'Atrasados', count: 2 },
+  { value: 'blocked', label: 'Bloqueados', count: 2 },
   { value: 'done', label: 'Concluídos' },
 ];
 
@@ -16,13 +16,13 @@ describe('FilterButtons', () => {
       <FilterButtons
         label="Visão"
         options={OPTIONS}
-        value="late"
+        value="blocked"
         onValueChange={() => undefined}
       />
     );
 
     expect(screen.getByRole('group', { name: 'Visão' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Atrasados' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Bloqueados' })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
@@ -45,9 +45,9 @@ describe('FilterButtons', () => {
 
     await userEvent
       .setup()
-      .click(screen.getByRole('button', { name: 'Atrasados' }));
+      .click(screen.getByRole('button', { name: 'Bloqueados' }));
 
-    expect(onValueChange).toHaveBeenCalledWith('late');
+    expect(onValueChange).toHaveBeenCalledWith('blocked');
   });
 
   it('mostra o contador só com showCounts, e reticências até ele chegar', () => {
@@ -105,9 +105,9 @@ describe('FilterButtons', () => {
     expect(screen.getByRole('button', { name: 'Todos' })).toHaveFocus();
 
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Atrasados' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Bloqueados' })).toHaveFocus();
     await user.keyboard('{Enter}');
-    expect(onValueChange).toHaveBeenLastCalledWith('late');
+    expect(onValueChange).toHaveBeenLastCalledWith('blocked');
 
     await user.tab();
     expect(screen.getByRole('button', { name: 'Concluídos' })).toHaveFocus();

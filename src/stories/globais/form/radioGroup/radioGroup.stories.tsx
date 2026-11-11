@@ -56,17 +56,17 @@ export const Vitrine: Story = {
 
       <Card title="Com descrição" description="Texto auxiliar por opção.">
         <RadioGroup
-          label="Plano"
+          label="Frequência do resumo"
           options={[
             {
               value: 'monthly',
               label: 'Mensal',
-              description: 'Cobrança todo mês, sem fidelidade.',
+              description: 'Notificação enviada todo mês.',
             },
             {
               value: 'yearly',
               label: 'Anual',
-              description: 'Cobrança única, com desconto.',
+              description: 'Notificação enviada uma vez por ano.',
             },
           ]}
         />

@@ -5,14 +5,14 @@ import { Card } from '@/components/global/card/card';
 import { FilterButtons } from '@/components/global/filterButtons/filterButtons';
 
 const meta = {
-  title: 'Global/FilterButtons',
+  title: 'Globais/FilterButtons',
   component: FilterButtons,
   parameters: {
     layout: 'padded',
     docs: {
       description: {
         component:
-          'Grupo de botões de escolha única, com contador opcional, para as "visões" de uma fila. O selecionado usa a cor primária e anuncia `aria-pressed`; não aplica nada sozinho. Quando não cabe na largura, rola de lado em vez de esconder opção.',
+          'Grupo de botões de escolha única, com contador opcional, para as "visões" de uma lista. O selecionado usa a cor primária e anuncia `aria-pressed`; não aplica nada sozinho. Quando não cabe na largura, rola de lado em vez de esconder opção.',
       },
     },
   },
@@ -30,8 +30,8 @@ type Story = StoryObj<typeof meta>;
 const VIEWS = [
   { value: 'all', label: 'Todos', count: 128 },
   { value: 'active', label: 'Ativos', count: 40 },
-  { value: 'pending', label: 'Pendentes', count: 12 },
-  { value: 'late', label: 'Atrasados', count: 3 },
+  { value: 'invited', label: 'Convidados', count: 12 },
+  { value: 'blocked', label: 'Bloqueados', count: 3 },
   { value: 'done', label: 'Concluídos', count: 25 },
   { value: 'archived', label: 'Arquivados', count: 48 },
 ];

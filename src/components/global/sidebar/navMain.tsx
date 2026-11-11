@@ -1,6 +1,7 @@
 import { Link, useMatchRoute } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
 
+import { useCloseMobileSidebarOnSamePage } from '@/components/global/sidebar/useCloseMobileSidebarOnSamePage';
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,6 +32,7 @@ export function NavMain() {
   const matchRoute = useMatchRoute();
   const user = useSessionStore((state) => state.user);
   const { state, isMobile } = useSidebar();
+  const closeOnSamePage = useCloseMobileSidebarOnSamePage();
 
   // Sidebar recolhida em ícones (só no desktop; no mobile ela é um sheet full).
   // Nesse modo o `SidebarMenuSub` fica escondido — então os filhos vão para um
@@ -119,7 +121,10 @@ export function NavMain() {
                       return (
                         <SidebarMenuSubItem key={item.url}>
                           <SidebarMenuSubButton asChild isActive={isActive}>
-                            <Link to={item.url}>
+                            <Link
+                              to={item.url}
+                              onClick={() => closeOnSamePage(item.url)}
+                            >
                               {item.icon}
                               <span>{item.title}</span>
                             </Link>
@@ -150,7 +155,7 @@ export function NavMain() {
                   tooltip={link.title}
                   isActive={isActive}
                 >
-                  <Link to={link.url}>
+                  <Link to={link.url} onClick={() => closeOnSamePage(link.url)}>
                     {link.icon}
                     <span>{link.title}</span>
                   </Link>

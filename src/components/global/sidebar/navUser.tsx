@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useCloseMobileSidebarOnSamePage } from '@/components/global/sidebar/useCloseMobileSidebarOnSamePage';
 import { ToggleTheme } from '@/components/global/layout/toggleTheme';
 import { useSessionStore } from '@/hooks/useSessionStore';
 import { confirmLeaveIfDirty } from '@/hooks/useUnsavedChangesGuard';
@@ -25,6 +26,7 @@ export function NavUser() {
   const { isMobile } = useSidebar();
   const { user, signOut } = useSessionStore();
   const navigate = useNavigate();
+  const closeOnSamePage = useCloseMobileSidebarOnSamePage();
 
   async function handleSignOut() {
     // Com edição não salva, pergunta antes de encerrar a sessão: perguntar
@@ -101,6 +103,7 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={() => {
+                  closeOnSamePage('/account');
                   void navigate({ to: '/account' });
                 }}
               >

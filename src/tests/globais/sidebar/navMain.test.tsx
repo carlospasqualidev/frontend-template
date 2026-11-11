@@ -25,6 +25,7 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
+  useLocation: () => ({ pathname: activePath.current, searchStr: '' }),
   useMatchRoute:
     () =>
     ({ to }: { to: string }) =>

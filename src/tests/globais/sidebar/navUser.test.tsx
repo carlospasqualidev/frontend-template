@@ -9,9 +9,11 @@ import { useSessionStore } from '@/hooks/useSessionStore';
 import { ThemeProvider } from '@/hooks/useThemeProvider';
 
 const navigate = vi.fn();
+const location = { pathname: '/users', searchStr: '' };
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
+  useLocation: () => location,
 }));
 
 const signOut = vi.fn().mockResolvedValue(undefined);

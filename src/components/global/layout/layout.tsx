@@ -8,6 +8,7 @@ import { PageActionsSlot } from '@/components/global/layout/pageActions';
 import { SuspenseFallback } from '@/components/global/layout/suspenseFallback';
 import { UnsavedChangesDialog } from '@/components/global/layout/unsavedChangesDialog';
 import { AppSidebar } from '@/components/global/sidebar/appSidebar';
+import { CloseMobileSidebarOnNavigate } from '@/components/global/sidebar/closeMobileSidebarOnNavigate';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -32,6 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <IdleTimeout />
       <UnsavedChangesDialog />
+      <CloseMobileSidebarOnNavigate />
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         {/* Camada `--z-header`: ACIMA do conteúdo da página e do sidebar, ABAIXO

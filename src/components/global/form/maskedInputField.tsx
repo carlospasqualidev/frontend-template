@@ -130,8 +130,7 @@ export function MaskedInputField<
   // entra uma vez, no `compositionend`.
   const [composingText, setComposingText] = useState<string | null>(null);
   const composingBaseDigits = useRef<string | null>(null);
-  const displayValue =
-    composingText ?? apply(mask, String(field.value ?? ''));
+  const displayValue = composingText ?? apply(mask, String(field.value ?? ''));
 
   function setInputRef(element: HTMLInputElement | null): void {
     inputRef.current = element;

@@ -203,14 +203,34 @@ function MultiSelect({
   const showClear = Boolean(clearable && selected.length > 0 && !disabled);
 
   const normalizedSearch = search.trim().toLowerCase();
+  const belowMinChars =
+    serverSearch && minChars !== undefined && search.trim().length < minChars;
   const filteredOptions = React.useMemo((): MultiSelectOption[] => {
+    if (belowMinChars) {
+      // Abaixo do mínimo, o resultado da busca anterior some: ficam só as marcadas.
+      return selected.flatMap((item) => {
+        const label =
+          pinnedLabels.get(item) ??
+          options.find((option) => option.value === item)?.label;
+        return label !== undefined ? [{ value: item, label }] : [];
+      });
+    }
     if (serverSearch) return [...pinnedSelected, ...options];
     return searchable && normalizedSearch
       ? options.filter((option) =>
           option.label.toLowerCase().includes(normalizedSearch)
         )
       : options;
-  }, [options, pinnedSelected, serverSearch, searchable, normalizedSearch]);
+  }, [
+    belowMinChars,
+    selected,
+    pinnedLabels,
+    options,
+    pinnedSelected,
+    serverSearch,
+    searchable,
+    normalizedSearch,
+  ]);
 
   // O que "Selecionar tudo" alcança: o que está à vista (resultado da busca
   // local ou do servidor), habilitado e ainda não marcado.
@@ -221,9 +241,6 @@ function MultiSelect({
       ),
     [filteredOptions, selectedSet]
   );
-
-  const belowMinChars =
-    serverSearch && minChars !== undefined && search.trim().length < minChars;
 
   const selectAll = () => {
     setPinnedLabels((previous) => {

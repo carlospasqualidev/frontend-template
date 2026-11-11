@@ -371,6 +371,78 @@ describe('MultiSelect (primitive)', () => {
       expect(screen.getByText('Nada.')).toBeInTheDocument();
     });
 
+    it('abaixo do mínimo some o resultado da busca anterior e o "Selecionar tudo", mas as marcadas ficam', async () => {
+      function Harness() {
+        const [options, setOptions] = useState<typeof FRUITS>([]);
+        const [value, setValue] = useState<string[]>([]);
+        return (
+          <MultiSelect
+            options={options}
+            value={value}
+            onValueChange={setValue}
+            onSearchChange={(term) => {
+              // A tela não consulta abaixo do mínimo: mantém o resultado antigo.
+              if (term.length >= 3) setOptions(FRUITS);
+            }}
+            minChars={3}
+            searchPlaceholder="Buscar fruta..."
+          />
+        );
+      }
+      render(<Harness />);
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('combobox'));
+      const input = screen.getByRole('textbox', { name: 'Buscar fruta...' });
+      await user.type(input, 'abc');
+      await user.click(screen.getByText('Banana'));
+      expect(screen.getByText('Laranja')).toBeInTheDocument();
+
+      await user.type(input, '{Backspace}');
+
+      expect(screen.queryByText('Laranja')).not.toBeInTheDocument();
+      expect(screen.queryByText('Maçã')).not.toBeInTheDocument();
+      expect(screen.getAllByText('Banana').length).toBeGreaterThan(0);
+      expect(
+        screen.queryByRole('button', { name: 'Selecionar tudo' })
+      ).not.toBeInTheDocument();
+
+      await user.clear(input);
+      await user.type(input, 'ab');
+      expect(screen.queryByText('Laranja')).not.toBeInTheDocument();
+    });
+
+    it('abaixo do mínimo, sem marcadas, mostra a mensagem de digitar mais', async () => {
+      function Harness() {
+        const [options, setOptions] = useState<typeof FRUITS>([]);
+        return (
+          <MultiSelect
+            options={options}
+            onSearchChange={(term) => {
+              if (term.length >= 3) setOptions(FRUITS);
+            }}
+            minChars={3}
+            searchPlaceholder="Buscar fruta..."
+          />
+        );
+      }
+      render(<Harness />);
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('combobox'));
+      const input = screen.getByRole('textbox', { name: 'Buscar fruta...' });
+      await user.type(input, 'abc');
+      expect(screen.getByText('Laranja')).toBeInTheDocument();
+
+      await user.type(input, '{Backspace}');
+
+      expect(screen.queryByText('Laranja')).not.toBeInTheDocument();
+      expect(screen.getByText('Digite ao menos 3 caracteres.')).toBeVisible();
+      expect(
+        screen.queryByRole('button', { name: 'Selecionar tudo' })
+      ).not.toBeInTheDocument();
+    });
+
     it('com opções na tela e busca em andamento mantém a lista e marca aria-busy', async () => {
       render(
         <MultiSelect

@@ -61,6 +61,14 @@ Por quê: misturar campos que filtram na hora com campos que esperam o botão é
 
 Exceção: filtro puramente **client-side de refino instantâneo** dentro de um resultado já carregado só é aceitável se **não houver** botão "Buscar" na tela — nunca conviva os dois comportamentos na mesma barra.
 
+### Visões de uma listagem — `FilterButtons`
+
+[`FilterButtons`](../../src/components/global/filterButtons/filterButtons.tsx) é um grupo de botões de **escolha única** (as "visões" de uma fila: Todos, Pendentes, Atrasados), com `role="group"` + `label` para leitor de tela, o selecionado em `variant="default"` com `aria-pressed` e contador opcional (`showCounts`; `count` ausente mostra "…" até chegar, nunca um zero falso). Props: `label`, `options` (`{ value, label, count? }`), `value`, `onValueChange`, `showCounts?`, `className?`. Não aplica nada sozinho: quem usa decide o efeito, em geral gravar um search param. Quando não cabe na largura, rola de lado; nunca esconde opção. É atalho de visão, não substitui a barra de filtros nem o "Buscar"; `UrlTabs` continua sendo a escolha para aba com painel. Story `Global/FilterButtons`.
+
+### Busca no servidor num filtro `multiSelect`
+
+`onSearchChange` liga a busca ao servidor (`options` passa a ser o resultado; as opções já aplicadas vêm sempre em `options`), `loading` e `emptyText` acompanham, e **`minChars`** define o mínimo de caracteres antes de buscar: abaixo dele a lista mostra "Digite ao menos N caracteres." e o `onSearchChange` da tela não é chamado com termo não vazio abaixo do mínimo (o termo vazio passa, para limpar a busca anterior). Só age junto de `onSearchChange`. Não há tipo de filtro à parte para busca assíncrona: busca no servidor é `multiSelect` com `onSearchChange`, com o termo debounced e o resultado numa query (exemplos: filtro de usuário em audit-logs e de perfil em users).
+
 ## Tabelas — cabeçalho neutro (regra dura)
 
 **Toda tabela do sistema tem o cabeçalho neutro (`bg-muted`) com o rótulo em `text-muted-foreground` (o padrão do `TableHead`; 4,61:1 no claro e 5,66:1 no escuro).** O estilo está **embutido na base** ([`components/ui/table.tsx`](../../src/components/ui/table.tsx) → `TableHeader`), então **toda** tabela que usa o primitivo `Table` herda o cabeçalho **automaticamente** — `DataTable`, `FormTable` e qualquer tabela montada à mão com `Table`/`TableHeader`. Numa tela nova não há o que configurar.

@@ -26,6 +26,9 @@ interface PageActionsProps {
   children: React.ReactNode;
 }
 
+const subscribeToSlot = () => () => {};
+const getSlot = () => document.getElementById(PAGE_ACTIONS_SLOT_ID);
+
 /**
  * Renderiza `children` no slot de ações do header global, em qualquer ponto
  * do JSX da tela. Use para botões contextuais (ex.: "Novo usuário"). Os
@@ -43,9 +46,6 @@ interface PageActionsProps {
  * </PageActions>
  * ```
  */
-const subscribeToSlot = () => () => {};
-const getSlot = () => document.getElementById(PAGE_ACTIONS_SLOT_ID);
-
 export function PageActions({ children }: PageActionsProps) {
   // O slot só entra no DOM no commit do `Layout`; o `useSyncExternalStore`
   // revalida o snapshot após o mount e re-renderiza quando ele aparece.

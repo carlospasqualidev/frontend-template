@@ -61,6 +61,11 @@ export interface MultiSelectFilter extends BaseFilter {
   loading?: boolean;
   /** Texto da lista sem resultado. */
   emptyText?: string;
+  /**
+   * Mínimo de caracteres digitados antes de buscar (ver `minChars` do
+   * `MultiSelect`). Só age junto de `onSearchChange`.
+   */
+  minChars?: number;
 }
 
 export interface DateFilter extends BaseFilter {
@@ -128,6 +133,23 @@ type FilterState = Map<string, DataTableFilterValue>;
 function getString(values: FilterState, key: string): string {
   const value = values.get(key);
   return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Com `minChars`, termo não vazio abaixo do mínimo não chega a `onSearchChange`;
+ * o termo vazio passa, para limpar a busca anterior.
+ */
+function guardSearchByMinChars(
+  onSearchChange: ((search: string) => void) | undefined,
+  minChars: number | undefined
+): ((search: string) => void) | undefined {
+  if (!onSearchChange || minChars === undefined) return onSearchChange;
+
+  return (search) => {
+    const trimmedLength = search.trim().length;
+    if (trimmedLength > 0 && trimmedLength < minChars) return;
+    onSearchChange(search);
+  };
 }
 
 function getStringArray(values: FilterState, key: string): string[] {
@@ -233,9 +255,13 @@ function renderFilter(
             onValueChange={(next) => setValue(filter.key, next)}
             placeholder={filter.placeholder ?? 'Selecione...'}
             searchable={filter.searchable}
-            onSearchChange={filter.onSearchChange}
+            onSearchChange={guardSearchByMinChars(
+              filter.onSearchChange,
+              filter.minChars
+            )}
             loading={filter.loading}
             emptyText={filter.emptyText}
+            minChars={filter.minChars}
             className="w-full"
           />
         </Field>

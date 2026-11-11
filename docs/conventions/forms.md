@@ -34,7 +34,7 @@ Parte das convenções do projeto, lida sob demanda (ver **Guias de referência*
 - O placeholder **complementa** o rótulo, **nunca o substitui** (o `label` continua obrigatório — ver a11y "Toda input precisa de label").
 - **Texto/número/máscara:** exemplo do formato/conteúdo esperado ("Digite o código", "seu@email.com"). `DateField` já usa "dd/mm/aaaa"; `NumberField` já mostra o zero mascarado.
 - **Select/Combobox/MultiSelect:** ação de escolha ("Selecione", "Selecione o cliente", "Todos" nos filtros multi).
-- **Únicas exceções** (não têm placeholder por natureza): `Switch`, `Checkbox`, `RadioGroup` e campos read-only de exibição.
+- **Únicas exceções** (não têm placeholder por natureza): `Switch`, `Checkbox`, [`RadioGroup`](../../src/components/global/form/radioGroup.tsx) e campos read-only de exibição.
 
 ### `readOnly` copiável × campo-espelho inerte
 

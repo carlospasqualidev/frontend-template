@@ -213,9 +213,9 @@
   --brand-foreground: oklch(0.97 0.014 254.604);
 
   /* A marca escura (0.424) não serve para texto no escuro; os derivados usam um
-     passo mais claro. Razões medidas: brand-text 9,53:1 sobre background, 7,89:1
+     passo mais claro. Razões medidas: brand-text 9,53:1 sobre background, 8,85:1
      sobre card, 7,13:1 sobre muted e 6,57:1 sobre brand-surface. brand-line
-     (1,76:1 sobre card) é decorativa. */
+     (1,98:1 sobre card) é decorativa. */
   --brand-text: oklch(0.78 0.15 262);
   --brand-surface: oklch(0.3 0.06 265);
   --brand-line: oklch(0.4 0.1 265);
@@ -226,11 +226,11 @@
   /* Mesmo hue da marca, passos para o fundo escuro. Razões contra background,
      card e muted escuros (nessa ordem); pior caso 4,32:1, vizinhos separados por
      1,21 a 1,24. `--chart-1` segue sendo o mais claro. */
-  --chart-1: oklch(0.86 0.07 258); /* 13,00 / 10,76 / 9,74 */
-  --chart-2: oklch(0.8 0.1 259); /* 10,63 / 8,80 / 7,96 */
-  --chart-3: oklch(0.74 0.13 260); /* 8,57 / 7,10 / 6,42 */
-  --chart-4: oklch(0.69 0.16 261); /* 7,07 / 5,86 / 5,30 */
-  --chart-5: oklch(0.64 0.19 262); /* 5,76 / 4,77 / 4,32 */
+  --chart-1: oklch(0.86 0.07 258); /* 13,00 / 12,08 / 9,74 */
+  --chart-2: oklch(0.8 0.1 259); /* 10,63 / 9,88 / 7,96 */
+  --chart-3: oklch(0.74 0.13 260); /* 8,57 / 7,96 / 6,42 */
+  --chart-4: oklch(0.69 0.16 261); /* 7,07 / 6,57 / 5,30 */
+  --chart-5: oklch(0.64 0.19 262); /* 5,76 / 5,35 / 4,32 */
 
   /* A paleta categórica, ao contrário, É redeclarada: são os MESMOS hues em passos
      escolhidos para o fundo escuro, não um flip automático dos de cima. Os passos
@@ -243,7 +243,14 @@
 
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.24 0.006 285.885);
+  /* Card ≈ #131316, mais claro que o fundo (elevação) mas só por 1,08:1.
+     MEDIDO (WCAG 2.x, oklch → sRGB): card sobre background 1,08; muted
+     (cabeçalho de tabela) sobre card 1,24; foreground 17,70:1 e
+     muted-foreground 7,03:1 sobre card; brand-text 8,85:1; border sobre card
+     1,31 e input 1,55 (nenhum chega a 3:1, como já era). Sidebar (0.21) fica
+     1,04:1 ACIMA do card; decisão 5: não mexer. O popover segue em 0.24 de
+     propósito: flutua sobre o card (1,12:1 acima dele) e lê melhor os menus. */
+  --card: oklch(0.19 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.24 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);

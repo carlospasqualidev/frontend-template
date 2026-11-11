@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,6 +73,37 @@ afterEach(() => {
 });
 
 describe('DataTable — visibilidade de colunas', () => {
+  it('depois do Esc o foco volta ao botão e o tooltip não abre', async () => {
+    const user = userEvent.setup();
+    renderTable();
+    await openMenu(user);
+    await user.keyboard('{Escape}');
+
+    const trigger = screen.getByRole('button', { name: 'Configurar colunas' });
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('depois do Esc, voltar ao botão com Tab abre o tooltip', async () => {
+    const user = userEvent.setup();
+    renderTable();
+    await openMenu(user);
+    await user.keyboard('{Escape}');
+    const trigger = screen.getByRole('button', { name: 'Configurar colunas' });
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await user.tab();
+    expect(trigger).not.toHaveFocus();
+    await user.tab({ shift: true });
+
+    expect(trigger).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Configurar colunas'
+    );
+  });
+
   it('mostra o menu sem columnVisibilityKey e não grava nada', async () => {
     const user = userEvent.setup();
     renderTable(null);

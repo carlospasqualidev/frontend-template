@@ -1,5 +1,6 @@
 import { type RowData } from '@tanstack/react-table';
 import { Columns3Cog, RotateCcw } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 import type {
   DataTableColumn,
@@ -51,6 +52,8 @@ interface ColumnVisibilityMenuProps<TData extends RowData> {
 export function ColumnVisibilityMenu<TData extends RowData>({
   table,
 }: ColumnVisibilityMenuProps<TData>) {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const returningFocus = useRef(false);
   const columns = table
     .getAllLeafColumns()
     .filter((column) => column.getCanHide())
@@ -61,6 +64,15 @@ export function ColumnVisibilityMenu<TData extends RowData>({
 
   if (columns.length === 0) return null;
 
+  // Ao fechar o menu o foco volta ao botão e o tooltip abriria sobre a busca ao
+  // lado: o foco devolvido não abre tooltip (o hover e o Tab seguem abrindo).
+  const closeAutoFocus = () => {
+    returningFocus.current = true;
+    setTimeout(() => {
+      returningFocus.current = false;
+    }, 0);
+  };
+
   const visibleCount = columns.filter(({ column }) =>
     column.getIsVisible()
   ).length;
@@ -69,7 +81,13 @@ export function ColumnVisibilityMenu<TData extends RowData>({
   return (
     <DropdownMenu>
       <TooltipProvider delayDuration={300}>
-        <Tooltip>
+        <Tooltip
+          open={tooltipOpen}
+          onOpenChange={(open) => {
+            if (open && returningFocus.current) return;
+            setTooltipOpen(open);
+          }}
+        >
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
@@ -85,7 +103,11 @@ export function ColumnVisibilityMenu<TData extends RowData>({
           <TooltipContent>{TRIGGER_LABEL}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DropdownMenuContent align="end" className="min-w-52">
+      <DropdownMenuContent
+        align="end"
+        className="min-w-52"
+        onCloseAutoFocus={closeAutoFocus}
+      >
         <DropdownMenuLabel>Colunas visíveis</DropdownMenuLabel>
         {columns.map(({ column, label }) => {
           const visible = column.getIsVisible();

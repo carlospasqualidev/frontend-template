@@ -33,7 +33,10 @@ describe('RadioGroup (global)', () => {
   it('`id` informado vira o prefixo dos ids', () => {
     render(<RadioGroup id="channel" label="Canal" options={options} />);
 
-    expect(screen.getByLabelText('SMS')).toHaveAttribute('id', 'channel-sms');
+    expect(screen.getByLabelText('SMS')).toHaveAttribute(
+      'id',
+      'channel-option-sms'
+    );
   });
 
   it('liga a descrição da opção por aria-describedby', () => {

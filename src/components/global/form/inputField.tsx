@@ -19,6 +19,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Input } from '@/components/ui/input';
 
 type InputFieldBaseProps = React.ComponentProps<'input'> & {
@@ -64,6 +65,7 @@ function InputFieldBase({
   type,
   id: idProp,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   errors,
   ...props
 }: InputFieldBaseProps) {
@@ -73,6 +75,12 @@ function InputFieldBase({
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <BaseField data-invalid={invalid}>
@@ -89,10 +97,13 @@ function InputFieldBase({
         id={id}
         type={type}
         aria-invalid={resolvedAriaInvalid}
+        aria-describedby={describedBy}
         {...props}
       />
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

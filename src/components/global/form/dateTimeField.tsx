@@ -22,6 +22,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Input } from '@/components/ui/input';
 import {
   PopoverAnchor,
@@ -120,6 +121,7 @@ function DateTimeFieldBase({
   disabled,
   className,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   calendarProps,
   ...props
 }: DateTimeFieldBaseProps) {
@@ -151,6 +153,12 @@ function DateTimeFieldBase({
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   // Último valor que ESTE campo comitou. O efeito de sincronia abaixo ignora o
   // eco do próprio commit para não apagar o texto que está sendo digitado.
@@ -440,6 +448,7 @@ function DateTimeFieldBase({
               value={displayValue}
               disabled={disabled}
               aria-invalid={resolvedAriaInvalid}
+              aria-describedby={describedBy}
               // pr-22 = os 3 adornos agrupados (3 × size-7 = 84px) + folga. Antes era
               // pr-28 com os botões espalhados em right-1/9/16, o que exigia um campo
               // mais largo que o padrão da barra de filtros (`sm:w-60`).
@@ -535,8 +544,10 @@ function DateTimeFieldBase({
         </PopoverContent>
       </Popover>
 
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

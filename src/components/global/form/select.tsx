@@ -31,6 +31,7 @@ import {
   SelectItem,
   Select as BaseSelect,
 } from '@/components/ui/select';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 
 /**
  * Acima deste número de opções o `Select` liga a busca automaticamente (a menos
@@ -49,6 +50,7 @@ type SelectBaseProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
   placeholder?: string;
   errors?: FormFieldErrors;
   'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
   options: { value: string; label: string; disabled?: boolean }[];
   /**
    * Exibe um campo de busca no topo da lista (como o `MultiSelect`). Quando
@@ -120,6 +122,7 @@ function SelectBase({
   onValueChange,
   disabled,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: SelectBaseProps) {
   const allErrors = resolveFieldErrors(errors);
@@ -128,6 +131,12 @@ function SelectBase({
   const generatedId = React.useId();
   const id = idProp ?? generatedId;
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   // Fallback interno para o modo `searchable` uncontrolled (com `defaultValue`).
   // No modo Radix (não-pesquisável) quem cuida disso é o próprio Radix Select.
@@ -169,6 +178,7 @@ function SelectBase({
           portal={portal}
           clearable={clearable}
           aria-invalid={resolvedAriaInvalid}
+          aria-describedby={describedBy}
         />
       ) : (
         <BaseSelect
@@ -189,6 +199,7 @@ function SelectBase({
             <SelectTrigger
               id={id}
               aria-invalid={resolvedAriaInvalid}
+              aria-describedby={describedBy}
               className="w-full"
             >
               <SelectValue placeholder={placeholder} />
@@ -216,8 +227,10 @@ function SelectBase({
         </BaseSelect>
       )}
 
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

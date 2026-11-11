@@ -20,6 +20,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Checkbox as BaseCheckbox } from '@/components/ui/checkbox';
 import { InfoTooltip } from '@/components/global/infoTooltip/infoTooltip';
 
@@ -84,7 +85,6 @@ function CheckboxBase({
 
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
-  const descriptionId = useId();
   const {
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -93,10 +93,12 @@ function CheckboxBase({
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
   // A descrição é a descrição acessível do controle: o leitor de tela a lê
   // junto do rótulo (ex.: por que o item está desabilitado).
-  const resolvedAriaDescribedBy =
-    [description ? descriptionId : undefined, ariaDescribedBy]
-      .filter(Boolean)
-      .join(' ') || undefined;
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   const fieldLabel = label ? (
     <FieldLabel
@@ -112,7 +114,7 @@ function CheckboxBase({
       <BaseField orientation="horizontal">
         <BaseCheckbox
           aria-invalid={resolvedAriaInvalid}
-          aria-describedby={resolvedAriaDescribedBy}
+          aria-describedby={describedBy}
           {...checkboxProps}
           id={id}
           className="cursor-pointer"
@@ -132,7 +134,7 @@ function CheckboxBase({
       {description && (
         <FieldDescription id={descriptionId}>{description}</FieldDescription>
       )}
-      <FieldError errors={allErrors} />
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

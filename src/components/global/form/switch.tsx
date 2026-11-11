@@ -19,6 +19,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Switch as BaseSwitch } from '@/components/ui/switch';
 
 type SwitchBaseProps = React.ComponentProps<typeof BaseSwitch> & {
@@ -76,14 +77,25 @@ function SwitchBase({
 
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
-  const { 'aria-invalid': ariaInvalid, ...switchProps } = props;
+  const {
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    ...switchProps
+  } = props;
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <BaseField data-invalid={invalid}>
       <BaseField orientation="horizontal">
         <BaseSwitch
           aria-invalid={resolvedAriaInvalid}
+          aria-describedby={describedBy}
           {...switchProps}
           id={id}
           className="cursor-pointer"
@@ -97,8 +109,10 @@ function SwitchBase({
           </FieldLabel>
         )}
       </BaseField>
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

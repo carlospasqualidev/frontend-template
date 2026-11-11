@@ -19,6 +19,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +65,7 @@ function TextAreaBase({
   errors,
   className,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: TextAreaBaseProps) {
   const allErrors = resolveFieldErrors(errors);
@@ -72,6 +74,12 @@ function TextAreaBase({
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <BaseField data-invalid={invalid}>
@@ -86,11 +94,14 @@ function TextAreaBase({
       <Textarea
         id={id}
         aria-invalid={resolvedAriaInvalid}
+        aria-describedby={describedBy}
         {...props}
         className={cn('min-h-28 resize-none', className)}
       />
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

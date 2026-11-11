@@ -5,6 +5,7 @@ import {
   useAsyncOptions,
   type AsyncOption,
 } from '@/components/global/form/useAsyncOptions';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import {
   Field,
   FieldDescription,
@@ -19,6 +20,7 @@ import {
 
 export interface AsyncComboboxProps {
   id?: string;
+  'aria-describedby'?: string;
   label: string;
   /** Mantém o rótulo acessível mas oculto — só em célula de tabela, onde o cabeçalho já rotula. */
   srOnlyLabel?: boolean;
@@ -64,6 +66,7 @@ export interface AsyncComboboxProps {
  */
 export function AsyncCombobox({
   id: idProp,
+  'aria-describedby': ariaDescribedBy,
   label,
   srOnlyLabel,
   placeholder = 'Selecione...',
@@ -82,6 +85,12 @@ export function AsyncCombobox({
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: messages,
+    ariaDescribedBy,
+  });
   const { loading, search, withSelected, labelOf } = useAsyncOptions({
     onSearch,
     minChars,
@@ -117,10 +126,13 @@ export function AsyncCombobox({
         disabled={disabled}
         clearable={clearable}
         aria-invalid={hasFieldErrors(messages) || undefined}
+        aria-describedby={describedBy}
       />
 
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={messages} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={messages} />
     </Field>
   );
 }

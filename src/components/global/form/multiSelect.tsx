@@ -18,6 +18,7 @@ import {
   resolveFieldErrors,
   hasFieldErrors,
 } from '@/lib/forms/errors';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { cn } from '@/lib/utils';
 import {
   Field as BaseField,
@@ -74,6 +75,7 @@ function MultiSelectBase({
   errors,
   options,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: MultiSelectBaseProps) {
   const allErrors = resolveFieldErrors(errors);
@@ -82,6 +84,12 @@ function MultiSelectBase({
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <BaseField data-invalid={invalid}>
@@ -99,11 +107,14 @@ function MultiSelectBase({
         id={id}
         options={options}
         aria-invalid={resolvedAriaInvalid}
+        aria-describedby={describedBy}
         className={cn('w-full', props.className)}
       />
 
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

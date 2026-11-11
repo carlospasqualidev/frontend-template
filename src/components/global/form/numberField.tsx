@@ -13,6 +13,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Input } from '@/components/ui/input';
 import { resolveFieldErrors } from '@/lib/forms/errors';
 import { APP_LOCALE } from '@/lib/locale';
@@ -28,6 +29,7 @@ interface NumberFieldProps<
    *  em células de tabela onde o cabeçalho da coluna já é o rótulo visual. */
   srOnlyLabel?: boolean;
   id?: string;
+  'aria-describedby'?: string;
   /** Texto de apoio abaixo do campo. */
   description?: string;
   placeholder?: string;
@@ -136,6 +138,7 @@ export function NumberField<
   label,
   srOnlyLabel,
   id: idProp,
+  'aria-describedby': ariaDescribedBy,
   description,
   placeholder,
   prefix = '',
@@ -153,6 +156,13 @@ export function NumberField<
     field,
     fieldState: { error },
   } = useController({ control, name });
+  const errors = resolveFieldErrors(error);
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors,
+    ariaDescribedBy,
+  });
 
   // O valor vem do `useWatch`, não do `field.value`: quando o campo é esvaziado
   // (`undefined`), o `useController` devolve o DEFAULT do formulário — e um campo
@@ -185,6 +195,7 @@ export function NumberField<
         disabled={disabled}
         readOnly={readOnly}
         aria-invalid={!!error || undefined}
+        aria-describedby={describedBy}
         value={masked}
         onChange={(event) => {
           field.onChange(
@@ -198,8 +209,10 @@ export function NumberField<
         }}
         onBlur={field.onBlur}
       />
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={resolveFieldErrors(error)} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={errors} />
     </BaseField>
   );
 }

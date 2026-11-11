@@ -21,6 +21,7 @@ import {
   FieldLegend,
   FieldSet,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import {
   RadioGroup as BaseRadioGroup,
   RadioGroupItem,
@@ -94,8 +95,20 @@ function RadioGroupBase({
 
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
-  const { 'aria-invalid': ariaInvalid, ...groupProps } = props;
+  const {
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    ...groupProps
+  } = props;
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  // O erro é do grupo: vai no elemento `role="radiogroup"`. A descrição de cada
+  // opção segue ligada à própria opção.
+  const { errorId, describedBy } = fieldDescribedBy({
+    id: baseId,
+    hasDescription: false,
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <FieldSet data-invalid={invalid}>
@@ -109,11 +122,12 @@ function RadioGroupBase({
       <BaseRadioGroup
         aria-labelledby={legendId}
         aria-invalid={resolvedAriaInvalid}
+        aria-describedby={describedBy}
         {...groupProps}
         id={baseId}
       >
         {options.map((option) => {
-          const id = `${baseId}-${option.value}`;
+          const id = `${baseId}-option-${option.value}`;
           const descriptionId = option.description
             ? `${id}-description`
             : undefined;
@@ -139,7 +153,7 @@ function RadioGroupBase({
           );
         })}
       </BaseRadioGroup>
-      <FieldError errors={allErrors} />
+      <FieldError id={errorId} errors={allErrors} />
     </FieldSet>
   );
 }

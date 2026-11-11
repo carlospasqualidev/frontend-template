@@ -22,6 +22,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Input } from '@/components/ui/input';
 import {
   PopoverAnchor,
@@ -102,6 +103,7 @@ function DateFieldBase({
   disabled,
   className,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   calendarProps,
   ...props
 }: DateFieldBaseProps) {
@@ -119,6 +121,12 @@ function DateFieldBase({
   const allErrors = resolveFieldErrors(errors);
   const invalid = hasFieldErrors(allErrors);
   const resolvedAriaInvalid = ariaInvalid ?? (invalid || undefined);
+  const { descriptionId, errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: Boolean(description),
+    errors: allErrors,
+    ariaDescribedBy,
+  });
   const selectedDate = React.useMemo(
     () => parseDateValue(resolvedValue),
     [resolvedValue]
@@ -252,6 +260,7 @@ function DateFieldBase({
               value={displayValue}
               disabled={disabled}
               aria-invalid={resolvedAriaInvalid}
+              aria-describedby={describedBy}
               className={cn('pr-28', className)}
               onChange={handleInputChange}
               onBlur={handleInputBlur}
@@ -313,8 +322,10 @@ function DateFieldBase({
         </PopoverContent>
       </Popover>
 
-      {description && <FieldDescription>{description}</FieldDescription>}
-      <FieldError errors={allErrors} />
+      {description && (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

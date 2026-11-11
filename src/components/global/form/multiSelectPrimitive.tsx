@@ -61,6 +61,7 @@ type MultiSelectProps = {
    */
   clearable?: boolean;
   'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 };
 
 /**
@@ -114,6 +115,7 @@ function MultiSelect({
   className,
   clearable,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
 }: MultiSelectProps) {
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = React.useState<string[]>(
@@ -273,6 +275,7 @@ function MultiSelect({
           role="combobox"
           disabled={disabled}
           aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           data-slot="multi-select-trigger"
           data-size={size}
           className={cn(

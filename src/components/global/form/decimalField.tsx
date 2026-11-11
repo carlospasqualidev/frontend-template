@@ -12,6 +12,7 @@ import {
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import { Input } from '@/components/ui/input';
 import { resolveFieldErrors } from '@/lib/forms/errors';
 
@@ -25,6 +26,7 @@ interface DecimalFieldProps<
   /** Mantém o rótulo acessível (leitor de tela) mas oculto visualmente. */
   srOnlyLabel?: boolean;
   id?: string;
+  'aria-describedby'?: string;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -77,6 +79,7 @@ export function DecimalField<
   label,
   srOnlyLabel,
   id: idProp,
+  'aria-describedby': ariaDescribedBy,
   placeholder,
   disabled,
   readOnly,
@@ -88,6 +91,13 @@ export function DecimalField<
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const errors = resolveFieldErrors(error);
+  const { errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: false,
+    errors,
+    ariaDescribedBy,
+  });
 
   // O valor vem do `useWatch`, não do `field.value`: quando o campo é esvaziado
   // (`undefined`), o `useController` devolve o DEFAULT do formulário — e um campo
@@ -129,11 +139,12 @@ export function DecimalField<
         disabled={disabled}
         readOnly={readOnly}
         aria-invalid={!!error || undefined}
+        aria-describedby={describedBy}
         value={text}
         onChange={(event) => handleChange(event.target.value)}
         onBlur={field.onBlur}
       />
-      <FieldError errors={resolveFieldErrors(error)} />
+      <FieldError id={errorId} errors={errors} />
     </BaseField>
   );
 }

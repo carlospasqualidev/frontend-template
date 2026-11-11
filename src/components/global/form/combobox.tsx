@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { fieldDescribedBy } from '@/components/global/form/fieldDescribedBy';
 import {
   hasFieldErrors,
   resolveFieldErrors,
@@ -69,6 +70,7 @@ export interface ComboboxInputProps {
    */
   minChars?: number;
   'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 }
 
 /**
@@ -90,6 +92,7 @@ export function ComboboxInput({
   loading = false,
   minChars,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
 }: ComboboxInputProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -126,6 +129,7 @@ export function ComboboxInput({
           role="combobox"
           aria-expanded={open}
           aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           disabled={disabled}
           className={cn(
             'flex h-8 w-full cursor-pointer items-center rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 dark:bg-input/30 dark:hover:bg-input/50',
@@ -243,6 +247,7 @@ interface ComboboxBaseProps {
    * opcionais onde faz sentido desfazer a escolha.
    */
   clearable?: boolean;
+  'aria-describedby'?: string;
 }
 
 type ControlledComboboxProps<
@@ -273,6 +278,7 @@ function ComboboxField({
   clearable,
   value,
   onValueChange,
+  'aria-describedby': ariaDescribedBy,
 }: ComboboxBaseProps & {
   value: string;
   onValueChange: (value: string) => void;
@@ -282,6 +288,12 @@ function ComboboxField({
   // Sem `id`, o `htmlFor` não ligaria o rótulo (inclusive o `srOnlyLabel`) ao controle.
   const generatedId = React.useId();
   const id = idProp ?? generatedId;
+  const { errorId, describedBy } = fieldDescribedBy({
+    id,
+    hasDescription: false,
+    errors: allErrors,
+    ariaDescribedBy,
+  });
 
   return (
     <BaseField data-invalid={invalid}>
@@ -305,8 +317,9 @@ function ComboboxField({
         portal={portal}
         clearable={clearable}
         aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
       />
-      <FieldError errors={allErrors} />
+      <FieldError id={errorId} errors={allErrors} />
     </BaseField>
   );
 }

@@ -32,7 +32,7 @@ import { Card } from '@/components/global/card/card';
 import { ConfirmDialog } from '@/components/global/confirmDialog/confirmDialog';
 import { InputField } from '@/components/global/form/inputField';
 import { Select } from '@/components/global/form/select';
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { Modal, ModalActions } from '@/components/global/modal/modal';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -615,6 +615,8 @@ const INITIAL_PEOPLE: Person[] = [
   },
 ];
 
+const PERSON_FORM_ID = 'crud-person-form';
+
 function PersonForm({
   initial,
   onSave,
@@ -638,45 +640,56 @@ function PersonForm({
   });
 
   return (
-    <form className="space-y-4" noValidate onSubmit={onSubmit}>
-      <InputField
-        id="crud-name"
-        label="Nome"
-        placeholder="Nome completo"
-        errors={errors.name}
-        disabled={isSubmitting}
-        {...register('name')}
-      />
+    <>
+      <form
+        id={PERSON_FORM_ID}
+        className="space-y-4"
+        noValidate
+        onSubmit={onSubmit}
+      >
+        <InputField
+          id="crud-name"
+          label="Nome"
+          placeholder="Nome completo"
+          errors={errors.name}
+          disabled={isSubmitting}
+          {...register('name')}
+        />
 
-      <InputField
-        id="crud-email"
-        label="E-mail"
-        type="email"
-        placeholder="email@empresa.com"
-        errors={errors.email}
-        disabled={isSubmitting}
-        {...register('email')}
-      />
+        <InputField
+          id="crud-email"
+          label="E-mail"
+          type="email"
+          placeholder="email@empresa.com"
+          errors={errors.email}
+          disabled={isSubmitting}
+          {...register('email')}
+        />
 
-      <Select
-        id="crud-role"
-        name="role"
-        control={control}
-        label="Papel"
-        placeholder="Selecione o papel"
-        disabled={isSubmitting}
-        options={roleOptions.map((option) => ({
-          label: option.label,
-          value: option.value,
-        }))}
-      />
-
-      <ModalFooter>
-        <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
+        <Select
+          id="crud-role"
+          name="role"
+          control={control}
+          label="Papel"
+          placeholder="Selecione o papel"
+          disabled={isSubmitting}
+          options={roleOptions.map((option) => ({
+            label: option.label,
+            value: option.value,
+          }))}
+        />
+      </form>
+      <ModalActions>
+        <Button
+          type="submit"
+          form={PERSON_FORM_ID}
+          loading={isSubmitting}
+          disabled={!isDirty}
+        >
           {initial ? 'Salvar alterações' : 'Cadastrar'}
         </Button>
-      </ModalFooter>
-    </form>
+      </ModalActions>
+    </>
   );
 }
 

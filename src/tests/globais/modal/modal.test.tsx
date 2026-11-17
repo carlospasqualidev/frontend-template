@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   Modal,
-  ModalFooter,
+  ModalActions,
   type ModalSize,
 } from '@/components/global/modal/modal';
 
@@ -259,12 +259,12 @@ describe('Modal (global)', () => {
     expect(screen.getByRole('textbox', { name: 'Nome' })).not.toHaveFocus();
   });
 
-  it('o Dialog limita a altura total ao viewport e o corpo rola', () => {
+  it('o Dialog limita a altura total ao viewport, o corpo rola e o rodapé fica fixo', () => {
     render(<Harness initialOpen size="2xl" />);
 
     expect(screen.getByRole('dialog')).toHaveClass(
       'max-h-[calc(100dvh-2rem)]',
-      'grid-rows-[auto_minmax(0,1fr)]'
+      'grid-rows-[auto_minmax(0,1fr)_auto]'
     );
   });
 
@@ -387,101 +387,245 @@ describe('Modal (global)', () => {
     ).toBeInTheDocument();
   });
 });
+describe('ModalActions (global)', () => {
+  function mockMobile(matches: boolean): void {
+    window.matchMedia = (query) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+  }
 
-describe('ModalFooter (global)', () => {
-  it('renderiza os botões de ação passados como children', () => {
+  function footerOf(element: HTMLElement): HTMLElement | null {
+    return element.closest('[data-slot="modal-footer"]');
+  }
+
+  beforeEach(() => mockMobile(false));
+
+  it('renderiza as ações no rodapé do modal, fora do corpo que rola', () => {
     render(
-      <ModalFooter>
-        <button type="button">Salvar</button>
-      </ModalFooter>
+      <Harness
+        initialOpen
+        body={
+          <>
+            <p>Conteúdo do modal</p>
+            <ModalActions>
+              <button type="button">Salvar</button>
+            </ModalActions>
+          </>
+        }
+      />
     );
 
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+    const footer = footerOf(screen.getByRole('button', { name: 'Salvar' }));
+    expect(footer).not.toBeNull();
+    expect(footer).not.toContainElement(screen.getByText('Conteúdo do modal'));
+    expect(footer?.parentElement).toBe(screen.getByRole('dialog'));
   });
 
-  it('centraliza e quebra de linha, com o botão único em 100% por only-of-type', () => {
+  it('aplica a regra de layout: centraliza, quebra de linha e o botão único ocupa 100%', () => {
     render(
-      <ModalFooter>
-        <button type="button">Salvar</button>
-      </ModalFooter>
+      <Harness
+        initialOpen
+        body={
+          <ModalActions>
+            <button type="button">Salvar</button>
+          </ModalActions>
+        }
+      />
     );
 
-    expect(screen.getByRole('button').parentElement).toHaveClass(
+    expect(
+      footerOf(screen.getByRole('button', { name: 'Salvar' }))
+    ).toHaveClass(
       'flex-wrap',
       'justify-center',
       'gap-2',
+      '[&>:not(button)]:basis-full',
       '[&>button:only-of-type]:basis-full'
     );
   });
 
-  it('com dois botões, mantém ambos no DOM, na ordem, sob a mesma regra', () => {
+  it('com dois botões, mantém a ordem do DOM (negativa à esquerda)', () => {
     render(
-      <ModalFooter>
-        <button type="button">Cancelar</button>
-        <button type="button">Confirmar</button>
-      </ModalFooter>
+      <Harness
+        initialOpen
+        body={
+          <ModalActions>
+            <button type="button">Recusar</button>
+            <button type="button">Aceitar</button>
+          </ModalActions>
+        }
+      />
     );
 
-    const buttons = screen.getAllByRole('button');
-    expect(buttons.map((b) => b.textContent)).toEqual([
-      'Cancelar',
-      'Confirmar',
-    ]);
-    expect(buttons[0].parentElement).toHaveClass('justify-center');
+    const footer = footerOf(screen.getByRole('button', { name: 'Recusar' }));
     expect(
-      buttons[0].parentElement?.querySelectorAll('button:only-of-type')
-    ).toHaveLength(0);
+      Array.from(footer?.querySelectorAll(':scope > button') ?? []).map(
+        (button) => button.textContent
+      )
+    ).toEqual(['Recusar', 'Aceitar']);
   });
 
-  it('com condicional falsa, o único botão fica sob a regra de 100%; com verdadeira, são dois irmãos centralizados', () => {
-    const Footer = ({ canDelete }: { canDelete: boolean }) => (
-      <ModalFooter>
-        <button type="button">Salvar</button>
-        {canDelete && <button type="button">Excluir</button>}
-      </ModalFooter>
-    );
-    const { container, rerender } = render(<Footer canDelete={false} />);
-    const footer = container.firstElementChild;
-    expect(footer).toHaveClass(
-      'flex-wrap',
-      'justify-center',
-      '[&>button:only-of-type]:basis-full'
-    );
+  it('acompanha o condicional: um botão, depois dois irmãos no mesmo rodapé', () => {
+    function Conditional({ canDelete }: { canDelete: boolean }) {
+      return (
+        <Harness
+          initialOpen
+          body={
+            <ModalActions>
+              <button type="button">Salvar</button>
+              {canDelete && <button type="button">Excluir</button>}
+            </ModalActions>
+          }
+        />
+      );
+    }
+    const { rerender } = render(<Conditional canDelete={false} />);
+    const footer = footerOf(screen.getByRole('button', { name: 'Salvar' }));
     expect(footer?.querySelectorAll(':scope > button')).toHaveLength(1);
 
-    rerender(<Footer canDelete />);
+    rerender(<Conditional canDelete />);
     expect(footer?.querySelectorAll(':scope > button')).toHaveLength(2);
-    expect(footer).toHaveClass('justify-center', 'gap-2');
   });
 
-  it('marca o rodapé com data-slot="modal-footer"', () => {
-    const { container } = render(
-      <ModalFooter>
-        <button type="button">Salvar</button>
-      </ModalFooter>
-    );
+  it('sem ModalActions, o rodapé fica vazio e sai do layout por empty:hidden', () => {
+    render(<Harness initialOpen />);
 
-    expect(container.firstElementChild).toHaveAttribute(
-      'data-slot',
-      'modal-footer'
-    );
+    const footer = screen
+      .getByRole('dialog')
+      .querySelector('[data-slot="modal-footer"]');
+    expect(footer).toBeEmptyDOMElement();
+    expect(footer).toHaveClass('empty:hidden');
   });
 
-  it('texto ao lado do botão: linha inteira centralizada, e o botão segue sendo o único <button> filho', () => {
-    const { container } = render(
-      <ModalFooter>
-        <p>Esta ação não pode ser desfeita.</p>
-        <button type="button">Excluir</button>
-      </ModalFooter>
+  it('texto ao lado do botão ocupa a linha inteira', () => {
+    render(
+      <Harness
+        initialOpen
+        body={
+          <ModalActions>
+            <p>Esta ação não pode ser desfeita.</p>
+            <button type="button">Excluir</button>
+          </ModalActions>
+        }
+      />
     );
-    const footer = container.firstElementChild;
 
+    const footer = footerOf(
+      screen.getByText('Esta ação não pode ser desfeita.')
+    );
     expect(footer).toHaveClass(
       '[&>:not(button)]:basis-full',
-      '[&>:not(button)]:text-center',
-      '[&>button:only-of-type]:basis-full'
+      '[&>:not(button)]:text-center'
     );
-    expect(footer?.querySelector(':scope > p')?.tagName).toBe('P');
     expect(footer?.querySelectorAll(':scope > button')).toHaveLength(1);
+  });
+
+  it('o submit no rodapé envia o formulário do corpo pelo atributo form', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    render(
+      <Harness
+        initialOpen
+        body={
+          <>
+            <form id="modal-test-form" onSubmit={onSubmit}>
+              <label htmlFor="modal-test-name">Nome</label>
+              <input id="modal-test-name" />
+            </form>
+            <ModalActions>
+              <button type="submit" form="modal-test-form">
+                Salvar
+              </button>
+            </ModalActions>
+          </>
+        }
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    await user.type(screen.getByLabelText('Nome'), 'Ana{Enter}');
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it('no Drawer (mobile), as ações também vão para o rodapé', () => {
+    mockMobile(true);
+    render(
+      <Harness
+        initialOpen
+        body={
+          <ModalActions>
+            <button type="button">Salvar</button>
+          </ModalActions>
+        }
+      />
+    );
+
+    const footer = footerOf(screen.getByRole('button', { name: 'Salvar' }));
+    expect(footer?.parentElement).toBe(screen.getByRole('dialog'));
+  });
+
+  it('ao abrir, o foco inicial vai ao campo do corpo, não à ação do rodapé', async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        body={
+          <>
+            <label htmlFor="modal-focus-name">Nome</label>
+            <input id="modal-focus-name" />
+            <ModalActions>
+              <button type="button">Salvar</button>
+            </ModalActions>
+          </>
+        }
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Abrir' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Nome')).toHaveFocus());
+  });
+
+  it('sem campo no corpo, o foco inicial vai à primeira ação do rodapé', async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        body={
+          <>
+            <p>Texto</p>
+            <ModalActions>
+              <button type="button">Continuar</button>
+            </ModalActions>
+          </>
+        }
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Abrir' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Continuar' })).toHaveFocus()
+    );
+  });
+
+  it('fora de um Modal, falha com erro explícito', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(() =>
+      render(
+        <ModalActions>
+          <button type="button">Salvar</button>
+        </ModalActions>
+      )
+    ).toThrow('ModalActions must be rendered inside a Modal.');
   });
 });

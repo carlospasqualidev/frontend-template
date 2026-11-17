@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/global/button/button';
 import { InputField } from '@/components/global/form/inputField';
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { Modal, ModalActions } from '@/components/global/modal/modal';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useZodForm } from '@/lib/forms/useZodForm';
 import {
@@ -96,45 +96,52 @@ function ChangePasswordForm({ onChanged }: { onChanged: () => void }) {
   const onSubmit = handleSubmit((values) => mutation.mutate(values));
 
   return (
-    <form
-      id={FORM_ID}
-      onSubmit={(event) => void onSubmit(event)}
-      className="grid gap-4"
-      noValidate
-    >
-      <InputField
-        control={control}
-        name="currentPassword"
-        id="account-current-password"
-        label="Senha atual"
-        type="password"
-        placeholder="Sua senha de hoje"
-        autoComplete="current-password"
-      />
-      <InputField
-        control={control}
-        name="password"
-        id="account-new-password"
-        label="Nova senha"
-        type="password"
-        placeholder="Mínimo de 8 caracteres"
-        autoComplete="new-password"
-      />
-      <InputField
-        control={control}
-        name="confirmPassword"
-        id="account-confirm-password"
-        label="Confirmação da nova senha"
-        type="password"
-        placeholder="Repita a nova senha"
-        autoComplete="new-password"
-      />
-      <ModalFooter>
-        <Button type="submit" loading={mutation.isPending} disabled={!isDirty}>
+    <>
+      <form
+        id={FORM_ID}
+        onSubmit={(event) => void onSubmit(event)}
+        className="grid gap-4"
+        noValidate
+      >
+        <InputField
+          control={control}
+          name="currentPassword"
+          id="account-current-password"
+          label="Senha atual"
+          type="password"
+          placeholder="Sua senha de hoje"
+          autoComplete="current-password"
+        />
+        <InputField
+          control={control}
+          name="password"
+          id="account-new-password"
+          label="Nova senha"
+          type="password"
+          placeholder="Mínimo de 8 caracteres"
+          autoComplete="new-password"
+        />
+        <InputField
+          control={control}
+          name="confirmPassword"
+          id="account-confirm-password"
+          label="Confirmação da nova senha"
+          type="password"
+          placeholder="Repita a nova senha"
+          autoComplete="new-password"
+        />
+      </form>
+      <ModalActions>
+        <Button
+          type="submit"
+          form={FORM_ID}
+          loading={mutation.isPending}
+          disabled={!isDirty}
+        >
           <Check />
           Alterar senha
         </Button>
-      </ModalFooter>
-    </form>
+      </ModalActions>
+    </>
   );
 }

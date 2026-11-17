@@ -18,7 +18,7 @@ import { MultiSelect } from '@/components/global/form/multiSelect';
 import { Select } from '@/components/global/form/select';
 import { HoverCard } from '@/components/global/hoverCard/hoverCard';
 import { InfoTooltip } from '@/components/global/infoTooltip/infoTooltip';
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { Modal, ModalActions } from '@/components/global/modal/modal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -406,9 +406,9 @@ export const DentroDoModal: Story = {
         >
           <div className="space-y-4">
             <FloatingBench context="modal" />
-            <ModalFooter>
+            <ModalActions>
               <Button onClick={() => setOpen(false)}>Salvar</Button>
-            </ModalFooter>
+            </ModalActions>
           </div>
         </Modal>
       </div>

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -129,6 +130,28 @@ const HEADER_BAND =
   'border-t-2 border-b border-t-primary bg-muted/40 px-4 py-3';
 
 /**
+ * Rodapé de ações, fora da área que rola: a ação principal fica sempre à vista,
+ * por mais longo que seja o corpo. Mesmo tom da faixa do cabeçalho, separado do
+ * corpo por `border-t`. Um botão ocupa 100% da largura; dois ou mais ficam
+ * centralizados, com a largura do texto, e quebram de linha se não couberem.
+ * Texto (`<p>`/`<span>`) ocupa a linha inteira, centralizado. A regra é CSS
+ * sobre o que foi renderizado (`only-of-type` de `button`), então
+ * `{cond && <Button />}` funciona sem tratamento; um `Button asChild` que vira
+ * `<a>`/`Link` conta como texto. Sem `ModalActions`, o rodapé fica vazio e
+ * `empty:hidden` o tira do layout.
+ */
+const FOOTER_BAND =
+  'flex flex-wrap justify-center gap-2 border-t bg-muted/40 px-4 py-3 empty:hidden [&>:not(button)]:basis-full [&>:not(button)]:text-center [&>button:only-of-type]:basis-full';
+
+/**
+ * Nó do rodapé do `Modal` aberto. `undefined` fora de um `Modal`; `null` no
+ * primeiro render, antes de o rodapé existir no DOM.
+ */
+const ModalActionsTargetContext = React.createContext<
+  HTMLElement | null | undefined
+>(undefined);
+
+/**
  * Cabeçalho do modal com botão de voltar opcional. O botão fica à esquerda,
  * centralizado verticalmente contra o bloco título+descrição.
  */
@@ -241,6 +264,10 @@ export function Modal({
     ? {}
     : { 'aria-describedby': undefined };
 
+  const [actionsTarget, setActionsTarget] = React.useState<HTMLElement | null>(
+    null
+  );
+
   // O "dentro de modal" NÃO é marcado aqui: quem provê o `InModalContext` é o
   // próprio `DialogContent`/`DrawerContent` (e `SheetContent`/`AlertDialogContent`),
   // para valer também em overlays montados à mão. O `PopoverContent` lê o contexto
@@ -275,7 +302,16 @@ export function Modal({
             drawer". `flex-1 min-h-0` limita a altura ao espaço restante do
             drawer (`max-h`), habilitando o scroll interno.
           */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <ModalActionsTargetContext.Provider value={actionsTarget}>
+              {children}
+            </ModalActionsTargetContext.Provider>
+          </div>
+          <div
+            ref={setActionsTarget}
+            data-slot="modal-footer"
+            className={FOOTER_BAND}
+          />
         </DrawerContent>
       </Drawer>
     );
@@ -294,7 +330,7 @@ export function Modal({
       */}
       <DialogContent
         className={cn(
-          'max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0',
+          'max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0',
           sizeClassName(size)
         )}
         showCloseButton={dismissible}
@@ -334,43 +370,38 @@ export function Modal({
           className="min-h-0 min-w-0"
           viewportClassName={cn(viewportMaxHeight(size), 'p-4')}
         >
-          {children}
+          <ModalActionsTargetContext.Provider value={actionsTarget}>
+            {children}
+          </ModalActionsTargetContext.Provider>
         </ScrollArea>
+        <div
+          ref={setActionsTarget}
+          data-slot="modal-footer"
+          className={cn(FOOTER_BAND, 'rounded-b-xl')}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
 /**
- * Rodapé padrão de ações de um modal. Um botão ocupa 100% da largura; dois ou
- * mais ficam centralizados, cada um com a largura do próprio texto, e quebram de
- * linha se não couberem. Texto (`<p>`/`<span>`) ocupa a linha inteira,
- * centralizado, e não conta como botão. A regra é CSS sobre o que foi renderizado
- * (`only-of-type` de `button`), então `{cond && <Button />}` funciona sem
- * tratamento. A regra olha a tag: o filho precisa renderizar `<button>`; um
- * `Button asChild` que vira `<a>`/`Link` conta como texto (linha inteira).
- * Use para agrupar os botões de ação de QUALQUER modal do projeto.
+ * Ações de um modal (Salvar, Confirmar, Continuar...). Escreva em qualquer ponto
+ * do conteúdo, inclusive dentro do componente que é dono do formulário: o `Modal`
+ * as renderiza no rodapé fixo dele (`FOOTER_BAND`), fora da área que rola. Assim
+ * o estado continua no formulário, que desmonta ao fechar e descarta o digitado.
+ * Como o rodapé fica fora do `<form>`, o submit liga-se a ele por `form={FORM_ID}`.
  * O botão de salvar fica sempre visível, com `disabled` até haver mudança
- * (`!formState.isDirty`), combinado com os demais bloqueios: a ação é
- * descobrível sem permitir salvar à toa. Vale para modal; a tela de detalhe
- * segue o par Descartar + Salvar (ver docs/conventions/screen-layout.md).
+ * (`!formState.isDirty`), combinado com os demais bloqueios. Sem "Cancelar"
+ * próprio: o X e o clique fora já cancelam.
  */
-export function ModalFooter({
-  className,
+export function ModalActions({
   children,
 }: {
-  className?: string;
   children: React.ReactNode;
-}) {
-  return (
-    <div
-      data-slot="modal-footer"
-      className={cn(
-        'flex flex-wrap justify-center gap-2 [&>:not(button)]:basis-full [&>:not(button)]:text-center [&>button:only-of-type]:basis-full',
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
+}): React.ReactPortal | null {
+  const target = React.useContext(ModalActionsTargetContext);
+  if (target === undefined) {
+    throw new Error('ModalActions must be rendered inside a Modal.');
+  }
+  return target ? createPortal(children, target) : null;
 }

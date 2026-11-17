@@ -1,5 +1,5 @@
 import { Button } from '@/components/global/button/button';
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { Modal, ModalActions } from '@/components/global/modal/modal';
 import { useIdleLogout } from '@/hooks/useIdleLogout';
 import { useSessionStore } from '@/hooks/useSessionStore';
 
@@ -36,18 +36,18 @@ export function IdleTimeout() {
       title="Sessão prestes a expirar"
       description="Sem atividade há um tempo."
     >
-      <p className="mb-4 text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Encerrando em{' '}
         <span className="font-semibold text-foreground tabular-nums">
           {secondsLeft}s
         </span>
         . Deseja continuar conectado?
       </p>
-      <ModalFooter>
+      <ModalActions>
         <Button type="button" onClick={continueSession}>
           Continuar conectado
         </Button>
-      </ModalFooter>
+      </ModalActions>
     </Modal>
   );
 }

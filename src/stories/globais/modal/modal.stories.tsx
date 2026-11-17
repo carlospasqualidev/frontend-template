@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/tanstack-react';
 
-import { Modal, ModalFooter } from '@/components/global/modal/modal';
+import { Modal, ModalActions } from '@/components/global/modal/modal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/global/card/card';
 import { Input } from '@/components/ui/input';
@@ -53,7 +53,15 @@ function EditProfileDemo() {
         open={open}
         setOpen={setOpen}
       >
-        <form className="grid items-start gap-6" onInput={() => setDirty(true)}>
+        <form
+          id="modal-story-profile-form"
+          className="grid items-start gap-6"
+          onInput={() => setDirty(true)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            setOpen(false);
+          }}
+        >
           <div className="grid gap-3">
             <Label htmlFor="modal-story-email">E-mail</Label>
             <Input
@@ -66,12 +74,16 @@ function EditProfileDemo() {
             <Label htmlFor="modal-story-username">Usuário</Label>
             <Input id="modal-story-username" defaultValue="@usuario" />
           </div>
-          <ModalFooter>
-            <Button disabled={!dirty} onClick={() => setOpen(false)}>
-              Salvar alterações
-            </Button>
-          </ModalFooter>
         </form>
+        <ModalActions>
+          <Button
+            type="submit"
+            form="modal-story-profile-form"
+            disabled={!dirty}
+          >
+            Salvar alterações
+          </Button>
+        </ModalActions>
       </Modal>
     </>
   );
@@ -119,24 +131,26 @@ function StepsDemo() {
         backLabel="Voltar à seleção"
       >
         {step === 'menu' ? (
-          <ModalFooter>
+          <ModalActions>
             <Button onClick={() => setStep('form')}>Continuar</Button>
-          </ModalFooter>
+          </ModalActions>
         ) : (
-          <form
-            className="grid items-start gap-6"
-            onInput={() => setDirty(true)}
-          >
-            <div className="grid gap-3">
-              <Label htmlFor="modal-story-step-name">Nome</Label>
-              <Input id="modal-story-step-name" defaultValue="" />
-            </div>
-            <ModalFooter>
+          <>
+            <form
+              className="grid items-start gap-6"
+              onInput={() => setDirty(true)}
+            >
+              <div className="grid gap-3">
+                <Label htmlFor="modal-story-step-name">Nome</Label>
+                <Input id="modal-story-step-name" defaultValue="" />
+              </div>
+            </form>
+            <ModalActions>
               <Button disabled={!dirty} onClick={() => setOpen(false)}>
                 Salvar
               </Button>
-            </ModalFooter>
-          </form>
+            </ModalActions>
+          </>
         )}
       </Modal>
     </>
@@ -163,16 +177,63 @@ function TwoButtonsDemo() {
         open={open}
         setOpen={setOpen}
       >
-        <ModalFooter>
+        <ModalActions>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Restaurar padrão
           </Button>
           <Button onClick={() => setOpen(false)}>Salvar alterações</Button>
-        </ModalFooter>
+        </ModalActions>
       </Modal>
     </>
   );
 }
+
+const LONG_BODY_SECTIONS = Array.from(
+  { length: 12 },
+  (_, index) => `Cláusula ${index + 1}`
+);
+
+function LongBodyDemo() {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button
+        onClick={(event) => {
+          event.currentTarget.blur();
+          setOpen(true);
+        }}
+      >
+        Abrir modal com corpo longo
+      </Button>
+
+      <Modal title="Termos de uso" open={open} setOpen={setOpen}>
+        <div className="space-y-4 text-sm">
+          {LONG_BODY_SECTIONS.map((section) => (
+            <p key={section}>
+              <strong>{section}.</strong> O conteúdo rola dentro do corpo; o
+              rodapé com as ações fica fixo embaixo, sempre à vista.
+            </p>
+          ))}
+        </div>
+        <ModalActions>
+          <Button onClick={() => setOpen(false)}>Li e concordo</Button>
+        </ModalActions>
+      </Modal>
+    </>
+  );
+}
+
+export const ComCorpoLongo: Story = {
+  render: () => (
+    <Card
+      title="Rodapé fixo"
+      description="As ações do `ModalActions` ficam fora da área que rola: o corpo rola, o rodapé não."
+    >
+      <LongBodyDemo />
+    </Card>
+  ),
+};
 
 export const ComDoisBotoes: Story = {
   render: () => (
@@ -247,12 +308,12 @@ function BlockingDemo() {
         setOpen={setOpen}
         dismissible={false}
       >
-        <ModalFooter>
+        <ModalActions>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Recusar
           </Button>
           <Button onClick={() => setOpen(false)}>Aceitar</Button>
-        </ModalFooter>
+        </ModalActions>
       </Modal>
     </>
   );

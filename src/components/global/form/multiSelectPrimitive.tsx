@@ -356,12 +356,12 @@ function MultiSelect({
         </ScrollArea>
 
         {(markableOptions.length > 0 || selected.length > 0) && (
-          <div className="flex items-center justify-center gap-1 border-t pt-1.5">
+          <div className="flex flex-col gap-0.5 border-t pt-1.5">
             {markableOptions.length > 0 && (
               <button
                 type="button"
                 onClick={selectAll}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <CheckIcon className="size-3.5" />
                 Selecionar tudo
@@ -371,7 +371,7 @@ function MultiSelect({
               <button
                 type="button"
                 onClick={() => commit([])}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <XIcon className="size-3.5" />
                 Limpar seleção

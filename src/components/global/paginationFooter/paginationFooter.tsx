@@ -34,8 +34,8 @@ export interface IPaginationFooterProps {
 }
 
 /**
- * Rodapé de paginação da `DataTable` e de listas em cartões: "Itens por página",
- * resumo opcional e Anterior/Próxima. Não conhece a fonte dos dados: a página
+ * Rodapé de paginação da `DataTable` e de listas em cartões: "Itens por página"
+ * à esquerda, resumo opcional e Anterior/Próxima à direita. Não conhece a fonte dos dados: a página
  * vive com quem chama, que também diz se há próxima.
  */
 export function PaginationFooter({
@@ -58,7 +58,7 @@ export function PaginationFooter({
       )}
     >
       {onPageSizeChange && isPageSizeOption(pageSize) ? (
-        <div className="mr-2 flex items-center gap-2">
+        <div className="mr-auto flex items-center gap-2">
           <span
             id={pageSizeLabelId}
             className="text-sm whitespace-nowrap text-muted-foreground"

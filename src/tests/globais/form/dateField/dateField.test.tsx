@@ -44,6 +44,10 @@ function ControlledHarness({
   );
 }
 
+// Abrir o calendário monta o seletor com 151 anos; com a suíte inteira em paralelo,
+// esses testes passam dos 5 s padrão do Vitest (isolados, levam bem menos).
+const CALENDAR_TEST_TIMEOUT = 15_000;
+
 describe('DateField (global) — valor entregue ao consumidor', () => {
   it('data completa vira ISO (aaaa-mm-dd)', async () => {
     const user = userEvent.setup();
@@ -170,119 +174,135 @@ describe('DateField (global) — valor entregue ao consumidor', () => {
   });
 });
 
-describe('DateField — seletor de ano do calendário', () => {
-  it('lista de 100 anos atrás a 50 anos à frente do ano atual', async () => {
-    const user = userEvent.setup();
-    const currentYear = new Date().getFullYear();
-    render(<DateField id="fabricacao" label="Data de fabricação" />);
+describe(
+  'DateField — seletor de ano do calendário',
+  { timeout: CALENDAR_TEST_TIMEOUT },
+  () => {
+    it('lista de 100 anos atrás a 50 anos à frente do ano atual', async () => {
+      const user = userEvent.setup();
+      const currentYear = new Date().getFullYear();
+      render(<DateField id="fabricacao" label="Data de fabricação" />);
 
-    await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
-    await user.click(
-      await screen.findByRole('combobox', { name: 'Escolha o ano' })
-    );
+      await user.click(
+        screen.getByRole('button', { name: 'Abrir calendário' })
+      );
+      await user.click(
+        await screen.findByRole('combobox', { name: 'Escolha o ano' })
+      );
 
-    const yearOptions = await screen.findAllByRole('option');
+      const yearOptions = await screen.findAllByRole('option');
 
-    expect(yearOptions).toHaveLength(151);
-    expect(yearOptions.at(0)).toHaveTextContent(String(currentYear - 100));
-    expect(yearOptions.at(-1)).toHaveTextContent(String(currentYear + 50));
-  });
+      expect(yearOptions).toHaveLength(151);
+      expect(yearOptions.at(0)).toHaveTextContent(String(currentYear - 100));
+      expect(yearOptions.at(-1)).toHaveTextContent(String(currentYear + 50));
+    });
 
-  it('respeita startMonth/endMonth passados em calendarProps', async () => {
-    const user = userEvent.setup();
-    render(
-      <DateField
-        id="fabricacao"
-        label="Data de fabricação"
-        calendarProps={{
-          startMonth: new Date(2020, 0, 1),
-          endMonth: new Date(2022, 11, 1),
-        }}
-      />
-    );
+    it('respeita startMonth/endMonth passados em calendarProps', async () => {
+      const user = userEvent.setup();
+      render(
+        <DateField
+          id="fabricacao"
+          label="Data de fabricação"
+          calendarProps={{
+            startMonth: new Date(2020, 0, 1),
+            endMonth: new Date(2022, 11, 1),
+          }}
+        />
+      );
 
-    await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
-    await user.click(
-      await screen.findByRole('combobox', { name: 'Escolha o ano' })
-    );
+      await user.click(
+        screen.getByRole('button', { name: 'Abrir calendário' })
+      );
+      await user.click(
+        await screen.findByRole('combobox', { name: 'Escolha o ano' })
+      );
 
-    const yearOptions = await screen.findAllByRole('option');
+      const yearOptions = await screen.findAllByRole('option');
 
-    expect(yearOptions.map((option) => option.textContent)).toEqual([
-      '2020',
-      '2021',
-      '2022',
-    ]);
-  });
-});
+      expect(yearOptions.map((option) => option.textContent)).toEqual([
+        '2020',
+        '2021',
+        '2022',
+      ]);
+    });
+  }
+);
 
-describe('DateField — camadas e portal dentro de Modal', () => {
-  /**
-   * Regressão do "o calendário abriu ATRÁS da modal". São duas garantias
-   * independentes e este teste trava a que dá para observar no DOM:
-   *
-   * 1. Dentro de um `Modal` o popover NÃO portala (`InModalContext` →
-   *    `PopoverContent`), então ele nasce DENTRO do dialog — é isso que faz a
-   *    roda do mouse funcionar (o `react-remove-scroll` do Dialog só libera o
-   *    wheel na própria subárvore).
-   * 2. `--z-floating` > `--z-overlay` (ver `src/index.css`) mantém qualquer
-   *    flutuante na frente do modal mesmo se ele portalar.
-   *
-   * O popover do Radix também tem `role="dialog"`, por isso identificamos o
-   * modal pelo nome acessível (o título).
-   */
-  it('renderiza o calendário DENTRO do dialog do modal (não portala para o body)', async () => {
-    const user = userEvent.setup();
-    render(
-      <Modal
-        open
-        setOpen={() => undefined}
-        title="Editar lote"
-        description="Descrição"
-      >
-        <DateField id="fabricacao" label="Data de fabricação" />
-      </Modal>
-    );
+describe(
+  'DateField — camadas e portal dentro de Modal',
+  { timeout: CALENDAR_TEST_TIMEOUT },
+  () => {
+    /**
+     * Regressão do "o calendário abriu ATRÁS da modal". São duas garantias
+     * independentes e este teste trava a que dá para observar no DOM:
+     *
+     * 1. Dentro de um `Modal` o popover NÃO portala (`InModalContext` →
+     *    `PopoverContent`), então ele nasce DENTRO do dialog — é isso que faz a
+     *    roda do mouse funcionar (o `react-remove-scroll` do Dialog só libera o
+     *    wheel na própria subárvore).
+     * 2. `--z-floating` > `--z-overlay` (ver `src/index.css`) mantém qualquer
+     *    flutuante na frente do modal mesmo se ele portalar.
+     *
+     * O popover do Radix também tem `role="dialog"`, por isso identificamos o
+     * modal pelo nome acessível (o título).
+     */
+    it('renderiza o calendário DENTRO do dialog do modal (não portala para o body)', async () => {
+      const user = userEvent.setup();
+      render(
+        <Modal
+          open
+          setOpen={() => undefined}
+          title="Editar lote"
+          description="Descrição"
+        >
+          <DateField id="fabricacao" label="Data de fabricação" />
+        </Modal>
+      );
 
-    const modal = screen.getByRole('dialog', { name: 'Editar lote' });
-    await user.click(
-      within(modal).getByRole('button', { name: 'Abrir calendário' })
-    );
+      const modal = screen.getByRole('dialog', { name: 'Editar lote' });
+      await user.click(
+        within(modal).getByRole('button', { name: 'Abrir calendário' })
+      );
 
-    expect(await within(modal).findByRole('grid')).toBeInTheDocument();
-  });
-});
+      expect(await within(modal).findByRole('grid')).toBeInTheDocument();
+    });
+  }
+);
 
-describe('DateField — navegação do calendário', () => {
-  it('mostra os 4 atalhos de navegação e "Próximo ano" avança 12 meses', async () => {
-    const user = userEvent.setup();
-    render(<ControlledHarness />);
+describe(
+  'DateField — navegação do calendário',
+  { timeout: CALENDAR_TEST_TIMEOUT },
+  () => {
+    it('mostra os 4 atalhos de navegação e "Próximo ano" avança 12 meses', async () => {
+      const user = userEvent.setup();
+      render(<ControlledHarness />);
 
-    const input = screen.getByLabelText<HTMLInputElement>(
-      'Data de fabricação (de)'
-    );
-    await user.type(input, '28072026');
-    await user.click(screen.getByLabelText('Abrir calendário'));
+      const input = screen.getByLabelText<HTMLInputElement>(
+        'Data de fabricação (de)'
+      );
+      await user.type(input, '28072026');
+      await user.click(screen.getByLabelText('Abrir calendário'));
 
-    // Recuar/avançar ano e mês.
-    expect(
-      await screen.findByRole('button', { name: 'Ano anterior' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Mês anterior' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Próximo mês' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Próximo ano' })
-    ).toBeInTheDocument();
+      // Recuar/avançar ano e mês.
+      expect(
+        await screen.findByRole('button', { name: 'Ano anterior' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Mês anterior' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Próximo mês' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Próximo ano' })
+      ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Próximo ano' }));
+      await user.click(screen.getByRole('button', { name: 'Próximo ano' }));
 
-    expect(await screen.findByText('valor:2027-07-28')).toBeInTheDocument();
-  });
-});
+      expect(await screen.findByText('valor:2027-07-28')).toBeInTheDocument();
+    });
+  }
+);
 
 describe('DateField — rótulo oculto', () => {
   it('sem id, o rótulo oculto continua ligado ao campo', () => {

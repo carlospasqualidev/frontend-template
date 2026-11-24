@@ -2,7 +2,7 @@
 
 Guia para o Claude trabalhar neste frontend. Este arquivo traz as regras gerais, que valem para toda tarefa, e os guias de `docs/` (ver **Guias de referência**) trazem as de cada área; juntos, são a fonte de verdade para convenções e comportamento esperado — leia o [`README.md`](README.md) para detalhes de stack, scripts e estrutura de pastas.
 
-> O diretório irmão `server-template/` é o template de backend que atende este frontend (Fastify + Prisma + Zod; sobe com `pnpm run db:up && pnpm run dev` lá dentro, em `http://localhost:8080`). Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito. O contrato HTTP dele está em `../server-template/docs/openapi.json` (ver **Contrato com o backend** em [`docs/conventions/http-and-state.md`](docs/conventions/http-and-state.md)).
+> O diretório irmão `server-template/` é o template de backend que atende este frontend (Fastify + Prisma + Zod; sobe com `pnpm run db:up && pnpm run dev` lá dentro, em `http://localhost:8080`; na primeira vez, siga antes o **Começando** do README dele: install, `.env`, migrations e seed). Não é o foco do trabalho — não otimize, refatore ou estenda essa API sem pedido explícito. O contrato HTTP dele está em `../server-template/docs/openapi.json` (ver **Contrato com o backend** em [`docs/conventions/http-and-state.md`](docs/conventions/http-and-state.md)).
 
 ---
 
@@ -228,7 +228,7 @@ Nada de spinner gigante nem skeleton genérico no lugar da tela: monte a estrutu
 
 - Windows (PowerShell). Em comandos shell use sintaxe PS (`$env:VAR`, `$null`, sem `&&` em PS 5.1).
 - Node >= 22 (versão fixa do template; CI roda em Node 22).
-- `npm` (lockfile `package-lock.json`).
+- `pnpm` (versão em `packageManager`, lockfile `pnpm-lock.yaml`); sem o comando `pnpm`, rode `corepack enable`.
 - Comandos do dia a dia: `pnpm run dev`: Servidor de desenvolvimento (Vite); `pnpm test`: Vitest run; `pnpm run test:related`: Vitest só nos testes afetados pelo não commitado; `pnpm run test:e2e`: E2E (Playwright) contra o `../server-template` no ar; `pnpm run lint`: ESLint; `pnpm run typecheck`: `tsc -b`; `pnpm run build`: Typecheck + build de produção; `pnpm run check`: Lint + format:check + typecheck + test — detalhe em `docs/claude/estrutura-e-scripts.md`.
 - **Pin do router:** `@tanstack/router-core` fica fixo por ser dependência exata do `@tanstack/react-router`; os overrides (inclusive o de `@radix-ui/react-dismissable-layer`) vivem no `pnpm-workspace.yaml` — detalhe em `docs/claude/dependencias.md`.
 

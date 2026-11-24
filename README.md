@@ -23,7 +23,7 @@ fetching, testes, lint e hooks de commit).
 ## Requisitos
 
 - Node.js >= 22
-- npm
+- pnpm (versão fixada em `packageManager`; se o comando `pnpm` não existir, rode `corepack enable`)
 
 ## Começando
 
@@ -34,8 +34,9 @@ pnpm run dev
 ```
 
 O app fala com o backend `../server-template` (suba-o com
-`pnpm run db:up && pnpm run dev` lá dentro; `VITE_API_URL` aponta para ele): sem
-ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
+`pnpm run db:up && pnpm run dev` lá dentro; na primeira vez, siga antes o
+**Começando** do README dele: install, `.env`, migrations e seed; `VITE_API_URL`
+aponta para ele): sem ele no ar, o login não entra. Ver [Modo híbrido](#modo-híbrido).
 
 ## Scripts
 
